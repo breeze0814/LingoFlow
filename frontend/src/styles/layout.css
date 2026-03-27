@@ -1,0 +1,103 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', 'PingFang SC', 'SF Pro Text', 'Noto Sans CJK SC', sans-serif;
+  color: var(--color-text);
+  background:
+    radial-gradient(760px 420px at -8% -15%, rgb(74 162 255 / 16%), transparent 64%),
+    radial-gradient(700px 380px at 105% -8%, rgb(245 158 11 / 12%), transparent 62%),
+    linear-gradient(165deg, #1d2430 0%, #202936 45%, #1f2531 100%);
+}
+
+.layoutShell {
+  position: relative;
+  min-height: 100vh;
+  padding: 22px clamp(14px, 3vw, 30px);
+  overflow: hidden;
+}
+
+.ambientGlow {
+  position: absolute;
+  width: 390px;
+  height: 390px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(68px);
+  opacity: 0.45;
+}
+
+.ambientGlowLeft {
+  left: -180px;
+  top: -140px;
+  background: rgb(47 134 255 / 34%);
+}
+
+.ambientGlowRight {
+  right: -140px;
+  top: 120px;
+  background: rgb(245 158 11 / 30%);
+}
+
+.layout {
+  position: relative;
+  width: min(980px, 100%);
+  margin: 0 auto;
+  border: 1px solid rgb(66 77 96 / 95%);
+  border-radius: 14px;
+  padding: 0;
+  background: rgb(35 43 56 / 92%);
+  backdrop-filter: blur(4px);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.content {
+  margin-top: 0;
+}
+
+.settingsHome {
+  width: 100%;
+}
+
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgb(74 162 255 / 65%);
+  outline-offset: 1px;
+}
+
+@media (max-width: 1080px) {
+  .layout {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .layoutShell {
+    padding: 12px;
+  }
+
+  .layout {
+    border-radius: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

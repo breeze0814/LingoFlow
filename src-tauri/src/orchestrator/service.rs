@@ -1,0 +1,298 @@
+use std::sync::Arc;
+
+use tokio::sync::Mutex;
+
+use crate::errors::app_error::AppError;
+use crate::errors::error_code::ErrorCode;
+use crate::orchestrator::models::{TaskData, TaskRequest, TaskResponse, TaskStatus, TaskType};
+use crate::platform::capture::capture_interactive_image;
+use crate::providers::registry::ProviderRegistry;
+use crate::providers::traits::{OcrRequest, TranslateRequest};
+use crate::storage::config_store::ConfigStore;
+
+const DEFAULT_TRANSLATE_TIMEOUT_MS: u64 = 15000;
+const DEFAULT_OCR_TIMEOUT_MS: u64 = 20000;
+
+struct OcrExecution {
+    provider_id: String,
+    recognized_text: String,
+}
+
+pub struct Orchestrator {
+    active_task: Mutex<Option<String>>,
+    config_store: Arc<ConfigStore>,
+    providers: Arc<ProviderRegistry>,
+}
+
+impl Orchestrator {
+    pub fn new(config_store: Arc<ConfigStore>, providers: Arc<ProviderRegistry>) -> Self {
+        Self {
+            active_task: Mutex::new(None),
+            config_store,
+            providers,
+        }
+    }
+
+    pub async fn execute(&self, request: TaskRequest) -> Result<TaskResponse, AppError> {
+        self.replace_active_task(request.task_id.clone()).await;
+        match request.task_type {
+            TaskType::OpenInputPanel => Ok(Self::accepted(request.task_id)),
+            TaskType::InputTranslate => self.handle_input_translate(request).await,
+            TaskType::SelectionTranslate => self.handle_selection_translate(request).await,
+            TaskType::OcrRecognize => self.handle_ocr_recognize(request).await,
+            TaskType::OcrTranslate => self.handle_ocr_translate(request).await,
+        }
+    }
+
+    async fn replace_active_task(&self, next: String) {
+        let mut guard = self.active_task.lock().await;
+        *guard = Some(next);
+    }
+
+    async fn handle_input_translate(&self, request: TaskRequest) -> Result<TaskResponse, AppError> {
+        let task_id = request.task_id.clone();
+        let text = request.text.unwrap_or_default();
+        if text.trim().is_empty() {
+            return Ok(Self::failed(
+                task_id,
+                AppError::new(ErrorCode::EmptyInput, "Input text is empty", false),
+            ));
+        }
+        let source_lang = request
+            .source_lang
+            .unwrap_or_else(|| self.config_store.get().app.source_lang);
+        let target_lang = request
+            .target_lang
+            .unwrap_or_else(|| self.config_store.get().app.target_lang);
+        let provider = match self.pick_translate_provider(request.translate_provider_id.as_deref())
+        {
+            Ok(provider) => provider,
+            Err(error) => return Ok(Self::failed(task_id, error)),
+        };
+
+        let provider_request = TranslateRequest {
+            text,
+            source_lang,
+            target_lang,
+            timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
+        };
+
+        match provider.translate(provider_request).await {
+            Ok(result) => Ok(Self::success(
+                task_id,
+                TaskData {
+                    provider_id: result.provider_id,
+                    source_text: result.source_text,
+                    translated_text: Some(result.translated_text),
+                    recognized_text: None,
+                },
+            )),
+            Err(error) => Ok(Self::failed(task_id, error)),
+        }
+    }
+
+    async fn handle_selection_translate(
+        &self,
+        request: TaskRequest,
+    ) -> Result<TaskResponse, AppError> {
+        Ok(Self::failed(
+            request.task_id,
+            AppError::new(
+                ErrorCode::NoSelection,
+                "Selection translate requires macOS helper integration",
+                true,
+            ),
+        ))
+    }
+
+    async fn handle_ocr_recognize(&self, request: TaskRequest) -> Result<TaskResponse, AppError> {
+        let task_id = request.task_id.clone();
+        let ocr = match self.execute_ocr_capture(&request).await {
+            Ok(result) => result,
+            Err(error) => {
+                if matches!(error.code, ErrorCode::UserCancelled) {
+                    return Ok(Self::cancelled(task_id));
+                }
+                return Ok(Self::failed(task_id, error));
+            }
+        };
+        println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
+
+        Ok(Self::success(
+            task_id,
+            TaskData {
+                provider_id: ocr.provider_id,
+                source_text: ocr.recognized_text.clone(),
+                translated_text: None,
+                recognized_text: Some(ocr.recognized_text),
+            },
+        ))
+    }
+
+    async fn handle_ocr_translate(&self, request: TaskRequest) -> Result<TaskResponse, AppError> {
+        let task_id = request.task_id.clone();
+        let ocr = match self.execute_ocr_capture(&request).await {
+            Ok(result) => result,
+            Err(error) => {
+                if matches!(error.code, ErrorCode::UserCancelled) {
+                    return Ok(Self::cancelled(task_id));
+                }
+                return Ok(Self::failed(task_id, error));
+            }
+        };
+        println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
+
+        let provider = match self.pick_translate_provider(request.translate_provider_id.as_deref())
+        {
+            Ok(provider) => provider,
+            Err(error) => return Ok(Self::failed(task_id, error)),
+        };
+        let source_lang = request
+            .source_lang
+            .unwrap_or_else(|| self.config_store.get().app.source_lang);
+        let target_lang = request
+            .target_lang
+            .unwrap_or_else(|| self.config_store.get().app.target_lang);
+
+        let provider_request = TranslateRequest {
+            text: ocr.recognized_text.clone(),
+            source_lang,
+            target_lang,
+            timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
+        };
+
+        match provider.translate(provider_request).await {
+            Ok(result) => Ok(Self::success(
+                task_id,
+                TaskData {
+                    provider_id: result.provider_id,
+                    source_text: ocr.recognized_text.clone(),
+                    translated_text: Some(result.translated_text),
+                    recognized_text: Some(ocr.recognized_text),
+                },
+            )),
+            Err(error) => Ok(Self::failed(task_id, error)),
+        }
+    }
+
+    fn accepted(task_id: String) -> TaskResponse {
+        TaskResponse {
+            ok: true,
+            task_id,
+            status: TaskStatus::Accepted,
+            data: None,
+            error: None,
+        }
+    }
+
+    fn failed(task_id: String, error: AppError) -> TaskResponse {
+        TaskResponse {
+            ok: false,
+            task_id,
+            status: TaskStatus::Failure,
+            data: None,
+            error: Some(error),
+        }
+    }
+
+    fn cancelled(task_id: String) -> TaskResponse {
+        TaskResponse {
+            ok: false,
+            task_id,
+            status: TaskStatus::Cancelled,
+            data: None,
+            error: None,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn success(task_id: String, data: TaskData) -> TaskResponse {
+        TaskResponse {
+            ok: true,
+            task_id,
+            status: TaskStatus::Success,
+            data: Some(data),
+            error: None,
+        }
+    }
+
+    fn pick_translate_provider(
+        &self,
+        requested_provider_id: Option<&str>,
+    ) -> Result<Arc<dyn crate::providers::traits::TranslateProvider>, AppError> {
+        if let Some(provider_id) = requested_provider_id {
+            if let Some(provider) = self.providers.translate_provider_by_id(provider_id) {
+                return Ok(provider);
+            }
+            return Err(AppError::new(
+                ErrorCode::ProviderNotEnabled,
+                format!("Translate provider `{provider_id}` is not enabled"),
+                false,
+            ));
+        }
+        self.providers.default_translate_provider().ok_or_else(|| {
+            AppError::new(
+                ErrorCode::ProviderNotConfigured,
+                "No translate provider configured. Please set OPENAI_API_KEY.",
+                false,
+            )
+        })
+    }
+
+    fn pick_ocr_provider(
+        &self,
+        requested_provider_id: Option<&str>,
+    ) -> Result<Arc<dyn crate::providers::traits::OcrProvider>, AppError> {
+        if let Some(provider_id) = requested_provider_id {
+            if let Some(provider) = self.providers.ocr_provider_by_id(provider_id) {
+                return Ok(provider);
+            }
+            return Err(AppError::new(
+                ErrorCode::ProviderNotEnabled,
+                format!("OCR provider `{provider_id}` is not enabled"),
+                false,
+            ));
+        }
+        self.providers.default_ocr_provider().ok_or_else(|| {
+            AppError::new(
+                ErrorCode::ProviderNotConfigured,
+                "No OCR provider configured. Please set OPENAI_API_KEY.",
+                false,
+            )
+        })
+    }
+
+    async fn execute_ocr_capture(&self, request: &TaskRequest) -> Result<OcrExecution, AppError> {
+        let image_path = capture_interactive_image()?;
+        let image_path_string = image_path.to_string_lossy().into_owned();
+        let result = self.run_ocr_provider(request, &image_path_string).await;
+        let _ = std::fs::remove_file(image_path);
+        result
+    }
+
+    async fn run_ocr_provider(
+        &self,
+        request: &TaskRequest,
+        image_path: &str,
+    ) -> Result<OcrExecution, AppError> {
+        let ocr_provider = self.pick_ocr_provider(request.ocr_provider_id.as_deref())?;
+        let ocr_request = OcrRequest {
+            image_path: image_path.to_string(),
+            source_lang_hint: request.source_lang_hint.clone(),
+            timeout_ms: DEFAULT_OCR_TIMEOUT_MS,
+        };
+        let ocr_result = ocr_provider.recognize(ocr_request).await?;
+        let recognized_text = ocr_result.recognized_text.trim().to_string();
+        if recognized_text.is_empty() {
+            return Err(AppError::new(
+                ErrorCode::OcrEmptyResult,
+                "OCR provider returned empty text",
+                false,
+            ));
+        }
+        Ok(OcrExecution {
+            provider_id: ocr_result.provider_id,
+            recognized_text,
+        })
+    }
+}

@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-bg: #1f2530;
+  --color-bg-soft: #262e3b;
+  --color-surface: #2b3443;
+  --color-surface-muted: #252d3a;
+  --color-text: #dce6f5;
+  --color-muted: #95a2b7;
+  --color-primary: #2f86ff;
+  --color-primary-strong: #4aa2ff;
+  --color-secondary: #3474de;
+  --color-accent: #f59e0b;
+  --color-border: #3c4658;
+  --color-border-strong: #4a566c;
+  --color-error: #ef4444;
+  --shadow-card: 0 30px 48px rgb(9 12 17 / 34%);
+  --shadow-soft: 0 10px 24px rgb(8 11 16 / 28%);
+}

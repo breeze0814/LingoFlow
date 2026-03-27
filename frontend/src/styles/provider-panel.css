@@ -1,0 +1,232 @@
+.providerStudio {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  min-height: 520px;
+  width: 100%;
+}
+
+.providerListPanel {
+  flex: 0 0 320px;
+  background: linear-gradient(180deg, rgb(28 29 45 / 96%) 0%, rgb(24 26 39 / 96%) 100%);
+  border: 1px solid rgb(58 60 87 / 88%);
+  overflow: hidden;
+}
+
+.providerGroup {
+  padding-top: 6px;
+}
+
+.providerGroup h4 {
+  margin: 0;
+  padding: 0 12px 8px;
+  color: #8f93ad;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.providerGroupList {
+  display: grid;
+}
+
+.providerRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px;
+  color: #d7dbeb;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.providerRow:hover {
+  background: rgb(49 52 74 / 72%);
+}
+
+.providerRow:focus-visible {
+  outline: 2px solid rgb(66 146 255 / 86%);
+  outline-offset: -2px;
+}
+
+.providerRowActive {
+  background: linear-gradient(180deg, #1962d2 0%, #155abc 100%);
+}
+
+.providerLogo {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid rgb(113 119 151 / 78%);
+  background: linear-gradient(180deg, rgb(85 90 118 / 88%) 0%, rgb(58 63 87 / 88%) 100%);
+  color: #edf1ff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.providerRowName {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.providerRowSwitch {
+  transform: scale(1.05);
+}
+
+.providerEditorPanel {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: linear-gradient(180deg, rgb(38 40 60 / 96%) 0%, rgb(35 37 54 / 96%) 100%);
+  border: 1px solid rgb(58 60 87 / 88%);
+  padding: 18px 16px 16px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.providerEditorPanel h3 {
+  margin: 0;
+  color: #dde3f6;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.providerEditorBody {
+  border-top: 1px solid rgb(72 75 102 / 86%);
+  padding-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.providerEditorSwitchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.providerEditorSwitchRow span {
+  color: #adb4ce;
+  font-size: 12px;
+}
+
+.providerTokenField {
+  display: grid;
+  gap: 8px;
+}
+
+.providerTokenField span {
+  color: #d6dcf0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.providerTokenField input {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgb(81 84 111 / 86%);
+  background: rgb(45 47 67 / 94%);
+  color: #eef2ff;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 18px;
+}
+
+.providerTokenField input:focus-visible {
+  outline: 2px solid rgb(86 154 255 / 88%);
+  outline-offset: 1px;
+}
+
+.providerTokenInputWrap {
+  position: relative;
+}
+
+.providerTokenInputWrap input {
+  padding-right: 66px;
+}
+
+.providerEyeButton {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgb(103 106 131 / 82%);
+  background: rgb(91 95 118 / 72%);
+  color: #f0f3ff;
+  cursor: pointer;
+}
+
+.providerEyeButton svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.providerEyeButton:hover {
+  background: rgb(104 109 132 / 78%);
+}
+
+.providerEditorActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.providerVerifyButton {
+  min-width: 100px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgb(87 91 117 / 88%);
+  color: #9ca3bf;
+  background: rgb(66 69 90 / 72%);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.providerVerifyButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.providerEditorHint {
+  border: 1px solid rgb(77 80 108 / 86%);
+  border-radius: 10px;
+  background: rgb(43 45 63 / 92%);
+  padding: 14px;
+}
+
+.providerEditorHint p {
+  margin: 0;
+  color: #b8bfd6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .providerStudio {
+    flex-direction: column;
+  }
+
+  .providerListPanel {
+    flex: 0 0 auto;
+  }
+
+  .providerEditorPanel h3 {
+    font-size: 18px;
+  }
+
+  .providerTokenField input {
+    font-size: 13px;
+  }
+}
