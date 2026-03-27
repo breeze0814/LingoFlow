@@ -11,7 +11,7 @@ import {
   ToolProviderId,
 } from './settingsTypes';
 
-const SETTINGS_STORAGE_KEY = 'mydict.settings.v1';
+const SETTINGS_STORAGE_KEY = 'lingoflow.settings.v1';
 
 type SettingsRecord = Record<string, unknown>;
 

@@ -17,7 +17,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: '输入翻译' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '截图翻译' })).not.toBeInTheDocument();
     expect(screen.queryByText('Settings Hub')).not.toBeInTheDocument();
-    expect(screen.queryByText('mydict')).not.toBeInTheDocument();
+    expect(screen.queryByText('LingoFlow')).not.toBeInTheDocument();
   });
 
   it('triggers shortcut action after modifiers are released', () => {

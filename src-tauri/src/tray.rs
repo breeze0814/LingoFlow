@@ -190,7 +190,7 @@ mod desktop {
             .show_menu_on_left_click(false)
             .icon(TRAY_TEMPLATE_ICON)
             .icon_as_template(true)
-            .tooltip("mydict")
+            .tooltip("LingoFlow")
             .on_menu_event(|app, event| handle_menu_event(app, event.id().as_ref()))
             .on_tray_icon_event(|tray, event| handle_tray_click(tray.app_handle(), event))
             .build(app)?;

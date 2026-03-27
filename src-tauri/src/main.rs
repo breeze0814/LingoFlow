@@ -1,3 +1,3 @@
 fn main() {
-    mydict_lib::run();
+    lingoflow_lib::run();
 }

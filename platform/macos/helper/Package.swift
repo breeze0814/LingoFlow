@@ -2,10 +2,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "MyDictHelper",
+    name: "LingoFlowHelper",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "mydict-helper", targets: ["App"]),
+        .executable(name: "lingoflow-helper", targets: ["App"]),
     ],
     targets: [
         .executableTarget(
@@ -19,4 +19,3 @@ let package = Package(
         ),
     ]
 )
-

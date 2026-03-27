@@ -9,7 +9,7 @@ use crate::errors::error_code::ErrorCode;
 use crate::providers::traits::{OcrProvider, OcrRequest, OcrResult};
 
 const PROVIDER_ID: &str = "apple_vision";
-const HELPER_EXECUTABLE: &str = "mydict-helper";
+const HELPER_EXECUTABLE: &str = "lingoflow-helper";
 const HELPER_COMMAND: &str = "ocr.recognize";
 const HELPER_PACKAGE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../platform/macos/helper");
 

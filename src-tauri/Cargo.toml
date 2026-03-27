@@ -1,11 +1,11 @@
 [package]
-name = "mydict"
+name = "lingoflow"
 version = "0.1.0"
 description = "Lightweight desktop translator"
 edition = "2021"
 
 [lib]
-name = "mydict_lib"
+name = "lingoflow_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
