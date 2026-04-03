@@ -1,3 +1,4 @@
+mod apiprovider;
 mod app_state;
 mod commands;
 mod errors;
@@ -5,6 +6,7 @@ mod http_api;
 mod orchestrator;
 mod platform;
 mod providers;
+mod shortcuts;
 mod storage;
 mod tray;
 
@@ -28,7 +30,11 @@ pub fn run() {
                 });
             }
             app.manage(state);
+            shortcuts::setup(&app.handle())?;
             tray::setup(&app.handle())?;
+            if let Some(main_window) = app.get_webview_window("main") {
+                main_window.hide()?;
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

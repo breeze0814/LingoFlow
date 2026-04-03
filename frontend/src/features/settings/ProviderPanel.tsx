@@ -43,6 +43,7 @@ function ProviderRow(props: ProviderRowProps) {
       tabIndex={0}
       aria-pressed={props.active}
       className={rowClass}
+      data-provider={props.id}
       onClick={() => props.onSelect(props.id)}
       onKeyDown={onKeyDown}
     >

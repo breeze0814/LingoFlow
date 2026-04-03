@@ -21,6 +21,7 @@ pub struct TranslateBody {
 
 #[derive(Debug, Deserialize)]
 pub struct CommonQuery {
+    source_lang: Option<String>,
     target_lang: Option<String>,
     provider_id: Option<String>,
     source_lang_hint: Option<String>,
@@ -86,6 +87,8 @@ async fn get_input_translate(
                 source_text: text,
                 translated_text: None,
                 recognized_text: None,
+                translation_results: vec![],
+                capture_rect: None,
             }),
         error: None,
     };
@@ -106,6 +109,7 @@ async fn get_ocr_translate(
     Query(query): Query<CommonQuery>,
 ) -> Result<Json<TaskResponse>, AppError> {
     let request = TaskRequest::ocr_translate(OcrTranslateTaskOptions {
+        source_lang: query.source_lang,
         source_lang_hint: query.source_lang_hint,
         target_lang: query.target_lang,
         provider_id: query.provider_id,

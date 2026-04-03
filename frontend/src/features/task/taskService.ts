@@ -1,5 +1,5 @@
 import { commandsClient } from '../../infra/tauri/commands';
-import { AppError, TaskState, TaskType } from './taskTypes';
+import { AppError, ProviderTranslationResult, TaskState, TaskType } from './taskTypes';
 
 type TriggerResponse = {
   action: 'triggered' | 'succeeded' | 'failed' | 'cancelled';
@@ -12,9 +12,16 @@ type TriggerResponse = {
       sourceText: string;
       translatedText?: string;
       recognizedText?: string;
+      translationResults?: ProviderTranslationResult[];
     };
     error?: AppError;
   };
+};
+
+type CommandProviderTranslation = {
+  provider_id: string;
+  translated_text?: string;
+  error?: AppError | null;
 };
 
 type CommandTaskResponse = {
@@ -26,6 +33,7 @@ type CommandTaskResponse = {
     source_text: string;
     translated_text?: string;
     recognized_text?: string;
+    translation_results?: CommandProviderTranslation[];
   } | null;
   error?: AppError | null;
 };
@@ -49,6 +57,7 @@ function mapResult(data: {
   source_text: string;
   translated_text?: string;
   recognized_text?: string;
+  translation_results?: CommandProviderTranslation[];
 }) {
   return {
     taskId: '',
@@ -56,7 +65,31 @@ function mapResult(data: {
     sourceText: data.source_text,
     translatedText: data.translated_text,
     recognizedText: data.recognized_text,
+    translationResults: mapTranslationResults(data),
   };
+}
+
+function mapTranslationResults(data: {
+  provider_id: string;
+  translated_text?: string;
+  translation_results?: CommandProviderTranslation[];
+}): ProviderTranslationResult[] {
+  if (data.translation_results && data.translation_results.length > 0) {
+    return data.translation_results.map((item) => ({
+      providerId: item.provider_id,
+      translatedText: item.translated_text,
+      error: item.error ?? undefined,
+    }));
+  }
+  if (!data.translated_text) {
+    return [];
+  }
+  return [
+    {
+      providerId: data.provider_id,
+      translatedText: data.translated_text,
+    },
+  ];
 }
 
 function mapRemoteError(error?: AppError | null): AppError {
@@ -160,10 +193,15 @@ export function triggerOcrRecognize(state: TaskState, sourceLangHint?: string) {
   });
 }
 
-export function triggerOcrTranslate(state: TaskState, targetLang: string, sourceLangHint?: string) {
+export function triggerOcrTranslate(
+  state: TaskState,
+  targetLang: string,
+  sourceLang?: string,
+  sourceLangHint?: string,
+) {
   return runTask({
     state,
     taskType: 'ocr_translate',
-    request: () => commandsClient.ocrTranslate({ targetLang, sourceLangHint }),
+    request: () => commandsClient.ocrTranslate({ sourceLang, targetLang, sourceLangHint }),
   });
 }

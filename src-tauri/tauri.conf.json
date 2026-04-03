@@ -17,7 +17,21 @@
         "title": "LingoFlow",
         "width": 900,
         "height": 620,
-        "resizable": true
+        "resizable": true,
+        "visible": false
+      },
+      {
+        "label": "ocr_result",
+        "title": "OCR 结果",
+        "url": "?window=ocr_result",
+        "width": 520,
+        "height": 600,
+        "resizable": true,
+        "visible": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay"
       }
     ]
   }

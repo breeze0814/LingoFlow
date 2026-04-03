@@ -3,10 +3,11 @@ use std::process::Command;
 
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
+use crate::orchestrator::models::CaptureRect;
 
 const CAPTURE_COMMAND: &str = "screencapture";
 
-pub fn capture_interactive_image() -> Result<PathBuf, AppError> {
+pub fn capture_interactive_image() -> Result<(PathBuf, Option<CaptureRect>), AppError> {
     let output_path = build_capture_output_path();
     let output = Command::new(CAPTURE_COMMAND)
         .arg("-i")
@@ -16,7 +17,10 @@ pub fn capture_interactive_image() -> Result<PathBuf, AppError> {
         .map_err(map_capture_spawn_error)?;
 
     if output.status.success() {
-        return ensure_capture_file_exists(output_path);
+        let path = ensure_capture_file_exists(output_path)?;
+        // TODO: 未来从 Swift Helper 获取截图区域坐标
+        // 当前返回 None，前端将使用鼠标位置作为 fallback
+        return Ok((path, None));
     }
 
     let stderr = String::from_utf8_lossy(&output.stderr);

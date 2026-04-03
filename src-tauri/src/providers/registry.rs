@@ -1,9 +1,14 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::apiprovider::baidu_fanyi::BaiduFanyiProvider;
+use crate::apiprovider::deepl_free::DeepLFreeProvider;
+use crate::apiprovider::google_translate::GoogleTranslateProvider;
+use crate::apiprovider::microsoft_translator::MicrosoftTranslatorProvider;
+use crate::apiprovider::tencent_tmt::TencentTmtProvider;
+use crate::apiprovider::youdao_web::YoudaoWebProvider;
 #[cfg(target_os = "macos")]
 use crate::providers::apple_vision_ocr::AppleVisionOcrProvider;
-use crate::providers::openai_compatible::OpenAiCompatibleProvider;
 use crate::providers::openai_compatible_ocr::OpenAiCompatibleOcrProvider;
 use crate::providers::traits::{OcrProvider, TranslateProvider};
 
@@ -18,6 +23,39 @@ impl ProviderRegistry {
     pub fn new() -> Self {
         let mut translate_providers: HashMap<String, Arc<dyn TranslateProvider>> = HashMap::new();
         let mut ocr_providers: HashMap<String, Arc<dyn OcrProvider>> = HashMap::new();
+        let mut default_translate_provider_id: Option<String> = None;
+
+        register_translate_provider(
+            &mut translate_providers,
+            &mut default_translate_provider_id,
+            YoudaoWebProvider::from_env(),
+        );
+        register_translate_provider(
+            &mut translate_providers,
+            &mut default_translate_provider_id,
+            DeepLFreeProvider::from_env(),
+        );
+        register_translate_provider(
+            &mut translate_providers,
+            &mut default_translate_provider_id,
+            MicrosoftTranslatorProvider::from_env(),
+        );
+        register_translate_provider(
+            &mut translate_providers,
+            &mut default_translate_provider_id,
+            GoogleTranslateProvider::from_env(),
+        );
+        register_translate_provider(
+            &mut translate_providers,
+            &mut default_translate_provider_id,
+            TencentTmtProvider::from_env(),
+        );
+        register_translate_provider(
+            &mut translate_providers,
+            &mut default_translate_provider_id,
+            BaiduFanyiProvider::from_env(),
+        );
+
         #[cfg(target_os = "macos")]
         let mut default_ocr_provider_id: Option<String> = {
             let apple_provider: Arc<dyn OcrProvider> = Arc::new(AppleVisionOcrProvider::new());
@@ -28,12 +66,6 @@ impl ProviderRegistry {
 
         #[cfg(not(target_os = "macos"))]
         let mut default_ocr_provider_id: Option<String> = None;
-
-        let default_translate_provider_id = OpenAiCompatibleProvider::from_env().map(|provider| {
-            let id = provider.provider_id().to_string();
-            translate_providers.insert(id.clone(), Arc::new(provider));
-            id
-        });
 
         if let Some(provider) = OpenAiCompatibleOcrProvider::from_env() {
             let id = provider.provider_id().to_string();
@@ -63,6 +95,18 @@ impl ProviderRegistry {
         self.translate_providers.get(provider_id).cloned()
     }
 
+    pub fn all_translate_providers(&self) -> Vec<(String, Arc<dyn TranslateProvider>)> {
+        let mut provider_ids: Vec<String> = self.translate_providers.keys().cloned().collect();
+        provider_ids.sort();
+        provider_ids
+            .into_iter()
+            .filter_map(|provider_id| {
+                self.translate_provider_by_id(&provider_id)
+                    .map(|provider| (provider_id, provider))
+            })
+            .collect()
+    }
+
     pub fn default_ocr_provider(&self) -> Option<Arc<dyn OcrProvider>> {
         let provider_id = self.default_ocr_provider_id.clone()?;
         self.ocr_provider_by_id(&provider_id)
@@ -70,5 +114,22 @@ impl ProviderRegistry {
 
     pub fn ocr_provider_by_id(&self, provider_id: &str) -> Option<Arc<dyn OcrProvider>> {
         self.ocr_providers.get(provider_id).cloned()
+    }
+}
+
+fn register_translate_provider<P>(
+    translate_providers: &mut HashMap<String, Arc<dyn TranslateProvider>>,
+    default_translate_provider_id: &mut Option<String>,
+    provider: Option<P>,
+) where
+    P: TranslateProvider + 'static,
+{
+    let Some(provider) = provider else {
+        return;
+    };
+    let id = provider.provider_id().to_string();
+    translate_providers.insert(id.clone(), Arc::new(provider));
+    if default_translate_provider_id.is_none() {
+        *default_translate_provider_id = Some(id);
     }
 }

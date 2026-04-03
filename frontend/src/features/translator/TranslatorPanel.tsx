@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { TaskState } from '../task/taskTypes';
+import { TaskResult, TaskState } from '../task/taskTypes';
+import { providerLabel } from './providerMeta';
 
 type TranslatorPanelProps = {
   taskState: TaskState;
@@ -9,24 +10,67 @@ type TranslatorPanelProps = {
 };
 
 type EngineCardProps = {
-  title: string;
+  providerId: string;
   content: string;
-  muted?: boolean;
+  isError: boolean;
+  onCopy: (text: string) => Promise<void>;
+};
+
+type DisplayResult = {
+  providerId: string;
+  content: string;
+  isError: boolean;
 };
 
 function normalizeDisplayText(text: string) {
   return text.replace(/\r\n/g, '\n').replace(/\t/g, '  ').trim();
 }
 
+function buildDisplayResults(result: TaskResult): DisplayResult[] {
+  if (result.translationResults && result.translationResults.length > 0) {
+    return result.translationResults.map((item) => {
+      if (item.error) {
+        return {
+          providerId: item.providerId,
+          content: `${item.error.message} (${item.error.code})`,
+          isError: true,
+        };
+      }
+      return {
+        providerId: item.providerId,
+        content: normalizeDisplayText(item.translatedText ?? 'Provider 未返回译文'),
+        isError: false,
+      };
+    });
+  }
+  const content = normalizeDisplayText(result.translatedText ?? result.recognizedText ?? '');
+  if (!content) {
+    return [];
+  }
+  return [
+    {
+      providerId: result.providerId,
+      content,
+      isError: false,
+    },
+  ];
+}
+
 async function copyToClipboard(text: string) {
   await navigator.clipboard.writeText(text);
 }
 
-function EngineCard({ title, content, muted }: EngineCardProps) {
+function EngineCard({ providerId, content, isError, onCopy }: EngineCardProps) {
+  const cardClass = isError ? 'engineCard engineCardError' : 'engineCard';
   return (
-    <article className={muted ? 'engineCard engineCardMuted' : 'engineCard'}>
+    <article className={cardClass} data-provider={providerId}>
       <header>
-        <h4>{title}</h4>
+        <h4>{providerLabel(providerId)}</h4>
+        {!isError ? (
+          <button type="button" onClick={() => onCopy(content)}>
+            复制
+          </button>
+        ) : null}
       </header>
       <p>{content}</p>
     </article>
@@ -34,12 +78,7 @@ function EngineCard({ title, content, muted }: EngineCardProps) {
 }
 
 function EmptyPanel() {
-  return (
-    <div className="panelEmpty">
-      <strong>等待翻译任务</strong>
-      <p>可使用上方按钮或托盘菜单触发输入翻译、划词翻译、截图翻译。</p>
-    </div>
-  );
+  return null;
 }
 
 function ErrorPanel({ taskState }: { taskState: TaskState }) {
@@ -68,10 +107,8 @@ export function TranslatorPanel({
     return <EmptyPanel />;
   }
 
-  const sourceText = normalizeDisplayText(taskState.result?.sourceText ?? '');
-  const translatedText = normalizeDisplayText(
-    taskState.result?.translatedText ?? taskState.result?.recognizedText ?? '',
-  );
+  const sourceText = normalizeDisplayText(taskState.result.sourceText ?? '');
+  const displayResults = buildDisplayResults(taskState.result);
 
   async function handleCopy(content: string, successMessage: string) {
     try {
@@ -108,12 +145,17 @@ export function TranslatorPanel({
 
       {copyMessage ? <div className="copyTip">{copyMessage}</div> : null}
 
-      <EngineCard
-        title={taskState.result.providerId}
-        content={translatedText || 'Provider 未返回译文'}
-      />
-      <EngineCard title="内置 AI 翻译" content="待接入" muted />
-      <EngineCard title="DeepL 翻译" content="待接入" muted />
+      <section className="engineList">
+        {displayResults.map((item) => (
+          <EngineCard
+            key={item.providerId}
+            providerId={item.providerId}
+            content={item.content}
+            isError={item.isError}
+            onCopy={(text) => handleCopy(text, `已复制 ${providerLabel(item.providerId)} 结果`)}
+          />
+        ))}
+      </section>
     </article>
   );
 }

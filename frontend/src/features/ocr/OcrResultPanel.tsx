@@ -60,8 +60,16 @@ function OcrSourceBlock(props: { sourceText: string; onCopy: CopyHandler }) {
     <section className="ocrSourceBlock">
       <header>
         <span>OCR 文本</span>
-        <button type="button" onClick={() => props.onCopy(props.sourceText, '已复制 OCR 文本')}>
-          复制
+        <button
+          type="button"
+          className="iconButton"
+          aria-label="复制 OCR 文本"
+          onClick={() => props.onCopy(props.sourceText, '已复制 OCR 文本')}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
         </button>
       </header>
       <textarea readOnly value={props.sourceText} />
@@ -95,9 +103,14 @@ function OcrResultList(props: { rows: DisplayRow[]; onCopy: CopyHandler; isLoadi
               {!item.isError ? (
                 <button
                   type="button"
+                  className="iconButton"
+                  aria-label={`复制 ${meta.label} 结果`}
                   onClick={() => props.onCopy(item.content, `已复制 ${meta.label} 结果`)}
                 >
-                  复制
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
                 </button>
               ) : null}
             </header>
@@ -171,17 +184,8 @@ export function OcrResultPanel({
 
   return (
     <aside className="ocrResultPanel" role="dialog" aria-label="OCR 结果面板">
-      <header className="ocrResultPanelHeader" data-tauri-drag-region>
-        <strong data-tauri-drag-region>截图 OCR 结果</strong>
-        <div className="ocrResultPanelActions">
-          <button type="button" onClick={handleCopyAll}>
-            复制全部
-          </button>
-          <button type="button" onClick={onClose}>
-            关闭
-          </button>
-        </div>
-      </header>
+
+      <OcrSourceBlock sourceText={sourceText} onCopy={handleCopy} />
 
       <section className="ocrResultLanguageRow">
         <span>{sourceLanguageLabel}</span>
@@ -189,7 +193,6 @@ export function OcrResultPanel({
         <span>{targetLanguageLabel}</span>
       </section>
 
-      <OcrSourceBlock sourceText={sourceText} onCopy={handleCopy} />
 
       {copyMessage ? <div className="ocrCopyTip">{copyMessage}</div> : null}
 

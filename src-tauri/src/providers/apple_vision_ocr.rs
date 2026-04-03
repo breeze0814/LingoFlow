@@ -1,4 +1,6 @@
+use std::fs;
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::{Child, Command, Output, Stdio};
 
 use async_trait::async_trait;
@@ -12,6 +14,7 @@ const PROVIDER_ID: &str = "apple_vision";
 const HELPER_EXECUTABLE: &str = "lingoflow-helper";
 const HELPER_COMMAND: &str = "ocr.recognize";
 const HELPER_PACKAGE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../platform/macos/helper");
+const HELPER_SCRATCH_SUBDIR: &str = "Library/Caches/LingoFlow/swift-helper";
 
 #[derive(Serialize)]
 struct HelperRequest {
@@ -86,9 +89,12 @@ impl AppleVisionOcrProvider {
     }
 
     fn spawn_helper_process() -> Result<Child, AppError> {
+        let scratch_path = Self::helper_scratch_path()?;
         Command::new("swift")
             .args([
                 "run",
+                "--scratch-path",
+                scratch_path.as_str(),
                 "--package-path",
                 HELPER_PACKAGE_PATH,
                 HELPER_EXECUTABLE,
@@ -104,6 +110,28 @@ impl AppleVisionOcrProvider {
                     false,
                 )
             })
+    }
+
+    fn helper_scratch_path() -> Result<String, AppError> {
+        let home = std::env::var("HOME").map_err(|error| {
+            AppError::new(
+                ErrorCode::InternalError,
+                format!("Failed to read HOME for helper scratch path: {error}"),
+                false,
+            )
+        })?;
+        let path = PathBuf::from(home).join(HELPER_SCRATCH_SUBDIR);
+        fs::create_dir_all(&path).map_err(|error| {
+            AppError::new(
+                ErrorCode::InternalError,
+                format!(
+                    "Failed to prepare helper scratch path {}: {error}",
+                    path.display()
+                ),
+                false,
+            )
+        })?;
+        Ok(path.to_string_lossy().into_owned())
     }
 
     fn encode_helper_request(request: &HelperRequest) -> Result<Vec<u8>, AppError> {

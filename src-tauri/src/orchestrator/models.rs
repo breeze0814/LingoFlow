@@ -4,6 +4,14 @@ use uuid::Uuid;
 use crate::errors::app_error::AppError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CaptureRect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskCommandPayload {
     pub text: Option<String>,
     pub source_lang: Option<String>,
@@ -43,6 +51,7 @@ pub struct TranslateTaskOptions {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct OcrTranslateTaskOptions {
+    pub source_lang: Option<String>,
     pub source_lang_hint: Option<String>,
     pub target_lang: Option<String>,
     pub provider_id: Option<String>,
@@ -59,11 +68,22 @@ pub enum TaskStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderTranslationData {
+    pub provider_id: String,
+    pub translated_text: Option<String>,
+    pub error: Option<AppError>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskData {
     pub provider_id: String,
     pub source_text: String,
     pub translated_text: Option<String>,
     pub recognized_text: Option<String>,
+    #[serde(default)]
+    pub translation_results: Vec<ProviderTranslationData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capture_rect: Option<CaptureRect>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -115,6 +135,7 @@ impl TaskRequest {
         Self::new(
             TaskType::OcrTranslate,
             TaskRequestOptions {
+                source_lang: options.source_lang,
                 source_lang_hint: options.source_lang_hint,
                 target_lang: options.target_lang,
                 translate_provider_id: options.provider_id,

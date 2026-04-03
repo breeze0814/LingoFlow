@@ -3,6 +3,7 @@ import {
   DETECTION_OPTIONS,
   DEFAULT_TOOL_PROVIDERS,
   LANGUAGE_OPTIONS,
+  OCR_PANEL_POSITION_OPTIONS,
   SettingsState,
   ShortcutId,
   ToolProviderId,
@@ -63,15 +64,6 @@ function Section(props: { title: string; children: ReactNode }) {
     <section className="settingsSection">
       <h3>{props.title}</h3>
       <div className="settingsGroup">{props.children}</div>
-    </section>
-  );
-}
-
-function PlaceholderPanel(props: { title: string; description: string }) {
-  return (
-    <section className="settingsPlaceholder">
-      <h4>{props.title}</h4>
-      <p>{props.description}</p>
     </section>
   );
 }
@@ -181,6 +173,12 @@ function renderServiceTab(current: SettingsState, onChange: SettingsUpdater) {
           checked={current.autoQueryOnOcr}
           onChange={(next) => updateSettings(current, onChange, 'autoQueryOnOcr', next)}
         />
+        <SelectRow
+          label="OCR 结果面板位置"
+          value={current.ocrPanelPosition}
+          options={OCR_PANEL_POSITION_OPTIONS}
+          onChange={(next) => updateSettings(current, onChange, 'ocrPanelPosition', next)}
+        />
         <ToggleRow
           label="粘贴后自动查询"
           checked={current.autoQueryOnPaste}
@@ -242,8 +240,5 @@ export function renderTabContent(
       />
     );
   }
-  if (tab === 'favorite') {
-    return <PlaceholderPanel title="收藏词条" description="收藏夹功能将在后续版本开放。" />;
-  }
-  return <PlaceholderPanel title="禁止名单" description="可在此维护忽略翻译与过滤规则。" />;
+  return null;
 }

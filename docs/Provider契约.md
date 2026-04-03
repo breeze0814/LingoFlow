@@ -116,7 +116,5 @@ async fn recognize(request: OcrRequest) -> Result<OcrResult, ProviderError>;
 - Provider 只能接收已经解析好的配置，不自己读取配置源。
 
 ## 12. V1 推荐 Provider
-- 翻译：`openai_compatible` + `secondary_online_provider`
+- 翻译：`youdao_web`、`deepl_free`、`azure_translator`、`google_translate`、`tencent_tmt`、`baidu_fanyi`
 - OCR：`apple_vision`
-
-这里的 `secondary_online_provider` 是占位策略，不在契约层绑定到某个具体厂商。

@@ -1,292 +1,625 @@
+/* ============================================
+   设置面板 - 「流动的语言」美学
+   ============================================ */
+
 .settingsPanel {
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: 0;
-  max-height: calc(100vh - 44px);
+  max-height: 100vh;
   overflow: auto;
-  background: var(--color-surface-muted);
+  background: var(--color-background);
+  font-family: var(--font-family);
+  position: relative;
 }
 
+/* 隐藏滚动条 */
 .settingsPanel::-webkit-scrollbar {
-  width: 10px;
+  display: none;
 }
 
-.settingsPanel::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background: rgb(128 142 167 / 55%);
-  background-clip: content-box;
+.settingsPanel {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+
+/* ============================================
+   标签页导航 - 流体胶囊设计
+   ============================================ */
 
 .settingsTabs {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 10;
   display: flex;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 12px 8px;
-  background: linear-gradient(180deg, rgb(42 51 66 / 98%) 0%, rgb(35 43 56 / 96%) 100%);
+  gap: var(--spacing-xs);
+  padding: var(--spacing-lg);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
 
 .settingsTabButton {
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-  min-width: 68px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  padding: 8px 6px 7px;
-  color: var(--color-muted);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 72px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: var(--radius-lg);
   background: transparent;
-  font-size: 12px;
-  line-height: 1;
+  color: var(--color-text-light);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-family);
+  line-height: 1.2;
   cursor: pointer;
-  transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease,
-    box-shadow 180ms ease;
+  transition: all var(--transition-normal);
+  overflow: hidden;
+}
+
+/* 标签页背景光晕效果 */
+.settingsTabButton::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(
+    circle at center,
+    rgba(59, 130, 246, 0.08) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.settingsTabButton:hover::before {
+  opacity: 1;
 }
 
 .settingsTabButton:hover {
-  border-color: rgb(82 97 119 / 95%);
-  background: rgb(49 58 74 / 92%);
-  color: #c6d3e8;
+  color: var(--color-text);
+  transform: translateY(-1px);
 }
 
+/* 激活状态 - 渐变胶囊 */
 .settingsTabs .tabActive {
-  border-color: rgb(50 118 235 / 88%);
-  background: linear-gradient(180deg, rgb(39 114 235 / 24%) 0%, rgb(30 88 185 / 20%) 100%);
-  color: #51a4ff;
-  box-shadow: inset 0 0 0 1px rgb(48 126 245 / 24%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow:
+    0 4px 12px rgba(59, 130, 246, 0.25),
+    0 2px 6px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.settingsTabs .tabActive::before {
+  opacity: 0;
+}
+
+.settingsTabs .tabActive:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow:
+    0 6px 16px rgba(59, 130, 246, 0.3),
+    0 3px 8px rgba(59, 130, 246, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .tabIcon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   fill: currentColor;
+  transition: transform var(--transition-bounce);
 }
 
+.settingsTabButton:hover .tabIcon {
+  transform: scale(1.1);
+}
+
+.settingsTabs .tabActive .tabIcon {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* ============================================
+   设置内容区域
+   ============================================ */
+
 .settingsBody {
-  padding: 18px;
+  padding: var(--spacing-xl);
   display: grid;
-  gap: 16px;
+  gap: var(--spacing-xl);
+  animation: fadeInUp 400ms var(--transition-smooth);
+  background: var(--color-background);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .settingsSection {
   display: grid;
-  gap: 10px;
+  gap: var(--spacing-lg);
 }
 
 .settingsSection h3 {
   margin: 0;
-  font-size: 15px;
-  line-height: 1;
-  color: #d6e2f5;
-  letter-spacing: 0.01em;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+  color: var(--color-text);
+  letter-spacing: -0.01em;
 }
+
+/* ============================================
+   快捷键设置面板 - 专业控制台美学
+   ============================================ */
 
 .settingsShortcutPanel {
   display: grid;
-  gap: 10px;
+  gap: var(--spacing-xl);
 }
 
 .settingsShortcutPanel h3 {
   margin: 0;
-  font-size: 15px;
-  color: #d6e2f5;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  letter-spacing: -0.02em;
 }
 
+/* 提示信息 - 状态指示器样式 */
 .settingsShortcutNote {
   margin: 0;
-  font-size: 12px;
-  color: var(--color-muted);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-left: 3px solid #3b82f6;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  line-height: var(--line-height-body);
+  font-family: var(--font-family-mono);
+  transition: all var(--transition-normal);
+}
+
+.settingsShortcutPanel[data-shortcut-recording="true"] .settingsShortcutNote {
+  border-left-color: #f59e0b;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, transparent 100%);
+  color: #fbbf24;
+  animation: notePulse 2s ease-in-out infinite;
+}
+
+@keyframes notePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .settingsShortcutForm {
   display: grid;
-  gap: 10px;
+  gap: var(--spacing-lg);
 }
 
+/* 快捷键字段 - 精密控制台卡片 */
 .settingsShortcutField {
   display: grid;
-  gap: 6px;
+  grid-template-columns: 140px 1fr;
+  grid-template-rows: auto auto;
+  gap: var(--spacing-md) var(--spacing-lg);
+  align-items: center;
   border: 1px solid var(--color-border);
-  border-radius: 9px;
-  padding: 10px 12px;
-  background: rgb(40 48 62 / 95%);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  background: var(--color-surface);
+  transition: all var(--transition-normal);
+  position: relative;
 }
 
+.settingsShortcutField::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  pointer-events: none;
+}
+
+.settingsShortcutField:hover::after {
+  opacity: 1;
+}
+
+.settingsShortcutField:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* 操作标签 - 左侧固定宽度 */
 .settingsShortcutLabel {
-  color: #d8e3f6;
-  font-size: 14px;
-  font-weight: 600;
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
 }
 
+/* 快捷键绑定行 - 右侧主要区域 */
 .settingsShortcutBindingRow {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-md);
 }
 
+/* 快捷键显示 - 键帽样式 */
 .settingsShortcutValue {
   flex: 1;
-  min-height: 34px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 8px;
-  padding: 7px 9px;
-  color: #dde7f7;
-  background: rgb(35 43 56 / 95%);
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--spacing-lg);
+  color: var(--color-text);
+  background: linear-gradient(180deg, #1a1f2a 0%, #141821 100%);
   font-size: 13px;
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.03em;
   display: flex;
   align-items: center;
+  transition: all var(--transition-normal);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
+.settingsShortcutValue::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
+}
+
+/* 录制状态 - 琥珀色脉冲 */
 .settingsShortcutValueRecording {
-  border-color: rgb(64 141 255 / 96%);
-  color: #73b6ff;
-  background: rgb(35 58 92 / 88%);
+  border-color: #f59e0b;
+  color: #fbbf24;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+  box-shadow:
+    0 0 0 3px rgba(245, 158, 11, 0.2),
+    inset 0 2px 4px rgba(245, 158, 11, 0.2),
+    inset 0 -1px 0 rgba(251, 191, 36, 0.3),
+    0 4px 12px rgba(245, 158, 11, 0.3);
+  animation: recordingPulse 1.5s ease-in-out infinite;
 }
 
+@keyframes recordingPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px rgba(245, 158, 11, 0.3),
+      inset 0 2px 4px rgba(245, 158, 11, 0.2),
+      inset 0 -1px 0 rgba(251, 191, 36, 0.3),
+      0 4px 12px rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(245, 158, 11, 0),
+      inset 0 2px 4px rgba(245, 158, 11, 0.2),
+      inset 0 -1px 0 rgba(251, 191, 36, 0.3),
+      0 6px 16px rgba(245, 158, 11, 0.5);
+  }
+}
+
+/* 修改按钮 - 精密控制器样式 */
 .settingsShortcutEditButton {
-  border: 1px solid rgb(82 97 119 / 95%);
-  border-radius: 8px;
-  padding: 7px 10px;
-  min-width: 66px;
-  color: #c8d7ee;
-  background: rgb(51 60 78 / 92%);
-  font-size: 12px;
-  line-height: 1;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 11px 20px;
+  min-width: 80px;
+  color: var(--color-text-light);
+  background: linear-gradient(180deg, #2a3441 0%, #242c38 100%);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  font-family: var(--font-family);
+  line-height: 1.2;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    color 180ms ease;
+  transition: all var(--transition-normal);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.settingsShortcutEditButton::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.settingsShortcutEditButton:hover::before {
+  opacity: 1;
 }
 
 .settingsShortcutEditButton:hover {
-  border-color: rgb(101 121 149 / 95%);
-  background: rgb(59 70 90 / 94%);
-  color: #e0ebfb;
+  border-color: #3b82f6;
+  color: #60a5fa;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(96, 165, 250, 0.1),
+    0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+.settingsShortcutEditButton:active {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* 激活状态 - 琥珀色高亮 */
 .settingsShortcutEditButtonActive {
-  border-color: rgb(64 141 255 / 90%);
-  color: #73b6ff;
-  background: rgb(35 58 92 / 88%);
+  border-color: #f59e0b;
+  color: #fbbf24;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.2) 100%);
+  box-shadow:
+    0 0 0 3px rgba(245, 158, 11, 0.2),
+    inset 0 1px 0 rgba(251, 191, 36, 0.3),
+    0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
-.settingsShortcutDescription {
-  color: var(--color-muted);
-  font-size: 12px;
-  line-height: 1.4;
+.settingsShortcutEditButtonActive::before {
+  opacity: 0;
 }
+
+.settingsShortcutEditButtonActive:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(217, 119, 6, 0.25) 100%);
+  box-shadow:
+    0 0 0 3px rgba(245, 158, 11, 0.3),
+    inset 0 1px 0 rgba(251, 191, 36, 0.4),
+    0 6px 16px rgba(245, 158, 11, 0.5);
+}
+
+/* 描述文本 - 跨两列 */
+.settingsShortcutDescription {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid rgba(58, 69, 85, 0.5);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-body);
+}
+
+/* ============================================
+   占位符区域
+   ============================================ */
 
 .settingsPlaceholder {
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  padding: 16px;
-  background: rgb(40 48 62 / 95%);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2xl);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(248, 250, 252, 0.4) 100%
+  );
+  text-align: center;
 }
 
 .settingsPlaceholder h4 {
   margin: 0;
-  font-size: 15px;
-  color: #d6e2f5;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
 }
 
 .settingsPlaceholder p {
-  margin: 7px 0 0;
-  color: var(--color-muted);
-  line-height: 1.5;
-  font-size: 13px;
+  margin: var(--spacing-sm) 0 0;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-body);
+  font-size: var(--font-size-body);
 }
+
+/* ============================================
+   设置分组卡片 - 流体容器
+   ============================================ */
 
 .settingsGroup {
   border: 1px solid var(--color-border);
-  border-radius: 9px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  background: rgb(40 48 62 / 95%);
+  background: var(--color-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all var(--transition-normal);
+}
+
+.settingsGroup:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border-color: var(--color-border-hover);
 }
 
 .settingRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 11px 12px;
-  border-top: 1px solid rgb(67 78 97 / 95%);
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
+  transition: all var(--transition-fast);
+  position: relative;
 }
 
 .settingRow:first-child {
-  border-top: 0;
+  border-top: none;
+}
+
+/* 悬浮渐变背景 */
+.settingRow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(59, 130, 246, 0.03) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.settingRow:hover::before {
+  opacity: 1;
+}
+
+.settingRow:hover {
+  background: var(--color-surface-hover);
 }
 
 .settingRow span {
-  color: #cfd8e8;
-  font-size: 14px;
-  line-height: 1.45;
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  font-weight: var(--font-weight-normal);
 }
+
+/* ============================================
+   表单元素 - 下拉选择
+   ============================================ */
 
 .settingRow select {
   min-width: 190px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 8px;
-  padding: 6px 9px;
-  color: #dde7f7;
-  background: rgb(35 43 56 / 95%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+  font-size: var(--font-size-body);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.settingRow select:hover {
+  border-color: var(--color-border-hover);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.settingRow select:focus {
+  border-color: var(--color-primary);
+  box-shadow:
+    var(--shadow-focus),
+    inset 0 1px 2px rgba(59, 130, 246, 0.1);
 }
 
 .settingSwitchRow span {
-  padding-right: 8px;
+  padding-right: var(--spacing-sm);
 }
 
+/* ============================================
+   开关组件 - 流体切换
+   ============================================ */
+
 .switch {
-  width: 34px;
-  height: 20px;
-  border: 1px solid rgb(111 122 139 / 72%);
-  border-radius: 999px;
-  background: rgb(121 130 143 / 58%);
-  padding: 1px;
+  width: 48px;
+  height: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+  padding: 3px;
   cursor: pointer;
-  transition:
-    background-color 180ms ease,
-    border-color 180ms ease;
+  transition: all var(--transition-normal);
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.switch:hover {
+  border-color: var(--color-border-hover);
+  background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
 }
 
 .switchKnob {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #e6edf8;
-  transition: transform 180ms ease;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-bounce);
 }
 
+/* 开启状态 - 渐变蓝色 */
 .switchOn {
-  border-color: transparent;
-  background: linear-gradient(140deg, #2f86ff 0%, #3f9cff 100%);
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.15),
+    0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.switchOn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    0 0 16px rgba(59, 130, 246, 0.4);
 }
 
 .switchOn .switchKnob {
-  transform: translateX(14px);
+  transform: translateX(22px);
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.15);
 }
+
+/* ============================================
+   响应式设计
+   ============================================ */
 
 @media (max-width: 760px) {
   .settingsTabs {
     justify-content: flex-start;
     overflow-x: auto;
     scrollbar-width: thin;
+    gap: var(--spacing-xs);
   }
 
   .settingsBody {
-    padding: 12px;
+    padding: var(--spacing-lg);
   }
 
   .settingRow {
     flex-direction: column;
     align-items: flex-start;
+    gap: var(--spacing-md);
   }
 
   .settingRow select {

@@ -52,4 +52,15 @@ describe('SettingsPanel', () => {
       },
     });
   });
+
+  it('updates OCR panel position', () => {
+    const onChange = vi.fn();
+    render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('tab', { name: '服务' }));
+    fireEvent.change(screen.getByLabelText('OCR 结果面板位置'), { target: { value: 'center' } });
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SETTINGS,
+      ocrPanelPosition: 'center',
+    });
+  });
 });

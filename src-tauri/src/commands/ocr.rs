@@ -21,6 +21,7 @@ pub async fn ocr_translate(
     payload: TaskCommandPayload,
 ) -> Result<TaskResponse, AppError> {
     let request = TaskRequest::ocr_translate(OcrTranslateTaskOptions {
+        source_lang: payload.source_lang,
         source_lang_hint: payload.source_lang_hint,
         target_lang: payload.target_lang,
         provider_id: payload.provider_id,

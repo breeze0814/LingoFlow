@@ -4,10 +4,12 @@ use tokio::sync::Mutex;
 
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
-use crate::orchestrator::models::{TaskData, TaskRequest, TaskResponse, TaskStatus, TaskType};
+use crate::orchestrator::models::{
+    ProviderTranslationData, TaskData, TaskRequest, TaskResponse, TaskStatus, TaskType,
+};
 use crate::platform::capture::capture_interactive_image;
 use crate::providers::registry::ProviderRegistry;
-use crate::providers::traits::{OcrRequest, TranslateRequest};
+use crate::providers::traits::{OcrRequest, TranslateProvider, TranslateRequest};
 use crate::storage::config_store::ConfigStore;
 
 const DEFAULT_TRANSLATE_TIMEOUT_MS: u64 = 15000;
@@ -16,6 +18,7 @@ const DEFAULT_OCR_TIMEOUT_MS: u64 = 20000;
 struct OcrExecution {
     provider_id: String,
     recognized_text: String,
+    capture_rect: Option<crate::orchestrator::models::CaptureRect>,
 }
 
 pub struct Orchestrator {
@@ -78,15 +81,26 @@ impl Orchestrator {
         };
 
         match provider.translate(provider_request).await {
-            Ok(result) => Ok(Self::success(
-                task_id,
-                TaskData {
-                    provider_id: result.provider_id,
-                    source_text: result.source_text,
-                    translated_text: Some(result.translated_text),
-                    recognized_text: None,
-                },
-            )),
+            Ok(result) => {
+                let provider_id = result.provider_id;
+                let source_text = result.source_text;
+                let translated_text = result.translated_text;
+                Ok(Self::success(
+                    task_id,
+                    TaskData {
+                        provider_id: provider_id.clone(),
+                        source_text,
+                        translated_text: Some(translated_text.clone()),
+                        recognized_text: None,
+                        translation_results: vec![ProviderTranslationData {
+                            provider_id,
+                            translated_text: Some(translated_text),
+                            error: None,
+                        }],
+                        capture_rect: None,
+                    },
+                ))
+            }
             Err(error) => Ok(Self::failed(task_id, error)),
         }
     }
@@ -125,6 +139,8 @@ impl Orchestrator {
                 source_text: ocr.recognized_text.clone(),
                 translated_text: None,
                 recognized_text: Some(ocr.recognized_text),
+                translation_results: vec![],
+                capture_rect: ocr.capture_rect,
             },
         ))
     }
@@ -142,37 +158,44 @@ impl Orchestrator {
         };
         println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
 
-        let provider = match self.pick_translate_provider(request.translate_provider_id.as_deref())
-        {
-            Ok(provider) => provider,
-            Err(error) => return Ok(Self::failed(task_id, error)),
-        };
+        let providers =
+            match self.pick_translate_providers(request.translate_provider_id.as_deref()) {
+                Ok(providers) => providers,
+                Err(error) => return Ok(Self::failed(task_id, error)),
+            };
         let source_lang = request
             .source_lang
             .unwrap_or_else(|| self.config_store.get().app.source_lang);
         let target_lang = request
             .target_lang
             .unwrap_or_else(|| self.config_store.get().app.target_lang);
+        let translation_results = self
+            .translate_with_providers(
+                &providers,
+                &ocr.recognized_text,
+                source_lang.as_str(),
+                target_lang.as_str(),
+            )
+            .await;
 
-        let provider_request = TranslateRequest {
-            text: ocr.recognized_text.clone(),
-            source_lang,
-            target_lang,
-            timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
+        let Some(primary_result) = Self::first_successful_translation(&translation_results) else {
+            return Ok(Self::failed(
+                task_id,
+                Self::first_translation_error(&translation_results),
+            ));
         };
 
-        match provider.translate(provider_request).await {
-            Ok(result) => Ok(Self::success(
-                task_id,
-                TaskData {
-                    provider_id: result.provider_id,
-                    source_text: ocr.recognized_text.clone(),
-                    translated_text: Some(result.translated_text),
-                    recognized_text: Some(ocr.recognized_text),
-                },
-            )),
-            Err(error) => Ok(Self::failed(task_id, error)),
-        }
+        Ok(Self::success(
+            task_id,
+            TaskData {
+                provider_id: primary_result.provider_id.clone(),
+                source_text: ocr.recognized_text.clone(),
+                translated_text: primary_result.translated_text.clone(),
+                recognized_text: Some(ocr.recognized_text),
+                translation_results,
+                capture_rect: ocr.capture_rect,
+            },
+        ))
     }
 
     fn accepted(task_id: String) -> TaskResponse {
@@ -233,10 +256,29 @@ impl Orchestrator {
         self.providers.default_translate_provider().ok_or_else(|| {
             AppError::new(
                 ErrorCode::ProviderNotConfigured,
-                "No translate provider configured. Please set OPENAI_API_KEY.",
+                "No translate provider configured. Please configure at least one API provider key.",
                 false,
             )
         })
+    }
+
+    fn pick_translate_providers(
+        &self,
+        requested_provider_id: Option<&str>,
+    ) -> Result<Vec<(String, Arc<dyn TranslateProvider>)>, AppError> {
+        if let Some(provider_id) = requested_provider_id {
+            let provider = self.pick_translate_provider(Some(provider_id))?;
+            return Ok(vec![(provider_id.to_string(), provider)]);
+        }
+        let providers = self.providers.all_translate_providers();
+        if providers.is_empty() {
+            return Err(AppError::new(
+                ErrorCode::ProviderNotConfigured,
+                "No translate provider configured. Please configure at least one API provider key.",
+                false,
+            ));
+        }
+        Ok(providers)
     }
 
     fn pick_ocr_provider(
@@ -256,18 +298,21 @@ impl Orchestrator {
         self.providers.default_ocr_provider().ok_or_else(|| {
             AppError::new(
                 ErrorCode::ProviderNotConfigured,
-                "No OCR provider configured. Please set OPENAI_API_KEY.",
+                "No OCR provider configured.",
                 false,
             )
         })
     }
 
     async fn execute_ocr_capture(&self, request: &TaskRequest) -> Result<OcrExecution, AppError> {
-        let image_path = capture_interactive_image()?;
+        let (image_path, capture_rect) = capture_interactive_image()?;
         let image_path_string = image_path.to_string_lossy().into_owned();
         let result = self.run_ocr_provider(request, &image_path_string).await;
         let _ = std::fs::remove_file(image_path);
-        result
+        result.map(|mut ocr| {
+            ocr.capture_rect = capture_rect;
+            ocr
+        })
     }
 
     async fn run_ocr_provider(
@@ -293,6 +338,58 @@ impl Orchestrator {
         Ok(OcrExecution {
             provider_id: ocr_result.provider_id,
             recognized_text,
+            capture_rect: None,
         })
+    }
+
+    async fn translate_with_providers(
+        &self,
+        providers: &[(String, Arc<dyn TranslateProvider>)],
+        text: &str,
+        source_lang: &str,
+        target_lang: &str,
+    ) -> Vec<ProviderTranslationData> {
+        let mut results = Vec::with_capacity(providers.len());
+        for (provider_id, provider) in providers {
+            let request = TranslateRequest {
+                text: text.to_string(),
+                source_lang: source_lang.to_string(),
+                target_lang: target_lang.to_string(),
+                timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
+            };
+            let result = match provider.translate(request).await {
+                Ok(translation) => ProviderTranslationData {
+                    provider_id: provider_id.clone(),
+                    translated_text: Some(translation.translated_text),
+                    error: None,
+                },
+                Err(error) => ProviderTranslationData {
+                    provider_id: provider_id.clone(),
+                    translated_text: None,
+                    error: Some(error),
+                },
+            };
+            results.push(result);
+        }
+        results
+    }
+
+    fn first_successful_translation(
+        results: &[ProviderTranslationData],
+    ) -> Option<&ProviderTranslationData> {
+        results.iter().find(|item| item.error.is_none())
+    }
+
+    fn first_translation_error(results: &[ProviderTranslationData]) -> AppError {
+        results
+            .iter()
+            .find_map(|item| item.error.clone())
+            .unwrap_or_else(|| {
+                AppError::new(
+                    ErrorCode::ProviderNetworkError,
+                    "All translate providers failed without returning an explicit error",
+                    true,
+                )
+            })
     }
 }

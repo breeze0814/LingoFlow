@@ -19,6 +19,21 @@ export type TaskResult = {
   sourceText: string;
   translatedText?: string;
   recognizedText?: string;
+  translationResults?: ProviderTranslationResult[];
+  captureRect?: CaptureRect;
+};
+
+export type CaptureRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export type ProviderTranslationResult = {
+  providerId: string;
+  translatedText?: string;
+  error?: AppError;
 };
 
 export type AppError = {

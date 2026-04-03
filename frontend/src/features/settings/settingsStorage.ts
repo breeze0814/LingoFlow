@@ -4,6 +4,7 @@ import {
   DEFAULT_TOOL_PROVIDERS,
   DetectionMode,
   EnglishVoice,
+  OcrPanelPosition,
   SettingsState,
   ShortcutConfig,
   ToolProviderConfig,
@@ -45,6 +46,19 @@ function parseEnglishVoice(value: unknown): EnglishVoice {
     return value;
   }
   throw new Error('invalid settings field: englishVoice');
+}
+
+function parseOcrPanelPosition(value: unknown): OcrPanelPosition {
+  if (value === undefined) {
+    return DEFAULT_SETTINGS.ocrPanelPosition;
+  }
+  if (value === 'cursor') {
+    return 'center';
+  }
+  if (value === 'top_left' || value === 'top_right' || value === 'center') {
+    return value;
+  }
+  throw new Error('invalid settings field: ocrPanelPosition');
 }
 
 function parseShortcuts(value: unknown): ShortcutConfig {
@@ -102,6 +116,7 @@ function parseSettings(record: SettingsRecord): SettingsState {
     primaryLanguage: parseString(record.primaryLanguage, 'primaryLanguage'),
     secondaryLanguage: parseString(record.secondaryLanguage, 'secondaryLanguage'),
     detectionMode: parseDetectionMode(record.detectionMode),
+    ocrPanelPosition: parseOcrPanelPosition(record.ocrPanelPosition),
     clearInputOnTranslate: parseBoolean(record.clearInputOnTranslate, 'clearInputOnTranslate'),
     keepResultForSelection: parseBoolean(record.keepResultForSelection, 'keepResultForSelection'),
     autoSelectQueryTextOnOpen: parseBoolean(

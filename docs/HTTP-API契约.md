@@ -59,7 +59,7 @@
   "text": "hello world",
   "source_lang": "auto",
   "target_lang": "zh-CN",
-  "provider_id": "openai_compatible"
+  "provider_id": "deepl_free"
 }
 ```
 
@@ -74,7 +74,7 @@
     "translated_text": "你好，世界",
     "detected_source_lang": "en",
     "target_lang": "zh-CN",
-    "provider_id": "openai_compatible"
+    "provider_id": "deepl_free"
   }
 }
 ```

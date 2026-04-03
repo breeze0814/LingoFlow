@@ -1,6 +1,7 @@
 export type DetectionMode = 'system_only' | 'auto';
 
 export type EnglishVoice = 'us' | 'uk';
+export type OcrPanelPosition = 'top_left' | 'top_right' | 'center';
 
 export type ShortcutId =
   | 'inputTranslate'
@@ -40,6 +41,7 @@ export type SettingsState = {
   primaryLanguage: string;
   secondaryLanguage: string;
   detectionMode: DetectionMode;
+  ocrPanelPosition: OcrPanelPosition;
   clearInputOnTranslate: boolean;
   keepResultForSelection: boolean;
   autoSelectQueryTextOnOpen: boolean;
@@ -76,6 +78,12 @@ export const DETECTION_OPTIONS: Option[] = [
 export const VOICE_OPTIONS: Option[] = [
   { value: 'us', label: '美音' },
   { value: 'uk', label: '英音' },
+];
+
+export const OCR_PANEL_POSITION_OPTIONS: Option[] = [
+  { value: 'top_left', label: '左上角' },
+  { value: 'top_right', label: '右上角' },
+  { value: 'center', label: '中间' },
 ];
 
 export const DEFAULT_SHORTCUTS: ShortcutConfig = {
@@ -133,6 +141,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   primaryLanguage: 'zh-CN',
   secondaryLanguage: 'en',
   detectionMode: 'system_only',
+  ocrPanelPosition: 'top_right',
   clearInputOnTranslate: false,
   keepResultForSelection: true,
   autoSelectQueryTextOnOpen: false,

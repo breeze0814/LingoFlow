@@ -9,15 +9,17 @@ import {
   triggerOcrTranslate,
   triggerSelectionTranslate,
 } from '../features/task/taskService';
-import { SettingsState } from '../features/settings/settingsTypes';
+import { LANGUAGE_OPTIONS, SettingsState } from '../features/settings/settingsTypes';
 import {
   loadSettingsFromStorage,
   saveSettingsToStorage,
 } from '../features/settings/settingsStorage';
 import { isTrayActionPayload, TRAY_ACTION_EVENT, TrayAction } from '../features/tray/trayEvents';
-import { TaskState, TaskType } from '../features/task/taskTypes';
+import { TaskResult, TaskState, TaskType } from '../features/task/taskTypes';
 import { matchesShortcut } from '../features/settings/shortcutMatcher';
 import { reportTask } from '../features/task/taskReporter';
+import { showOcrResultWindow } from '../features/ocr/ocrResultWindowService';
+import { OcrResultWindowPayload } from '../features/ocr/ocrResultWindowBridge';
 
 function makeTaskId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -37,6 +39,23 @@ function makeUiError(taskType: TaskType, message: string): TaskState {
       message,
       retryable: true,
     },
+  };
+}
+
+function languageLabel(code: string): string {
+  const found = LANGUAGE_OPTIONS.find((item) => item.value === code);
+  return found ? found.label : code;
+}
+
+function buildOcrWindowPayload(
+  result: TaskResult,
+  sourceLanguageLabel: string,
+  targetLanguageLabel: string,
+): OcrResultWindowPayload {
+  return {
+    result,
+    sourceLanguageLabel,
+    targetLanguageLabel,
   };
 }
 
@@ -80,20 +99,51 @@ export function App() {
     [],
   );
 
+  const presentOcrResultWindow = useCallback(
+    async (taskType: TaskType, result: TaskResult | undefined) => {
+      if (!result) {
+        console.log('[presentOcrResultWindow] result is undefined');
+        return;
+      }
+      try {
+        console.log('[presentOcrResultWindow] result:', result);
+        console.log('[presentOcrResultWindow] captureRect:', result.captureRect);
+        const payload = buildOcrWindowPayload(
+          result,
+          languageLabel(settings.primaryLanguage),
+          languageLabel(settings.secondaryLanguage),
+        );
+        console.log('[presentOcrResultWindow] payload:', payload);
+        await showOcrResultWindow(payload);
+        console.log('[presentOcrResultWindow] window shown successfully');
+      } catch (error) {
+        console.error('[presentOcrResultWindow] error:', error);
+        setTaskState(makeUiError(taskType, `打开 OCR 结果窗口失败: ${String(error)}`));
+      }
+    },
+    [settings.primaryLanguage, settings.secondaryLanguage],
+  );
+
   const runSelectionTranslate = useCallback(async () => {
     const next = await triggerSelectionTranslate(taskState, targetLang);
     applyTaskState(next);
   }, [applyTaskState, targetLang, taskState]);
 
   const runOcrTranslate = useCallback(async () => {
-    const next = await triggerOcrTranslate(taskState, targetLang, settings.primaryLanguage);
+    const next = await triggerOcrTranslate(taskState, targetLang, 'auto', settings.primaryLanguage);
     applyTaskState(next);
-  }, [applyTaskState, settings.primaryLanguage, targetLang, taskState]);
+    if (next.action === 'succeeded') {
+      await presentOcrResultWindow(next.payload.taskType, next.payload.result);
+    }
+  }, [applyTaskState, presentOcrResultWindow, settings.primaryLanguage, targetLang, taskState]);
 
   const runOcrRecognize = useCallback(async () => {
     const next = await triggerOcrRecognize(taskState, settings.primaryLanguage);
     applyTaskState(next);
-  }, [applyTaskState, settings.primaryLanguage, taskState]);
+    if (next.action === 'succeeded') {
+      await presentOcrResultWindow(next.payload.taskType, next.payload.result);
+    }
+  }, [applyTaskState, presentOcrResultWindow, settings.primaryLanguage, taskState]);
 
   const runInputTranslate = useCallback(
     async (text: string) => {
@@ -268,8 +318,10 @@ export function App() {
 
   return (
     <MainLayout>
-      <section className="settingsHome">
-        <SettingsPanel value={settings} onChange={setSettings} />
+      <section className="workspace">
+        <section className="settingsHome">
+          <SettingsPanel value={settings} onChange={setSettings} />
+        </section>
       </section>
       <InputDialog
         open={showInput}

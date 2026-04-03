@@ -53,7 +53,6 @@ mod desktop {
                 emit_action(app, MENU_INPUT_TRANSLATE);
             }
             MENU_OCR_TRANSLATE => {
-                show_main_window(app);
                 emit_action(app, MENU_OCR_TRANSLATE);
             }
             MENU_SELECTION_TRANSLATE => {
@@ -69,7 +68,6 @@ mod desktop {
                 emit_action(app, MENU_SHOW_MAIN_WINDOW);
             }
             MENU_OCR_RECOGNIZE => {
-                show_main_window(app);
                 emit_action(app, MENU_OCR_RECOGNIZE);
             }
             MENU_OPEN_SETTINGS => {

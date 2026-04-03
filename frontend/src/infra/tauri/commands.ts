@@ -15,6 +15,7 @@ type OcrRecognizeInput = {
 };
 
 type OcrTranslateInput = {
+  sourceLang?: string;
   targetLang: string;
   sourceLangHint?: string;
 };
@@ -34,6 +35,11 @@ type CommandTaskData = {
   source_text: string;
   translated_text?: string;
   recognized_text?: string;
+  translation_results?: {
+    provider_id: string;
+    translated_text?: string;
+    error?: CommandError | null;
+  }[];
 };
 
 type CommandTaskResponse = {
@@ -71,6 +77,7 @@ export const commandsClient = {
   ocrTranslate(input: OcrTranslateInput): Promise<CommandTaskResponse> {
     return invoke('ocr_translate', {
       payload: {
+        source_lang: input.sourceLang,
         target_lang: input.targetLang,
         source_lang_hint: input.sourceLangHint,
       },

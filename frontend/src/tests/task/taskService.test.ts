@@ -12,6 +12,12 @@ vi.mock('../../infra/tauri/commands', () => ({
         provider_id: 'openai_compatible',
         source_text: 'hello',
         translated_text: '你好',
+        translation_results: [
+          {
+            provider_id: 'openai_compatible',
+            translated_text: '你好',
+          },
+        ],
       },
     }),
   },
@@ -24,5 +30,8 @@ describe('taskService', () => {
       targetLang: 'zh-CN',
     });
     expect(result.action).toBe('succeeded');
+    if (result.action === 'succeeded') {
+      expect(result.payload.result?.translationResults?.[0]?.providerId).toBe('openai_compatible');
+    }
   });
 });

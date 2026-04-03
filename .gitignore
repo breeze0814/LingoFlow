@@ -1,6 +1,6 @@
 # macOS
 .DS_Store
-
+.claude
 # Logs
 *.log
 npm-debug.log*
