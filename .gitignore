@@ -1,6 +1,8 @@
 # macOS
 .DS_Store
 .claude
+.spec-workflow
+docs
 # Logs
 *.log
 npm-debug.log*
