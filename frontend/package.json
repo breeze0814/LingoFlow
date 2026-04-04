@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "npm run sync:tesseract-assets && vite",
+    "build": "npm run sync:tesseract-assets && tsc -b && vite build",
+    "postinstall": "npm run sync:tesseract-assets",
+    "sync:tesseract-assets": "node ./scripts/sync-tesseract-assets.mjs",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint --config eslint.config.mjs \"src/**/*.{ts,tsx}\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.{json,html}\"",
@@ -15,8 +17,15 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
+    "@tesseract.js-data/chi_sim": "^1.0.0",
+    "@tesseract.js-data/deu": "^1.0.0",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/fra": "^1.0.0",
+    "@tesseract.js-data/jpn": "^1.0.0",
+    "@tesseract.js-data/kor": "^1.0.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
