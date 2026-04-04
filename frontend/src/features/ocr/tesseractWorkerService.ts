@@ -1,4 +1,5 @@
 import { createWorker } from 'tesseract.js';
+import { normalizeOcrText } from './ocrTextNormalization';
 import { resolveTesseractLanguages } from './ocrRuntimeLanguage';
 
 const TESSERACT_WORKER_PATH = '/tesseract/worker.min.js';
@@ -48,7 +49,7 @@ export async function recognizeImageWithTesseract(
   const languages = resolveTesseractLanguages(sourceLangHint);
   const worker = await ensureWorker(languages);
   const result = await worker.recognize(imageDataUrl);
-  return result.data.text.trim();
+  return normalizeOcrText(result.data.text);
 }
 
 export async function terminateTesseractWorker() {
