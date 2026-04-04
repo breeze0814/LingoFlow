@@ -20,6 +20,25 @@ type OcrTranslateInput = {
   sourceLangHint?: string;
 };
 
+type CaptureRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type OcrRecognizeRegionInput = {
+  captureRect: CaptureRect;
+  sourceLangHint?: string;
+};
+
+type OcrTranslateRegionInput = {
+  captureRect: CaptureRect;
+  sourceLang?: string;
+  targetLang: string;
+  sourceLangHint?: string;
+};
+
 type DebugPrintInput = {
   message: string;
 };
@@ -74,9 +93,27 @@ export const commandsClient = {
       },
     });
   },
+  ocrRecognizeRegion(input: OcrRecognizeRegionInput): Promise<CommandTaskResponse> {
+    return invoke('ocr_recognize_region', {
+      payload: {
+        capture_rect: input.captureRect,
+        source_lang_hint: input.sourceLangHint,
+      },
+    });
+  },
   ocrTranslate(input: OcrTranslateInput): Promise<CommandTaskResponse> {
     return invoke('ocr_translate', {
       payload: {
+        source_lang: input.sourceLang,
+        target_lang: input.targetLang,
+        source_lang_hint: input.sourceLangHint,
+      },
+    });
+  },
+  ocrTranslateRegion(input: OcrTranslateRegionInput): Promise<CommandTaskResponse> {
+    return invoke('ocr_translate_region', {
+      payload: {
+        capture_rect: input.captureRect,
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
         source_lang_hint: input.sourceLangHint,

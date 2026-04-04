@@ -183,7 +183,7 @@ mod desktop {
     }
 
     fn hide_interface<R: Runtime>(app: &AppHandle<R>) {
-        for label in ["main", "ocr_result"] {
+        for label in ["main", "ocr_result", "screenshot_overlay"] {
             let Some(window) = app.get_webview_window(label) else {
                 continue;
             };

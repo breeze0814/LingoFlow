@@ -24,6 +24,10 @@ import {
   createOcrRecognizePayload,
   createOcrTranslatePayload,
 } from '../features/ocr/translationWorkspacePayload';
+import {
+  primeScreenshotOverlayService,
+  showScreenshotOverlay,
+} from '../features/screenshot/screenshotOverlayService';
 
 function makeTaskId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -71,6 +75,13 @@ function isShortcutRecording(): boolean {
 
 function isTauriRuntime(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+function isWindowsTauriRuntime(): boolean {
+  if (!isTauriRuntime() || typeof navigator === 'undefined') {
+    return false;
+  }
+  return navigator.userAgent.includes('Windows');
 }
 
 function hasActiveModifiers(event: KeyboardEvent): boolean {
@@ -155,6 +166,17 @@ export function App() {
   }, [applyTaskState, targetLang, taskState]);
 
   const runOcrTranslate = useCallback(async () => {
+    if (isWindowsTauriRuntime()) {
+      await showScreenshotOverlay({
+        mode: 'ocr_translate',
+        sourceLanguageLabel: languageLabel(settings.primaryLanguage),
+        sourceLangHint: settings.primaryLanguage,
+        targetLang: targetLang,
+        targetLanguageCode: settings.secondaryLanguage,
+        targetLanguageLabel: languageLabel(settings.secondaryLanguage),
+      });
+      return;
+    }
     const next = await triggerOcrTranslate(taskState, targetLang, 'auto', settings.primaryLanguage);
     applyTaskState(next);
     if (next.action === 'succeeded') {
@@ -164,17 +186,34 @@ export function App() {
     applyTaskState,
     presentTranslatedTextWorkspace,
     settings.primaryLanguage,
+    settings.secondaryLanguage,
     targetLang,
     taskState,
   ]);
 
   const runOcrRecognize = useCallback(async () => {
+    if (isWindowsTauriRuntime()) {
+      await showScreenshotOverlay({
+        mode: 'ocr_recognize',
+        sourceLanguageLabel: languageLabel(settings.primaryLanguage),
+        sourceLangHint: settings.primaryLanguage,
+        targetLanguageCode: settings.secondaryLanguage,
+        targetLanguageLabel: languageLabel(settings.secondaryLanguage),
+      });
+      return;
+    }
     const next = await triggerOcrRecognize(taskState, settings.primaryLanguage);
     applyTaskState(next);
     if (next.action === 'succeeded') {
       await presentRecognizedTextWorkspace(next.payload.taskType, next.payload.result);
     }
-  }, [applyTaskState, presentRecognizedTextWorkspace, settings.primaryLanguage, taskState]);
+  }, [
+    applyTaskState,
+    presentRecognizedTextWorkspace,
+    settings.primaryLanguage,
+    settings.secondaryLanguage,
+    taskState,
+  ]);
 
   const openInputTranslateWorkspace = useCallback(async () => {
     await presentOcrResultWindow(createInputTranslatePayload(translationWorkspaceLabels()), 'input_translate');
@@ -321,6 +360,16 @@ export function App() {
       console.error('native shortcut sync failed', error);
     });
   }, [settings.shortcuts]);
+
+  useEffect(() => {
+    if (!isWindowsTauriRuntime()) {
+      return;
+    }
+
+    void primeScreenshotOverlayService().catch((error) => {
+      console.error('screenshot overlay service init failed', error);
+    });
+  }, []);
 
   useEffect(() => {
     saveSettingsToStorage(settings);

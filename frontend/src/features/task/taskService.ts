@@ -193,6 +193,23 @@ export function triggerOcrRecognize(state: TaskState, sourceLangHint?: string) {
   });
 }
 
+export function triggerOcrRecognizeRegion(
+  state: TaskState,
+  captureRect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  },
+  sourceLangHint?: string,
+) {
+  return runTask({
+    state,
+    taskType: 'ocr_recognize',
+    request: () => commandsClient.ocrRecognizeRegion({ captureRect, sourceLangHint }),
+  });
+}
+
 export function triggerOcrTranslate(
   state: TaskState,
   targetLang: string,
@@ -203,5 +220,30 @@ export function triggerOcrTranslate(
     state,
     taskType: 'ocr_translate',
     request: () => commandsClient.ocrTranslate({ sourceLang, targetLang, sourceLangHint }),
+  });
+}
+
+export function triggerOcrTranslateRegion(
+  state: TaskState,
+  captureRect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  },
+  targetLang: string,
+  sourceLang?: string,
+  sourceLangHint?: string,
+) {
+  return runTask({
+    state,
+    taskType: 'ocr_translate',
+    request: () =>
+      commandsClient.ocrTranslateRegion({
+        captureRect,
+        sourceLang,
+        targetLang,
+        sourceLangHint,
+      }),
   });
 }

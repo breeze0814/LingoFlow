@@ -1,0 +1,70 @@
+html:has(body[data-window-type='screenshot_overlay']) {
+  background: transparent;
+}
+
+body[data-window-type='screenshot_overlay'] {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+body[data-window-type='screenshot_overlay'] #root {
+  width: 100vw;
+  height: 100vh;
+}
+
+.screenshotOverlayRoot {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  cursor: crosshair;
+  background:
+    linear-gradient(rgba(11, 17, 32, 0.42), rgba(11, 17, 32, 0.42)),
+    radial-gradient(circle at top left, rgba(122, 162, 247, 0.25), transparent 24%);
+  user-select: none;
+}
+
+.screenshotOverlayRootHidden {
+  background: transparent;
+}
+
+.screenshotOverlayRootHidden .screenshotOverlayHint,
+.screenshotOverlayRootHidden .screenshotOverlaySelection {
+  opacity: 0;
+}
+
+.screenshotOverlayHint {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 14px;
+  background: rgba(8, 12, 24, 0.72);
+  color: #f8fbff;
+  backdrop-filter: blur(10px);
+}
+
+.screenshotOverlayHint strong {
+  font-size: 16px;
+}
+
+.screenshotOverlayHint span,
+.screenshotOverlayHint em {
+  font-size: 13px;
+  font-style: normal;
+  color: rgba(232, 240, 255, 0.88);
+}
+
+.screenshotOverlaySelection {
+  position: absolute;
+  border: 2px solid rgba(103, 183, 255, 0.92);
+  background: rgba(103, 183, 255, 0.14);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 18px 40px rgba(13, 38, 76, 0.25);
+  transition: opacity 60ms ease;
+}

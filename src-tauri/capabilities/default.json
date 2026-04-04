@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Capability for main window",
-  "windows": ["main", "ocr_result", "ocr_runtime"],
+  "windows": ["main", "ocr_result", "ocr_runtime", "screenshot_overlay"],
   "permissions": [
     "core:default",
     "core:webview:allow-create-webview-window",
