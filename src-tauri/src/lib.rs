@@ -16,6 +16,9 @@ use http_api::server::start_http_server;
 use tauri::Manager;
 use window_lifecycle::{close_request_action, CloseRequestAction};
 
+#[cfg(target_os = "windows")]
+pub use platform::windows_capture::{build_clipboard_wait_script, build_region_capture_script};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -63,7 +66,9 @@ pub fn run() {
         commands::translation::selection_translate,
         commands::translation::input_translate,
         commands::ocr::ocr_recognize,
-        commands::ocr::ocr_translate
+        commands::ocr::ocr_translate,
+        commands::ocr::ocr_recognize_region,
+        commands::ocr::ocr_translate_region
     ]);
 
     #[cfg(not(test))]
@@ -74,6 +79,8 @@ pub fn run() {
             commands::translation::input_translate,
             commands::ocr::ocr_recognize,
             commands::ocr::ocr_translate,
+            commands::ocr::ocr_recognize_region,
+            commands::ocr::ocr_translate_region,
             commands::tesseract_ocr::resolve_tesseract_ocr
         ]);
 

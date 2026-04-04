@@ -47,6 +47,30 @@ impl Orchestrator {
         }
     }
 
+    pub async fn execute_captured_ocr(
+        &self,
+        request: TaskRequest,
+        image_path: String,
+        capture_rect: crate::orchestrator::models::CaptureRect,
+    ) -> Result<TaskResponse, AppError> {
+        self.replace_active_task(request.task_id.clone()).await;
+        match request.task_type {
+            TaskType::OcrRecognize => {
+                self.handle_ocr_recognize_from_image(request, image_path, capture_rect)
+                    .await
+            }
+            TaskType::OcrTranslate => {
+                self.handle_ocr_translate_from_image(request, image_path, capture_rect)
+                    .await
+            }
+            _ => Err(AppError::new(
+                ErrorCode::InternalError,
+                "Captured OCR execution only supports OCR tasks",
+                false,
+            )),
+        }
+    }
+
     async fn replace_active_task(&self, next: String) {
         let mut guard = self.active_task.lock().await;
         *guard = Some(next);
@@ -134,6 +158,32 @@ impl Orchestrator {
         ))
     }
 
+    async fn handle_ocr_recognize_from_image(
+        &self,
+        request: TaskRequest,
+        image_path: String,
+        capture_rect: crate::orchestrator::models::CaptureRect,
+    ) -> Result<TaskResponse, AppError> {
+        let task_id = request.task_id.clone();
+        let ocr = match self.execute_ocr_image(&request, &image_path, capture_rect).await {
+            Ok(result) => result,
+            Err(error) => return Ok(Self::failed(task_id, error)),
+        };
+        println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
+
+        Ok(Self::success(
+            task_id,
+            TaskData {
+                provider_id: ocr.provider_id,
+                source_text: ocr.recognized_text.clone(),
+                translated_text: None,
+                recognized_text: Some(ocr.recognized_text),
+                translation_results: vec![],
+                capture_rect: ocr.capture_rect,
+            },
+        ))
+    }
+
     async fn handle_ocr_translate(&self, request: TaskRequest) -> Result<TaskResponse, AppError> {
         let task_id = request.task_id.clone();
         let ocr = match self.execute_ocr_capture(&request).await {
@@ -167,6 +217,58 @@ impl Orchestrator {
             )
             .await;
 
+        let Some(primary_result) = Self::first_successful_translation(&translation_results) else {
+            return Ok(Self::failed(
+                task_id,
+                Self::first_translation_error(&translation_results),
+            ));
+        };
+
+        Ok(Self::success(
+            task_id,
+            TaskData {
+                provider_id: primary_result.provider_id.clone(),
+                source_text: ocr.recognized_text.clone(),
+                translated_text: primary_result.translated_text.clone(),
+                recognized_text: Some(ocr.recognized_text),
+                translation_results,
+                capture_rect: ocr.capture_rect,
+            },
+        ))
+    }
+
+    async fn handle_ocr_translate_from_image(
+        &self,
+        request: TaskRequest,
+        image_path: String,
+        capture_rect: crate::orchestrator::models::CaptureRect,
+    ) -> Result<TaskResponse, AppError> {
+        let task_id = request.task_id.clone();
+        let ocr = match self.execute_ocr_image(&request, &image_path, capture_rect).await {
+            Ok(result) => result,
+            Err(error) => return Ok(Self::failed(task_id, error)),
+        };
+        println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
+
+        let providers =
+            match self.pick_translate_providers(request.translate_provider_id.as_deref()) {
+                Ok(providers) => providers,
+                Err(error) => return Ok(Self::failed(task_id, error)),
+            };
+        let source_lang = request
+            .source_lang
+            .unwrap_or_else(|| self.config_store.get().app.source_lang);
+        let target_lang = request
+            .target_lang
+            .unwrap_or_else(|| self.config_store.get().app.target_lang);
+        let translation_results = self
+            .translate_with_providers(
+                &providers,
+                &ocr.recognized_text,
+                source_lang.as_str(),
+                target_lang.as_str(),
+            )
+            .await;
         let Some(primary_result) = Self::first_successful_translation(&translation_results) else {
             return Ok(Self::failed(
                 task_id,
@@ -300,6 +402,20 @@ impl Orchestrator {
         let _ = std::fs::remove_file(image_path);
         result.map(|mut ocr| {
             ocr.capture_rect = capture_rect;
+            ocr
+        })
+    }
+
+    async fn execute_ocr_image(
+        &self,
+        request: &TaskRequest,
+        image_path: &str,
+        capture_rect: crate::orchestrator::models::CaptureRect,
+    ) -> Result<OcrExecution, AppError> {
+        let result = self.run_ocr_provider(request, image_path).await;
+        let _ = std::fs::remove_file(image_path);
+        result.map(|mut ocr| {
+            ocr.capture_rect = Some(capture_rect);
             ocr
         })
     }

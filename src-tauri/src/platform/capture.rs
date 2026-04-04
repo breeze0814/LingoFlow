@@ -1,17 +1,27 @@
 use std::path::PathBuf;
+#[cfg(target_os = "macos")]
 use std::process::Command;
 
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
 use crate::orchestrator::models::CaptureRect;
-
-const WINDOWS_CAPTURE_TIMEOUT_SECONDS: u64 = 120;
+#[cfg(target_os = "windows")]
+use crate::platform::windows_capture::{
+    capture_region_image, launch_screenclip, wait_for_clipboard_image,
+};
 
 pub fn capture_interactive_image() -> Result<(PathBuf, Option<CaptureRect>), AppError> {
     let output_path = build_capture_output_path();
     run_capture_command(&output_path)?;
     let path = ensure_capture_file_exists(output_path)?;
     Ok((path, None))
+}
+
+pub fn capture_region_image_file(capture_rect: &CaptureRect) -> Result<(PathBuf, CaptureRect), AppError> {
+    let output_path = build_capture_output_path();
+    run_region_capture_command(&output_path, capture_rect)?;
+    let path = ensure_capture_file_exists(output_path)?;
+    Ok((path, capture_rect.clone()))
 }
 
 fn build_capture_output_path() -> PathBuf {
@@ -46,14 +56,23 @@ fn run_capture_command(output_path: &PathBuf) -> Result<(), AppError> {
 }
 
 #[cfg(target_os = "windows")]
+fn run_region_capture_command(output_path: &PathBuf, capture_rect: &CaptureRect) -> Result<(), AppError> {
+    capture_region_image(output_path, capture_rect)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn run_region_capture_command(_output_path: &PathBuf, _capture_rect: &CaptureRect) -> Result<(), AppError> {
+    Err(AppError::new(
+        ErrorCode::InternalError,
+        "Direct region capture is only implemented on Windows",
+        false,
+    ))
+}
+
+#[cfg(target_os = "windows")]
 fn run_capture_command(output_path: &PathBuf) -> Result<(), AppError> {
-    let output = Command::new("powershell")
-        .arg("-NoProfile")
-        .arg("-STA")
-        .arg("-Command")
-        .arg(build_windows_capture_script(output_path))
-        .output()
-        .map_err(map_capture_spawn_error)?;
+    launch_screenclip().map_err(map_capture_spawn_error)?;
+    let output = wait_for_clipboard_image(output_path).map_err(map_capture_spawn_error)?;
     if output.status.success() {
         return Ok(());
     }
@@ -126,40 +145,5 @@ fn map_windows_capture_failure(stderr: &str) -> AppError {
         ErrorCode::InternalError,
         format!("Screenshot capture failed: {stderr}"),
         true,
-    )
-}
-
-#[cfg(target_os = "windows")]
-fn build_windows_capture_script(output_path: &PathBuf) -> String {
-    let escaped_path = output_path.to_string_lossy().replace('\'', "''");
-    format!(
-        concat!(
-            "Add-Type -AssemblyName System.Windows.Forms; ",
-            "Add-Type -AssemblyName System.Drawing; ",
-            "Add-Type @'\n",
-            "using System.Runtime.InteropServices;\n",
-            "public static class ClipboardSequence {{\n",
-            "  [DllImport(\"user32.dll\")] public static extern uint GetClipboardSequenceNumber();\n",
-            "}}\n",
-            "'@; ",
-            "$outputPath = '{}'; ",
-            "$initialSequence = [ClipboardSequence]::GetClipboardSequenceNumber(); ",
-            "Start-Process 'explorer.exe' 'ms-screenclip:'; ",
-            "$deadline = (Get-Date).AddSeconds({}); ",
-            "while ((Get-Date) -lt $deadline) {{ ",
-            "  Start-Sleep -Milliseconds 200; ",
-            "  $nextSequence = [ClipboardSequence]::GetClipboardSequenceNumber(); ",
-            "  if ($nextSequence -eq $initialSequence) {{ continue; }} ",
-            "  if (-not [System.Windows.Forms.Clipboard]::ContainsImage()) {{ continue; }} ",
-            "  $image = [System.Windows.Forms.Clipboard]::GetImage(); ",
-            "  if ($null -eq $image) {{ continue; }} ",
-            "  $image.Save($outputPath, [System.Drawing.Imaging.ImageFormat]::Png); ",
-            "  exit 0; ",
-            "}} ",
-            "Write-Error 'User cancelled screenshot capture'; ",
-            "exit 1"
-        ),
-        escaped_path,
-        WINDOWS_CAPTURE_TIMEOUT_SECONDS
     )
 }
