@@ -10,6 +10,10 @@ use crate::apiprovider::youdao_web::YoudaoWebProvider;
 #[cfg(target_os = "macos")]
 use crate::providers::apple_vision_ocr::AppleVisionOcrProvider;
 use crate::providers::openai_compatible_ocr::OpenAiCompatibleOcrProvider;
+#[cfg(target_os = "windows")]
+use crate::providers::tesseract_js_bridge::TesseractJsBridge;
+#[cfg(target_os = "windows")]
+use crate::providers::tesseract_js_ocr::TesseractJsOcrProvider;
 use crate::providers::traits::{OcrProvider, TranslateProvider};
 
 pub struct ProviderRegistry {
@@ -17,6 +21,8 @@ pub struct ProviderRegistry {
     default_translate_provider_id: Option<String>,
     ocr_providers: HashMap<String, Arc<dyn OcrProvider>>,
     default_ocr_provider_id: Option<String>,
+    #[cfg(target_os = "windows")]
+    tesseract_js_bridge: Arc<TesseractJsBridge>,
 }
 
 impl ProviderRegistry {
@@ -24,6 +30,8 @@ impl ProviderRegistry {
         let mut translate_providers: HashMap<String, Arc<dyn TranslateProvider>> = HashMap::new();
         let mut ocr_providers: HashMap<String, Arc<dyn OcrProvider>> = HashMap::new();
         let mut default_translate_provider_id: Option<String> = None;
+        #[cfg(target_os = "windows")]
+        let tesseract_js_bridge = Arc::new(TesseractJsBridge::new());
 
         register_translate_provider(
             &mut translate_providers,
@@ -67,6 +75,17 @@ impl ProviderRegistry {
         #[cfg(not(target_os = "macos"))]
         let mut default_ocr_provider_id: Option<String> = None;
 
+        #[cfg(target_os = "windows")]
+        {
+            let provider: Arc<dyn OcrProvider> =
+                Arc::new(TesseractJsOcrProvider::new(tesseract_js_bridge.clone()));
+            let provider_id = provider.provider_id().to_string();
+            ocr_providers.insert(provider_id.clone(), provider);
+            if default_ocr_provider_id.is_none() {
+                default_ocr_provider_id = Some(provider_id);
+            }
+        }
+
         if let Some(provider) = OpenAiCompatibleOcrProvider::from_env() {
             let id = provider.provider_id().to_string();
             ocr_providers.insert(id.clone(), Arc::new(provider));
@@ -80,6 +99,8 @@ impl ProviderRegistry {
             default_translate_provider_id,
             ocr_providers,
             default_ocr_provider_id,
+            #[cfg(target_os = "windows")]
+            tesseract_js_bridge,
         }
     }
 
@@ -114,6 +135,16 @@ impl ProviderRegistry {
 
     pub fn ocr_provider_by_id(&self, provider_id: &str) -> Option<Arc<dyn OcrProvider>> {
         self.ocr_providers.get(provider_id).cloned()
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn attach_app_handle(&self, app: tauri::AppHandle) {
+        self.tesseract_js_bridge.attach_app(app);
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn tesseract_js_bridge(&self) -> Arc<TesseractJsBridge> {
+        self.tesseract_js_bridge.clone()
     }
 }
 

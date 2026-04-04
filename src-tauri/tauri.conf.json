@@ -32,6 +32,16 @@
         "alwaysOnTop": true,
         "hiddenTitle": true,
         "titleBarStyle": "Overlay"
+      },
+      {
+        "label": "ocr_runtime",
+        "title": "OCR Runtime",
+        "url": "?window=ocr_runtime",
+        "width": 64,
+        "height": 64,
+        "resizable": false,
+        "visible": false,
+        "skipTaskbar": true
       }
     ]
   }

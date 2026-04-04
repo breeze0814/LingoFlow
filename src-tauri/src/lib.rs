@@ -18,7 +18,7 @@ use window_lifecycle::{close_request_action, CloseRequestAction};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .on_window_event(|window, event| {
             if close_request_action(
@@ -36,6 +36,8 @@ pub fn run() {
         })
         .setup(|app| {
             let state = AppState::new()?;
+            #[cfg(target_os = "windows")]
+            state.providers.attach_app_handle(app.handle().clone());
             if state.config_store.get().http_api.enabled {
                 let opts = state.config_store.http_server_options();
                 let orchestrator = state.orchestrator.clone();
@@ -52,15 +54,30 @@ pub fn run() {
                 main_window.hide()?;
             }
             Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
+        });
+
+    #[cfg(test)]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        commands::debug::debug_print,
+        commands::shortcuts::sync_global_shortcuts,
+        commands::translation::selection_translate,
+        commands::translation::input_translate,
+        commands::ocr::ocr_recognize,
+        commands::ocr::ocr_translate
+    ]);
+
+    #[cfg(not(test))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
             commands::debug::debug_print,
             commands::shortcuts::sync_global_shortcuts,
             commands::translation::selection_translate,
             commands::translation::input_translate,
             commands::ocr::ocr_recognize,
-            commands::ocr::ocr_translate
-        ])
+            commands::ocr::ocr_translate,
+            commands::tesseract_ocr::resolve_tesseract_ocr
+        ]);
+
+    builder
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
