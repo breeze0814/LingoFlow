@@ -4,13 +4,22 @@ export const OCR_RESULT_WINDOW_LABEL = 'ocr_result';
 export const OCR_RESULT_WINDOW_QUERY = '/?window=ocr_result';
 export const OCR_RESULT_UPDATE_EVENT = 'ocr://result/update';
 
-const OCR_RESULT_CACHE_KEY = 'lingoflow.ocr_result.latest';
+const OCR_RESULT_CACHE_KEY = 'lingoflow.ocr_result.workspace.v2';
 
 type RecordObject = Record<string, unknown>;
 
+export type TranslationWorkspaceMode =
+  | 'input_translate'
+  | 'ocr_recognize'
+  | 'ocr_translate';
+
 export type OcrResultWindowPayload = {
-  result: TaskResult;
+  autoTranslate: boolean;
+  initialText: string;
+  mode: TranslationWorkspaceMode;
+  result?: TaskResult;
   sourceLanguageLabel: string;
+  targetLanguageCode: string;
   targetLanguageLabel: string;
 };
 
@@ -34,8 +43,14 @@ export function isOcrResultWindowPayload(value: unknown): value is OcrResultWind
     return false;
   }
   return (
-    isTaskResult(value.result) &&
+    typeof value.autoTranslate === 'boolean' &&
+    typeof value.initialText === 'string' &&
+    (value.mode === 'input_translate' ||
+      value.mode === 'ocr_recognize' ||
+      value.mode === 'ocr_translate') &&
+    (value.result === undefined || isTaskResult(value.result)) &&
     typeof value.sourceLanguageLabel === 'string' &&
+    typeof value.targetLanguageCode === 'string' &&
     typeof value.targetLanguageLabel === 'string'
   );
 }

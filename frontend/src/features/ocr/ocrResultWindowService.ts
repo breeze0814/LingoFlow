@@ -15,6 +15,7 @@ import {
   OCR_RESULT_WINDOW_QUERY,
   OcrResultWindowPayload,
   cacheOcrResultPayload,
+  readCachedOcrResultPayload,
 } from './ocrResultWindowBridge';
 
 const OCR_WINDOW_WIDTH = 460;
@@ -172,6 +173,15 @@ async function emitResultPayload(payload: OcrResultWindowPayload) {
   await emitTo(OCR_RESULT_WINDOW_LABEL, OCR_RESULT_UPDATE_EVENT, payload);
 }
 
+async function showAndFocusOcrWindow(
+  ocrWindow: WebviewWindow,
+  captureRect: CaptureRect | null | undefined,
+) {
+  await positionOcrResultWindow(ocrWindow, captureRect);
+  await ocrWindow.show();
+  await ocrWindow.setFocus();
+}
+
 export async function showOcrResultWindow(payload: OcrResultWindowPayload) {
   if (!isTauriRuntime()) {
     console.log('[showOcrResultWindow] not in Tauri runtime, skipping');
@@ -184,15 +194,21 @@ export async function showOcrResultWindow(payload: OcrResultWindowPayload) {
   const ocrWindow = await ensureOcrResultWindow();
   console.log('[showOcrResultWindow] window ensured');
 
-  await positionOcrResultWindow(ocrWindow, payload.result.captureRect);
-  console.log('[showOcrResultWindow] window positioned');
-
-  await ocrWindow.show();
-  console.log('[showOcrResultWindow] window shown');
-
-  await ocrWindow.setFocus();
-  console.log('[showOcrResultWindow] window focused');
+  await showAndFocusOcrWindow(ocrWindow, payload.result?.captureRect);
+  console.log('[showOcrResultWindow] window shown and focused');
 
   await emitResultPayload(payload);
   console.log('[showOcrResultWindow] payload emitted');
+}
+
+export async function showCachedOcrResultWindow() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  const payload = readCachedOcrResultPayload();
+  const ocrWindow = await ensureOcrResultWindow();
+  await showAndFocusOcrWindow(ocrWindow, payload?.result?.captureRect);
+  if (payload) {
+    await emitResultPayload(payload);
+  }
 }

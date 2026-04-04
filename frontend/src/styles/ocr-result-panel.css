@@ -321,6 +321,16 @@ body[data-window-type='ocr_result'] #root::before {
   }
 }
 
+.ocrResultError {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-body);
+}
+
 /* ============================================
    翻译结果列表
    ============================================ */

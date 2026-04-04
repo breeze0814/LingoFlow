@@ -67,42 +67,31 @@ impl Orchestrator {
         let target_lang = request
             .target_lang
             .unwrap_or_else(|| self.config_store.get().app.target_lang);
-        let provider = match self.pick_translate_provider(request.translate_provider_id.as_deref())
-        {
-            Ok(provider) => provider,
+        let providers = match self.pick_translate_providers(request.translate_provider_id.as_deref()) {
+            Ok(providers) => providers,
             Err(error) => return Ok(Self::failed(task_id, error)),
         };
-
-        let provider_request = TranslateRequest {
-            text,
-            source_lang,
-            target_lang,
-            timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
+        let translation_results = self
+            .translate_with_providers(&providers, &text, source_lang.as_str(), target_lang.as_str())
+            .await;
+        let Some(primary_result) = Self::first_successful_translation(&translation_results) else {
+            return Ok(Self::failed(
+                task_id,
+                Self::first_translation_error(&translation_results),
+            ));
         };
 
-        match provider.translate(provider_request).await {
-            Ok(result) => {
-                let provider_id = result.provider_id;
-                let source_text = result.source_text;
-                let translated_text = result.translated_text;
-                Ok(Self::success(
-                    task_id,
-                    TaskData {
-                        provider_id: provider_id.clone(),
-                        source_text,
-                        translated_text: Some(translated_text.clone()),
-                        recognized_text: None,
-                        translation_results: vec![ProviderTranslationData {
-                            provider_id,
-                            translated_text: Some(translated_text),
-                            error: None,
-                        }],
-                        capture_rect: None,
-                    },
-                ))
-            }
-            Err(error) => Ok(Self::failed(task_id, error)),
-        }
+        Ok(Self::success(
+            task_id,
+            TaskData {
+                provider_id: primary_result.provider_id.clone(),
+                source_text: text,
+                translated_text: primary_result.translated_text.clone(),
+                recognized_text: None,
+                translation_results,
+                capture_rect: None,
+            },
+        ))
     }
 
     async fn handle_selection_translate(

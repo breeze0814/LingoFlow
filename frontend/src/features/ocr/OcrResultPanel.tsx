@@ -1,53 +1,19 @@
-import { useEffect, useState } from 'react';
-import { TaskResult } from '../task/taskTypes';
+import { type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, useEffect, useState } from 'react';
 import { providerLabel, providerMeta } from '../translator/providerMeta';
-
-type DisplayRow = {
-  providerId: string;
-  content: string;
-  isError: boolean;
-  isLoading?: boolean;
-};
+import { DisplayRow } from './ocrResultRows';
+import { TranslationWorkspaceStatus } from './translationWorkspaceService';
 
 type OcrResultPanelProps = {
-  result: TaskResult;
-  sourceLanguageLabel: string;
-  targetLanguageLabel: string;
+  errorMessage: string;
   onClose: () => void;
+  onSubmit: () => void;
+  onTextChange: (text: string) => void;
+  rows: DisplayRow[];
+  sourceLanguageLabel: string;
+  status: TranslationWorkspaceStatus;
+  text: string;
+  targetLanguageLabel: string;
 };
-
-function normalizeDisplayText(text: string) {
-  return text.replace(/\r\n/g, '\n').replace(/\t/g, '  ').trim();
-}
-
-function buildRows(result: TaskResult): DisplayRow[] {
-  if (result.translationResults && result.translationResults.length > 0) {
-    return result.translationResults.map((item) => {
-      if (item.error) {
-        return {
-          providerId: item.providerId,
-          content: `${item.error.message} (${item.error.code})`,
-          isError: true,
-        };
-      }
-      return {
-        providerId: item.providerId,
-        content: normalizeDisplayText(item.translatedText ?? 'Provider 未返回译文'),
-        isError: false,
-      };
-    });
-  }
-  if (result.translatedText) {
-    return [
-      {
-        providerId: result.providerId,
-        content: normalizeDisplayText(result.translatedText),
-        isError: false,
-      },
-    ];
-  }
-  return [];
-}
 
 async function copyToClipboard(text: string) {
   await navigator.clipboard.writeText(text);
@@ -55,7 +21,23 @@ async function copyToClipboard(text: string) {
 
 type CopyHandler = (content: string, successMessage: string) => void;
 
-function OcrSourceBlock(props: { sourceText: string; onCopy: CopyHandler }) {
+function WorkspaceInputBlock(props: {
+  onCopy: CopyHandler;
+  onSubmit: () => void;
+  onTextChange: (text: string) => void;
+  status: TranslationWorkspaceStatus;
+  text: string;
+}) {
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+    event.preventDefault();
+    if (props.status !== 'pending') {
+      props.onSubmit();
+    }
+  }
+
   return (
     <section className="ocrSourceBlock">
       <header>
@@ -64,7 +46,7 @@ function OcrSourceBlock(props: { sourceText: string; onCopy: CopyHandler }) {
           type="button"
           className="iconButton"
           aria-label="复制 OCR 文本"
-          onClick={() => props.onCopy(props.sourceText, '已复制 OCR 文本')}
+          onClick={() => props.onCopy(props.text, '已复制输入内容')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -72,17 +54,23 @@ function OcrSourceBlock(props: { sourceText: string; onCopy: CopyHandler }) {
           </svg>
         </button>
       </header>
-      <textarea readOnly value={props.sourceText} />
+      <textarea
+        aria-label="翻译输入框"
+        value={props.text}
+        onChange={(event) => props.onTextChange(event.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="输入内容后按 Enter 翻译，Shift + Enter 换行"
+      />
     </section>
   );
 }
 
-function OcrResultList(props: { rows: DisplayRow[]; onCopy: CopyHandler; isLoading?: boolean }) {
-  if (props.isLoading) {
+function OcrResultList(props: { rows: DisplayRow[]; onCopy: CopyHandler; status: TranslationWorkspaceStatus }) {
+  if (props.status === 'pending') {
     return <div className="ocrResultLoading">正在翻译中...</div>;
   }
   if (props.rows.length === 0) {
-    return <div className="ocrResultEmpty">当前没有可展示的翻译结果。</div>;
+    return <div className="ocrResultEmpty">输入内容后按 Enter 发起翻译。</div>;
   }
   return (
     <>
@@ -93,7 +81,7 @@ function OcrResultList(props: { rows: DisplayRow[]; onCopy: CopyHandler; isLoadi
           <article
             key={item.providerId}
             className={cardClass}
-            style={{ '--provider-color': meta.color } as React.CSSProperties}
+            style={{ '--provider-color': meta.color } as CSSProperties}
           >
             <header>
               <h4>
@@ -122,16 +110,40 @@ function OcrResultList(props: { rows: DisplayRow[]; onCopy: CopyHandler; isLoadi
   );
 }
 
+function WorkspaceToolbar(props: { onClose: () => void; onCopyAll: () => void }) {
+  return (
+    <header className="ocrResultPanelHeader">
+      <strong>翻译工作台</strong>
+      <div className="ocrResultPanelActions">
+        <button type="button" className="iconButton" aria-label="复制全部结果" onClick={props.onCopyAll}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        </button>
+        <button type="button" className="iconButton" aria-label="关闭窗口" onClick={props.onClose}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      </div>
+    </header>
+  );
+}
+
 export function OcrResultPanel({
-  result,
-  sourceLanguageLabel,
-  targetLanguageLabel,
+  errorMessage,
   onClose,
+  onSubmit,
+  onTextChange,
+  rows,
+  sourceLanguageLabel,
+  status,
+  text,
+  targetLanguageLabel,
 }: OcrResultPanelProps) {
   const [copyMessage, setCopyMessage] = useState('');
-  const sourceText = normalizeDisplayText(result.sourceText ?? '');
-  const rows = buildRows(result);
-  const isLoading = rows.length === 0 && !result.translatedText && !result.translationResults;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -163,7 +175,7 @@ export function OcrResultPanel({
 
   async function handleCopyAll() {
     const successRows = rows.filter((row) => !row.isError);
-    if (successRows.length === 0) {
+    if (successRows.length === 0 || !text.trim()) {
       setCopyMessage('没有可复制的翻译结果');
       clearCopyMessageSoon();
       return;
@@ -171,7 +183,7 @@ export function OcrResultPanel({
 
     const parts: string[] = [];
     parts.push('OCR 文本：');
-    parts.push(sourceText);
+    parts.push(text);
     parts.push('');
     parts.push('翻译结果：');
     successRows.forEach((row) => {
@@ -184,8 +196,14 @@ export function OcrResultPanel({
 
   return (
     <aside className="ocrResultPanel" role="dialog" aria-label="OCR 结果面板">
-
-      <OcrSourceBlock sourceText={sourceText} onCopy={handleCopy} />
+      <WorkspaceToolbar onClose={onClose} onCopyAll={handleCopyAll} />
+      <WorkspaceInputBlock
+        onCopy={handleCopy}
+        onSubmit={onSubmit}
+        onTextChange={onTextChange}
+        status={status}
+        text={text}
+      />
 
       <section className="ocrResultLanguageRow">
         <span>{sourceLanguageLabel}</span>
@@ -193,11 +211,11 @@ export function OcrResultPanel({
         <span>{targetLanguageLabel}</span>
       </section>
 
-
       {copyMessage ? <div className="ocrCopyTip">{copyMessage}</div> : null}
+      {errorMessage ? <div className="ocrResultError">{errorMessage}</div> : null}
 
       <section className="ocrResultList">
-        <OcrResultList rows={rows} onCopy={handleCopy} isLoading={isLoading} />
+        <OcrResultList rows={rows} onCopy={handleCopy} status={status} />
       </section>
     </aside>
   );

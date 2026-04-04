@@ -7,7 +7,6 @@ import './styles/variables.css';
 import './styles/layout.css';
 import './styles/settings-panel.css';
 import './styles/provider-panel.css';
-import './styles/input-dialog.css';
 import './styles/ocr-result-panel.css';
 import './styles/translator.css';
 

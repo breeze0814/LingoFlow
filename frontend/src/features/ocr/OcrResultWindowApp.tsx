@@ -1,6 +1,7 @@
-import { MouseEvent, useEffect, useState } from 'react';
+import { MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { OcrResultPanel } from './OcrResultPanel';
+import { buildDisplayRows } from './ocrResultRows';
 import {
   OCR_RESULT_UPDATE_EVENT,
   OcrResultWindowPayload,
@@ -9,16 +10,42 @@ import {
   isOcrResultWindowPayload,
   readCachedOcrResultPayload,
 } from './ocrResultWindowBridge';
+import {
+  createTranslationWorkspaceState,
+  submitTranslationWorkspaceText,
+  type TranslationWorkspaceState,
+} from './translationWorkspaceService';
 
 function isTauriRuntime() {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+function buildCachedPayload(
+  payload: OcrResultWindowPayload,
+  state: TranslationWorkspaceState,
+): OcrResultWindowPayload {
+  return {
+    ...payload,
+    autoTranslate: false,
+    initialText: state.text,
+    result: state.result ?? undefined,
+  };
 }
 
 export function OcrResultWindowApp() {
   const [payload, setPayload] = useState<OcrResultWindowPayload | null>(() =>
     readCachedOcrResultPayload(),
   );
+  const [workspaceState, setWorkspaceState] = useState<TranslationWorkspaceState>(() =>
+    createTranslationWorkspaceState(readCachedOcrResultPayload()),
+  );
   const [listenError, setListenError] = useState('');
+  const autoTranslateTokenRef = useRef('');
+
+  useEffect(() => {
+    setWorkspaceState(createTranslationWorkspaceState(payload));
+    autoTranslateTokenRef.current = '';
+  }, [payload]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -73,6 +100,50 @@ export function OcrResultWindowApp() {
     }
   }
 
+  const handleSubmit = useCallback(async (nextText?: string) => {
+    if (!payload) {
+      return;
+    }
+
+    const text = nextText ?? workspaceState.text;
+    setWorkspaceState((current) => ({
+      ...current,
+      errorMessage: '',
+      result: null,
+      status: 'pending',
+      text,
+    }));
+
+    const nextState = await submitTranslationWorkspaceText(payload, text);
+    const resolvedState = {
+      ...workspaceState,
+      ...nextState,
+      text,
+    };
+
+    setWorkspaceState((current) => ({
+      ...current,
+      ...nextState,
+      text,
+    }));
+
+    const nextPayload = buildCachedPayload(payload, resolvedState);
+    cacheOcrResultPayload(nextPayload);
+    setPayload(nextPayload);
+  }, [payload, workspaceState]);
+
+  useEffect(() => {
+    if (!payload || !payload.autoTranslate || !payload.initialText.trim()) {
+      return;
+    }
+    const token = `${payload.mode}:${payload.initialText}:${payload.targetLanguageCode}`;
+    if (autoTranslateTokenRef.current === token) {
+      return;
+    }
+    autoTranslateTokenRef.current = token;
+    void handleSubmit(payload.initialText);
+  }, [handleSubmit, payload]);
+
   function handleRootMouseDown(event: MouseEvent<HTMLElement>) {
     if (event.target !== event.currentTarget) {
       return;
@@ -84,12 +155,24 @@ export function OcrResultWindowApp() {
     return (
       <main className="ocrResultWindowRoot" onMouseDown={handleRootMouseDown}>
         <OcrResultPanel
-          result={payload.result}
-          sourceLanguageLabel={payload.sourceLanguageLabel}
-          targetLanguageLabel={payload.targetLanguageLabel}
+          errorMessage={workspaceState.errorMessage}
           onClose={() => {
             void hideCurrentWindow(true);
           }}
+          onSubmit={() => {
+            void handleSubmit();
+          }}
+          onTextChange={(text) => {
+            setWorkspaceState((current) => ({
+              ...current,
+              text,
+            }));
+          }}
+          rows={buildDisplayRows(workspaceState.result)}
+          sourceLanguageLabel={payload.sourceLanguageLabel}
+          status={workspaceState.status}
+          text={workspaceState.text}
+          targetLanguageLabel={payload.targetLanguageLabel}
         />
       </main>
     );

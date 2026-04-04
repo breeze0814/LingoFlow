@@ -78,7 +78,12 @@ function EngineCard({ providerId, content, isError, onCopy }: EngineCardProps) {
 }
 
 function EmptyPanel() {
-  return null;
+  return (
+    <article className="panel panelEmpty">
+      <h2>等待翻译任务</h2>
+      <p>触发输入翻译、截图翻译或划词翻译后，会在这里展示结果。</p>
+    </article>
+  );
 }
 
 function ErrorPanel({ taskState }: { taskState: TaskState }) {
