@@ -9,18 +9,18 @@
 /// 
 /// The test verifies that:
 /// 1. handle_pressed_shortcut function is called when shortcuts are triggered
-/// 2. For shortcuts requiring window display (Option+A, Option+D, Option+F, Cmd+,): window is shown
-/// 3. For background-only shortcuts (Option+S, Shift+Option+S): window remains hidden
+/// 2. For shortcuts requiring window display (Option+S, Option+D, Cmd+,): window is shown
+/// 3. For background-only shortcuts (Option+Q, Option+F, Shift+Option+S): window remains hidden
 /// 4. tray://action event is emitted to frontend
 
 use proptest::prelude::*;
 
 #[derive(Debug, Clone, PartialEq)]
 enum ShortcutKey {
-    OptionA,      // Input translate - shows window
+    OptionQ,      // OCR translate - background only
     OptionD,      // Selection translate - shows window
-    OptionS,      // OCR translate - background only
-    OptionF,      // Show main window - shows window
+    OptionS,      // Input translate - shows window
+    OptionF,      // Show mini window - background only
     ShiftOptionS, // OCR recognize - background only
     CmdComma,     // Open settings - shows window
 }
@@ -50,18 +50,17 @@ impl ShortcutKey {
     fn requires_window_display(&self) -> bool {
         matches!(
             self,
-            ShortcutKey::OptionA
+            ShortcutKey::OptionS
                 | ShortcutKey::OptionD
-                | ShortcutKey::OptionF
                 | ShortcutKey::CmdComma
         )
     }
 
     fn action_name(&self) -> &'static str {
         match self {
-            ShortcutKey::OptionA => "input_translate",
+            ShortcutKey::OptionQ => "ocr_translate",
             ShortcutKey::OptionD => "selection_translate",
-            ShortcutKey::OptionS => "ocr_translate",
+            ShortcutKey::OptionS => "input_translate",
             ShortcutKey::OptionF => "show_main_window",
             ShortcutKey::ShiftOptionS => "ocr_recognize",
             ShortcutKey::CmdComma => "open_settings",
@@ -145,7 +144,7 @@ mod bug_condition_tests {
         #[test]
         fn prop_bug_condition_shortcut_response(
             key in prop::sample::select(vec![
-                ShortcutKey::OptionA,
+                ShortcutKey::OptionQ,
                 ShortcutKey::OptionD,
                 ShortcutKey::OptionS,
                 ShortcutKey::OptionF,
@@ -185,9 +184,9 @@ mod bug_condition_tests {
     }
 
     #[test]
-    fn test_option_a_in_tray_state() {
+    fn test_option_q_in_tray_state() {
         let event = ShortcutEvent {
-            key: ShortcutKey::OptionA,
+            key: ShortcutKey::OptionQ,
             window_state: WindowState::MinimizedToTray,
         };
         let result = simulate_current_buggy_behavior(&event);
@@ -195,20 +194,20 @@ mod bug_condition_tests {
         // This assertion SHOULD FAIL on unfixed code
         assert!(
             result.handler_called,
-            "Bug: Option+A shortcut not handled when app is in tray"
+            "Bug: Option+Q shortcut not handled when app is in tray"
         );
         assert!(
-            result.window_shown,
-            "Bug: Window not shown for Option+A in tray state"
+            !result.window_shown,
+            "Bug: Window should NOT be shown for Option+Q in tray state"
         );
         assert!(
             result.event_emitted,
-            "Bug: tray://action event not emitted for Option+A"
+            "Bug: tray://action event not emitted for Option+Q"
         );
         assert_eq!(
             result.action_name.as_deref(),
-            Some("input_translate"),
-            "Bug: Wrong action name for Option+A"
+            Some("ocr_translate"),
+            "Bug: Wrong action name for Option+Q"
         );
     }
 
@@ -247,12 +246,17 @@ mod bug_condition_tests {
             "Bug: Option+S shortcut not handled when app is in tray"
         );
         assert!(
-            !result.window_shown,
-            "Bug: Window should NOT be shown for Option+S (background operation)"
+            result.window_shown,
+            "Bug: Window not shown for Option+S in tray state"
         );
         assert!(
             result.event_emitted,
             "Bug: tray://action event not emitted for Option+S"
+        );
+        assert_eq!(
+            result.action_name.as_deref(),
+            Some("input_translate"),
+            "Bug: Wrong action name for Option+S"
         );
     }
 
@@ -291,8 +295,8 @@ mod bug_condition_tests {
             "Bug: Option+F shortcut not handled when app is in tray"
         );
         assert!(
-            result.window_shown,
-            "Bug: Window not shown for Option+F in tray state"
+            !result.window_shown,
+            "Bug: Window should NOT be shown for Option+F in tray state"
         );
         assert!(
             result.event_emitted,
@@ -327,7 +331,7 @@ mod bug_condition_tests {
         // This test verifies that shortcuts work correctly when window is visible
         // This should PASS even on unfixed code (preservation check)
         let shortcuts = vec![
-            ShortcutKey::OptionA,
+            ShortcutKey::OptionQ,
             ShortcutKey::OptionD,
             ShortcutKey::OptionS,
             ShortcutKey::OptionF,
@@ -355,3 +359,4 @@ mod bug_condition_tests {
         }
     }
 }
+

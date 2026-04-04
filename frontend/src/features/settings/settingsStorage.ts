@@ -69,13 +69,57 @@ function parseShortcuts(value: unknown): ShortcutConfig {
     throw new Error('invalid settings field: shortcuts');
   }
 
-  return {
+  const shortcuts: ShortcutConfig = {
     inputTranslate: parseString(value.inputTranslate, 'shortcuts.inputTranslate'),
     ocrTranslate: parseString(value.ocrTranslate, 'shortcuts.ocrTranslate'),
     selectionTranslate: parseString(value.selectionTranslate, 'shortcuts.selectionTranslate'),
     ocrRecognize: parseString(value.ocrRecognize, 'shortcuts.ocrRecognize'),
-    showMainWindow: parseString(value.showMainWindow, 'shortcuts.showMainWindow'),
+    hideInterface: parseString(value.hideInterface, 'shortcuts.hideInterface'),
     openSettings: parseString(value.openSettings, 'shortcuts.openSettings'),
+  };
+
+  return migrateLegacyShortcuts(migratePreviousDefaultShortcuts(shortcuts));
+}
+
+function normalizeShortcut(shortcut: string): string {
+  return shortcut.replace(/\s+/g, '').toLowerCase();
+}
+
+function isLegacyDefaultShortcutPair(shortcuts: ShortcutConfig): boolean {
+  return (
+    normalizeShortcut(shortcuts.inputTranslate) === normalizeShortcut('Option + A') &&
+    normalizeShortcut(shortcuts.ocrTranslate) === normalizeShortcut('Option + S')
+  );
+}
+
+function migrateLegacyShortcuts(shortcuts: ShortcutConfig): ShortcutConfig {
+  if (!isLegacyDefaultShortcutPair(shortcuts)) {
+    return shortcuts;
+  }
+  return {
+    ...shortcuts,
+    inputTranslate: DEFAULT_SHORTCUTS.inputTranslate,
+    ocrTranslate: DEFAULT_SHORTCUTS.ocrTranslate,
+  };
+}
+
+function isPreviousDefaultShortcutSet(shortcuts: ShortcutConfig): boolean {
+  return (
+    normalizeShortcut(shortcuts.inputTranslate) === normalizeShortcut('Option + S') &&
+    normalizeShortcut(shortcuts.ocrTranslate) === normalizeShortcut('Option + Q') &&
+    normalizeShortcut(shortcuts.hideInterface) === normalizeShortcut('Option + F')
+  );
+}
+
+function migratePreviousDefaultShortcuts(shortcuts: ShortcutConfig): ShortcutConfig {
+  if (!isPreviousDefaultShortcutSet(shortcuts)) {
+    return shortcuts;
+  }
+  return {
+    ...shortcuts,
+    inputTranslate: DEFAULT_SHORTCUTS.inputTranslate,
+    ocrTranslate: DEFAULT_SHORTCUTS.ocrTranslate,
+    hideInterface: DEFAULT_SHORTCUTS.hideInterface,
   };
 }
 

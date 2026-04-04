@@ -9,15 +9,31 @@ mod providers;
 mod shortcuts;
 mod storage;
 mod tray;
+mod window_lifecycle;
 
 use app_state::AppState;
 use http_api::server::start_http_server;
 use tauri::Manager;
+use window_lifecycle::{close_request_action, CloseRequestAction};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
+        .on_window_event(|window, event| {
+            if close_request_action(
+                window.label(),
+                matches!(event, tauri::WindowEvent::CloseRequested { .. }),
+            ) == CloseRequestAction::HideToTray
+            {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                }
+                if let Err(error) = window.hide() {
+                    eprintln!("failed to hide main window on close request: {error}");
+                }
+            }
+        })
         .setup(|app| {
             let state = AppState::new()?;
             if state.config_store.get().http_api.enabled {
@@ -39,6 +55,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::debug::debug_print,
+            commands::shortcuts::sync_global_shortcuts,
             commands::translation::selection_translate,
             commands::translation::input_translate,
             commands::ocr::ocr_recognize,

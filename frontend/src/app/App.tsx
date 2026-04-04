@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MainLayout } from './layout/MainLayout';
 import { SettingsPanel } from '../features/settings/SettingsPanel';
-import { InputDialog } from '../features/input/InputDialog';
 import { initialTaskState, taskReducer } from '../features/task/taskReducer';
 import {
-  triggerInputTranslate,
   triggerOcrRecognize,
   triggerOcrTranslate,
   triggerSelectionTranslate,
@@ -20,6 +18,12 @@ import { matchesShortcut } from '../features/settings/shortcutMatcher';
 import { reportTask } from '../features/task/taskReporter';
 import { showOcrResultWindow } from '../features/ocr/ocrResultWindowService';
 import { OcrResultWindowPayload } from '../features/ocr/ocrResultWindowBridge';
+import { syncNativeShortcuts } from '../features/settings/nativeShortcutSyncService';
+import {
+  createInputTranslatePayload,
+  createOcrRecognizePayload,
+  createOcrTranslatePayload,
+} from '../features/ocr/translationWorkspacePayload';
 
 function makeTaskId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -47,18 +51,6 @@ function languageLabel(code: string): string {
   return found ? found.label : code;
 }
 
-function buildOcrWindowPayload(
-  result: TaskResult,
-  sourceLanguageLabel: string,
-  targetLanguageLabel: string,
-): OcrResultWindowPayload {
-  return {
-    result,
-    sourceLanguageLabel,
-    targetLanguageLabel,
-  };
-}
-
 function shouldSkipKeybindingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -77,16 +69,26 @@ function isShortcutRecording(): boolean {
   return document.querySelector('[data-shortcut-recording="true"]') !== null;
 }
 
+function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
 function hasActiveModifiers(event: KeyboardEvent): boolean {
   return event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
 }
 
-type ShortcutAction = 'input_translate' | 'selection_translate' | 'ocr_translate' | 'ocr_recognize';
+type ShortcutAction =
+  | 'input_translate'
+  | 'selection_translate'
+  | 'ocr_translate'
+  | 'ocr_recognize'
+  | 'hide_interface'
+  | 'show_main_window'
+  | 'open_settings';
 
 export function App() {
   const [taskState, setTaskState] = useState(initialTaskState);
   const [settings, setSettings] = useState<SettingsState>(() => loadSettingsFromStorage());
-  const [showInput, setShowInput] = useState(false);
   const pendingShortcutActionRef = useRef<ShortcutAction | null>(null);
 
   const targetLang = settings.secondaryLanguage;
@@ -100,28 +102,51 @@ export function App() {
   );
 
   const presentOcrResultWindow = useCallback(
-    async (taskType: TaskType, result: TaskResult | undefined) => {
-      if (!result) {
-        console.log('[presentOcrResultWindow] result is undefined');
-        return;
-      }
+    async (payload: OcrResultWindowPayload, taskType: TaskType) => {
       try {
-        console.log('[presentOcrResultWindow] result:', result);
-        console.log('[presentOcrResultWindow] captureRect:', result.captureRect);
-        const payload = buildOcrWindowPayload(
-          result,
-          languageLabel(settings.primaryLanguage),
-          languageLabel(settings.secondaryLanguage),
-        );
-        console.log('[presentOcrResultWindow] payload:', payload);
         await showOcrResultWindow(payload);
-        console.log('[presentOcrResultWindow] window shown successfully');
       } catch (error) {
-        console.error('[presentOcrResultWindow] error:', error);
         setTaskState(makeUiError(taskType, `打开 OCR 结果窗口失败: ${String(error)}`));
       }
     },
+    [],
+  );
+
+  const translationWorkspaceLabels = useCallback(
+    () => ({
+      sourceLanguageLabel: languageLabel(settings.primaryLanguage),
+      targetLanguageCode: settings.secondaryLanguage,
+      targetLanguageLabel: languageLabel(settings.secondaryLanguage),
+    }),
     [settings.primaryLanguage, settings.secondaryLanguage],
+  );
+
+  const presentRecognizedTextWorkspace = useCallback(
+    async (taskType: TaskType, result: TaskResult | undefined) => {
+      if (!result) {
+        return;
+      }
+
+      await presentOcrResultWindow(
+        createOcrRecognizePayload(result, translationWorkspaceLabels()),
+        taskType,
+      );
+    },
+    [presentOcrResultWindow, translationWorkspaceLabels],
+  );
+
+  const presentTranslatedTextWorkspace = useCallback(
+    async (taskType: TaskType, result: TaskResult | undefined) => {
+      if (!result) {
+        return;
+      }
+
+      await presentOcrResultWindow(
+        createOcrTranslatePayload(result, translationWorkspaceLabels()),
+        taskType,
+      );
+    },
+    [presentOcrResultWindow, translationWorkspaceLabels],
   );
 
   const runSelectionTranslate = useCallback(async () => {
@@ -133,44 +158,53 @@ export function App() {
     const next = await triggerOcrTranslate(taskState, targetLang, 'auto', settings.primaryLanguage);
     applyTaskState(next);
     if (next.action === 'succeeded') {
-      await presentOcrResultWindow(next.payload.taskType, next.payload.result);
+      await presentTranslatedTextWorkspace(next.payload.taskType, next.payload.result);
     }
-  }, [applyTaskState, presentOcrResultWindow, settings.primaryLanguage, targetLang, taskState]);
+  }, [
+    applyTaskState,
+    presentTranslatedTextWorkspace,
+    settings.primaryLanguage,
+    targetLang,
+    taskState,
+  ]);
 
   const runOcrRecognize = useCallback(async () => {
     const next = await triggerOcrRecognize(taskState, settings.primaryLanguage);
     applyTaskState(next);
     if (next.action === 'succeeded') {
-      await presentOcrResultWindow(next.payload.taskType, next.payload.result);
+      await presentRecognizedTextWorkspace(next.payload.taskType, next.payload.result);
     }
-  }, [applyTaskState, presentOcrResultWindow, settings.primaryLanguage, taskState]);
+  }, [applyTaskState, presentRecognizedTextWorkspace, settings.primaryLanguage, taskState]);
 
-  const runInputTranslate = useCallback(
-    async (text: string) => {
-      const next = await triggerInputTranslate(taskState, { text, targetLang });
-      applyTaskState(next);
-      setShowInput(false);
-    },
-    [applyTaskState, targetLang, taskState],
-  );
+  const openInputTranslateWorkspace = useCallback(async () => {
+    await presentOcrResultWindow(createInputTranslatePayload(translationWorkspaceLabels()), 'input_translate');
+  }, [presentOcrResultWindow, translationWorkspaceLabels]);
 
-  const runClipboardTranslate = useCallback(async () => {
+  const focusSettingsWindow = useCallback(async () => {
     try {
-      const text = (await navigator.clipboard.readText()).trim();
-      if (!text) {
-        setTaskState(makeUiError('input_translate', '剪贴板内容为空，无法翻译。'));
-        return;
-      }
-      await runInputTranslate(text);
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      const currentWindow = getCurrentWindow();
+      await currentWindow.show();
+      await currentWindow.unminimize();
+      await currentWindow.setFocus();
     } catch (error) {
-      setTaskState(makeUiError('input_translate', `读取剪贴板失败: ${String(error)}`));
+      console.error('failed to focus settings window', error);
     }
-  }, [runInputTranslate]);
+  }, []);
+
+  const hideCurrentWindow = useCallback(async () => {
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().hide();
+    } catch (error) {
+      console.error('failed to hide current window', error);
+    }
+  }, []);
 
   const executeShortcutAction = useCallback(
     (action: ShortcutAction) => {
       if (action === 'input_translate') {
-        setShowInput(true);
+        void openInputTranslateWorkspace();
         return;
       }
       if (action === 'selection_translate') {
@@ -181,15 +215,33 @@ export function App() {
         void runOcrTranslate();
         return;
       }
+      if (action === 'hide_interface') {
+        void hideCurrentWindow();
+        return;
+      }
+      if (action === 'show_main_window') {
+        return;
+      }
+      if (action === 'open_settings') {
+        void focusSettingsWindow();
+        return;
+      }
       void runOcrRecognize();
     },
-    [runOcrRecognize, runOcrTranslate, runSelectionTranslate],
+    [
+      focusSettingsWindow,
+      hideCurrentWindow,
+      openInputTranslateWorkspace,
+      runOcrRecognize,
+      runOcrTranslate,
+      runSelectionTranslate,
+    ],
   );
 
   const handleTrayAction = useCallback(
     async (action: TrayAction) => {
       if (action === 'input_translate') {
-        setShowInput(true);
+        await openInputTranslateWorkspace();
         return;
       }
       if (action === 'selection_translate') {
@@ -204,24 +256,28 @@ export function App() {
         await runOcrRecognize();
         return;
       }
-      if (action === 'clipboard_translate') {
-        await runClipboardTranslate();
+      if (action === 'show_main_window') {
         return;
       }
-      if (
-        action === 'open_settings' ||
-        action === 'show_main_window' ||
-        action === 'check_update'
-      ) {
+      if (action === 'open_settings') {
+        await focusSettingsWindow();
+        return;
+      }
+      if (action === 'check_update') {
         return;
       }
     },
-    [runClipboardTranslate, runOcrRecognize, runOcrTranslate, runSelectionTranslate],
+    [
+      focusSettingsWindow,
+      openInputTranslateWorkspace,
+      runOcrRecognize,
+      runOcrTranslate,
+      runSelectionTranslate,
+    ],
   );
 
   useEffect(() => {
-    const isTauriRuntime = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-    if (!isTauriRuntime) {
+    if (!isTauriRuntime()) {
       return;
     }
 
@@ -257,10 +313,24 @@ export function App() {
   }, [handleTrayAction]);
 
   useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    void syncNativeShortcuts(settings.shortcuts).catch((error) => {
+      console.error('native shortcut sync failed', error);
+    });
+  }, [settings.shortcuts]);
+
+  useEffect(() => {
     saveSettingsToStorage(settings);
   }, [settings]);
 
   useEffect(() => {
+    if (isTauriRuntime()) {
+      return;
+    }
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (isShortcutRecording()) {
         return;
@@ -279,6 +349,11 @@ export function App() {
         pendingShortcutActionRef.current = 'ocr_translate';
         return;
       }
+      if (matchesShortcut(event, settings.shortcuts.hideInterface)) {
+        event.preventDefault();
+        pendingShortcutActionRef.current = 'hide_interface';
+        return;
+      }
       if (matchesShortcut(event, settings.shortcuts.selectionTranslate)) {
         event.preventDefault();
         pendingShortcutActionRef.current = 'selection_translate';
@@ -287,6 +362,11 @@ export function App() {
       if (matchesShortcut(event, settings.shortcuts.ocrRecognize)) {
         event.preventDefault();
         pendingShortcutActionRef.current = 'ocr_recognize';
+        return;
+      }
+      if (matchesShortcut(event, settings.shortcuts.openSettings)) {
+        event.preventDefault();
+        pendingShortcutActionRef.current = 'open_settings';
       }
     };
 
@@ -323,12 +403,6 @@ export function App() {
           <SettingsPanel value={settings} onChange={setSettings} />
         </section>
       </section>
-      <InputDialog
-        open={showInput}
-        clearAfterSubmit={settings.clearInputOnTranslate}
-        onCancel={() => setShowInput(false)}
-        onSubmit={runInputTranslate}
-      />
     </MainLayout>
   );
 }

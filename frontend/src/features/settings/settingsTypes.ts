@@ -8,7 +8,7 @@ export type ShortcutId =
   | 'ocrTranslate'
   | 'selectionTranslate'
   | 'ocrRecognize'
-  | 'showMainWindow'
+  | 'hideInterface'
   | 'openSettings';
 
 export type ShortcutConfig = Record<ShortcutId, string>;
@@ -87,11 +87,11 @@ export const OCR_PANEL_POSITION_OPTIONS: Option[] = [
 ];
 
 export const DEFAULT_SHORTCUTS: ShortcutConfig = {
-  inputTranslate: 'Option + A',
+  inputTranslate: 'Option + F',
   ocrTranslate: 'Option + S',
   selectionTranslate: 'Option + D',
   ocrRecognize: 'Shift + Option + S',
-  showMainWindow: 'Option + F',
+  hideInterface: 'Option + Q',
   openSettings: 'Cmd/Ctrl + ,',
 };
 

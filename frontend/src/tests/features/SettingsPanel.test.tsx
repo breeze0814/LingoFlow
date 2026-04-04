@@ -18,7 +18,9 @@ describe('SettingsPanel', () => {
     render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', { name: '快捷键' }));
     expect(screen.getByText('系统快捷键')).toBeInTheDocument();
-    expect(screen.getByText('Option + A')).toBeInTheDocument();
+    expect(screen.getByText('Option + F')).toBeInTheDocument();
+    expect(screen.getByText('Option + S')).toBeInTheDocument();
+    expect(screen.getByText('Option + Q')).toBeInTheDocument();
     expect(screen.queryByLabelText('输入翻译快捷键')).not.toBeInTheDocument();
   });
 

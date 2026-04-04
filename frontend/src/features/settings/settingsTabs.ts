@@ -36,9 +36,9 @@ export const SHORTCUT_FIELDS: ShortcutField[] = [
     description: '仅提取文字，不执行翻译',
   },
   {
-    id: 'showMainWindow',
-    action: '显示迷你窗口',
-    description: '唤起设置窗口',
+    id: 'hideInterface',
+    action: '关闭界面',
+    description: '隐藏界面但保留托盘进程',
   },
   {
     id: 'openSettings',

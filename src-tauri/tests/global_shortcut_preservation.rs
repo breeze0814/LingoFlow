@@ -19,10 +19,10 @@ use proptest::prelude::*;
 
 #[derive(Debug, Clone, PartialEq)]
 enum ShortcutKey {
-    OptionA,      // Input translate - shows window
+    OptionQ,      // OCR translate - background only
     OptionD,      // Selection translate - shows window
-    OptionS,      // OCR translate - background only
-    OptionF,      // Show main window - shows window
+    OptionS,      // Input translate - shows window
+    OptionF,      // Show mini window - background only
     ShiftOptionS, // OCR recognize - background only
     CmdComma,     // Open settings - shows window
 }
@@ -68,22 +68,24 @@ impl ShortcutKey {
     fn requires_window_display(&self) -> bool {
         matches!(
             self,
-            ShortcutKey::OptionA
+            ShortcutKey::OptionS
                 | ShortcutKey::OptionD
-                | ShortcutKey::OptionF
                 | ShortcutKey::CmdComma
         )
     }
 
     fn is_background_only(&self) -> bool {
-        matches!(self, ShortcutKey::OptionS | ShortcutKey::ShiftOptionS)
+        matches!(
+            self,
+            ShortcutKey::OptionQ | ShortcutKey::OptionF | ShortcutKey::ShiftOptionS
+        )
     }
 
     fn action_name(&self) -> &'static str {
         match self {
-            ShortcutKey::OptionA => "input_translate",
+            ShortcutKey::OptionQ => "ocr_translate",
             ShortcutKey::OptionD => "selection_translate",
-            ShortcutKey::OptionS => "ocr_translate",
+            ShortcutKey::OptionS => "input_translate",
             ShortcutKey::OptionF => "show_main_window",
             ShortcutKey::ShiftOptionS => "ocr_recognize",
             ShortcutKey::CmdComma => "open_settings",
@@ -188,7 +190,7 @@ mod preservation_tests {
         #[test]
         fn prop_shortcuts_work_when_window_visible(
             key in prop::sample::select(vec![
-                ShortcutKey::OptionA,
+                ShortcutKey::OptionQ,
                 ShortcutKey::OptionD,
                 ShortcutKey::OptionS,
                 ShortcutKey::OptionF,
@@ -229,35 +231,38 @@ mod preservation_tests {
         }
     }
 
-    /// Test: Option+A (Input Translate) preserves window display behavior
+    /// Test: Option+Q (OCR Translate) preserves background-only behavior
     #[test]
-    fn test_option_a_preserves_window_display() {
+    fn test_option_q_preserves_background_behavior() {
         let event = PreservationEvent {
-            key: ShortcutKey::OptionA,
+            key: ShortcutKey::OptionQ,
             window_state: WindowState::Visible,
             trigger_method: TriggerMethod::GlobalShortcut,
         };
         let result = simulate_baseline_behavior(&event);
 
         assert!(result.handler_called, "Handler should be called");
-        assert!(result.window_shown, "Window should be shown for Option+A");
+        assert!(
+            !result.window_shown,
+            "Window should NOT be shown for Option+Q (background operation)"
+        );
         assert!(result.event_emitted, "Event should be emitted");
         assert_eq!(
             result.action_name.as_deref(),
-            Some("input_translate"),
-            "Action name should be input_translate"
+            Some("ocr_translate"),
+            "Action name should be ocr_translate"
         );
         assert!(
-            result.window_ops.show_called,
-            "show() should be called for Option+A"
+            !result.window_ops.show_called,
+            "show() should NOT be called for background operation"
         );
         assert!(
-            result.window_ops.unminimize_called,
-            "unminimize() should be called for Option+A"
+            !result.window_ops.unminimize_called,
+            "unminimize() should NOT be called for background operation"
         );
         assert!(
-            result.window_ops.focus_called,
-            "set_focus() should be called for Option+A"
+            !result.window_ops.focus_called,
+            "set_focus() should NOT be called for background operation"
         );
     }
 
@@ -280,9 +285,9 @@ mod preservation_tests {
         assert!(result.window_ops.focus_called);
     }
 
-    /// Test: Option+S (OCR Translate) preserves background-only behavior
+    /// Test: Option+S (Input Translate) preserves window display behavior
     #[test]
-    fn test_option_s_preserves_background_behavior() {
+    fn test_option_s_preserves_window_display() {
         let event = PreservationEvent {
             key: ShortcutKey::OptionS,
             window_state: WindowState::Visible,
@@ -291,27 +296,24 @@ mod preservation_tests {
         let result = simulate_baseline_behavior(&event);
 
         assert!(result.handler_called, "Handler should be called");
-        assert!(
-            !result.window_shown,
-            "Window should NOT be shown for Option+S (background operation)"
-        );
+        assert!(result.window_shown, "Window should be shown for Option+S");
         assert!(result.event_emitted, "Event should be emitted");
         assert_eq!(
             result.action_name.as_deref(),
-            Some("ocr_translate"),
-            "Action name should be ocr_translate"
+            Some("input_translate"),
+            "Action name should be input_translate"
         );
         assert!(
-            !result.window_ops.show_called,
-            "show() should NOT be called for background operation"
+            result.window_ops.show_called,
+            "show() should be called for Option+S"
         );
         assert!(
-            !result.window_ops.unminimize_called,
-            "unminimize() should NOT be called for background operation"
+            result.window_ops.unminimize_called,
+            "unminimize() should be called for Option+S"
         );
         assert!(
-            !result.window_ops.focus_called,
-            "set_focus() should NOT be called for background operation"
+            result.window_ops.focus_called,
+            "set_focus() should be called for Option+S"
         );
     }
 
@@ -334,9 +336,9 @@ mod preservation_tests {
         assert!(!result.window_ops.focus_called);
     }
 
-    /// Test: Option+F (Show Main Window) preserves window display behavior
+    /// Test: Option+F (Show mini window) preserves background-only behavior
     #[test]
-    fn test_option_f_preserves_window_display() {
+    fn test_option_f_preserves_background_behavior() {
         let event = PreservationEvent {
             key: ShortcutKey::OptionF,
             window_state: WindowState::Visible,
@@ -345,12 +347,12 @@ mod preservation_tests {
         let result = simulate_baseline_behavior(&event);
 
         assert!(result.handler_called);
-        assert!(result.window_shown);
+        assert!(!result.window_shown);
         assert!(result.event_emitted);
         assert_eq!(result.action_name.as_deref(), Some("show_main_window"));
-        assert!(result.window_ops.show_called);
-        assert!(result.window_ops.unminimize_called);
-        assert!(result.window_ops.focus_called);
+        assert!(!result.window_ops.show_called);
+        assert!(!result.window_ops.unminimize_called);
+        assert!(!result.window_ops.focus_called);
     }
 
     /// Test: Cmd+, (Open Settings) preserves window display behavior
@@ -376,7 +378,7 @@ mod preservation_tests {
     #[test]
     fn test_all_shortcuts_preserve_event_emission() {
         let shortcuts = vec![
-            ShortcutKey::OptionA,
+            ShortcutKey::OptionQ,
             ShortcutKey::OptionD,
             ShortcutKey::OptionS,
             ShortcutKey::OptionF,
@@ -415,7 +417,7 @@ mod preservation_tests {
     #[test]
     fn test_tray_menu_trigger_preserves_functionality() {
         let event = PreservationEvent {
-            key: ShortcutKey::OptionA,
+            key: ShortcutKey::OptionQ,
             window_state: WindowState::Visible,
             trigger_method: TriggerMethod::TrayMenu,
         };
@@ -456,9 +458,8 @@ mod preservation_tests {
         // 3. set_focus() - bring window to front
 
         let shortcuts_requiring_window = vec![
-            ShortcutKey::OptionA,
+            ShortcutKey::OptionS,
             ShortcutKey::OptionD,
-            ShortcutKey::OptionF,
             ShortcutKey::CmdComma,
         ];
 
@@ -491,7 +492,11 @@ mod preservation_tests {
     /// Test: Background operations never trigger window operations
     #[test]
     fn test_background_operations_never_show_window() {
-        let background_shortcuts = vec![ShortcutKey::OptionS, ShortcutKey::ShiftOptionS];
+        let background_shortcuts = vec![
+            ShortcutKey::OptionQ,
+            ShortcutKey::OptionF,
+            ShortcutKey::ShiftOptionS,
+        ];
 
         for key in background_shortcuts {
             let event = PreservationEvent {
@@ -524,3 +529,4 @@ mod preservation_tests {
         }
     }
 }
+
