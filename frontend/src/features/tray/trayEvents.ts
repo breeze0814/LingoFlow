@@ -5,7 +5,6 @@ export const SUPPORTED_TRAY_ACTIONS = [
   'selection_translate',
   'ocr_translate',
   'ocr_recognize',
-  'clipboard_translate',
   'open_settings',
   'show_main_window',
   'check_update',

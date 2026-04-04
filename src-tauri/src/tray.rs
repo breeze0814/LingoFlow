@@ -13,12 +13,19 @@ mod desktop {
     const MENU_INPUT_TRANSLATE: &str = "input_translate";
     const MENU_OCR_TRANSLATE: &str = "ocr_translate";
     const MENU_SELECTION_TRANSLATE: &str = "selection_translate";
-    const MENU_CLIPBOARD_TRANSLATE: &str = "clipboard_translate";
     const MENU_SHOW_MAIN_WINDOW: &str = "show_main_window";
+    const MENU_HIDE_INTERFACE: &str = "hide_interface";
     const MENU_OCR_RECOGNIZE: &str = "ocr_recognize";
     const MENU_OPEN_SETTINGS: &str = "open_settings";
     const MENU_CHECK_UPDATE: &str = "check_update";
     const MENU_QUIT: &str = "quit";
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    struct MenuEntrySpec {
+        id: &'static str,
+        text: &'static str,
+        accelerator: Option<&'static str>,
+    }
 
     #[derive(Clone, Serialize)]
     struct TrayActionPayload {
@@ -46,10 +53,20 @@ mod desktop {
         }
     }
 
+    fn hide_interface<R: Runtime>(app: &AppHandle<R>) {
+        for label in ["main", "ocr_result"] {
+            let Some(window) = app.get_webview_window(label) else {
+                continue;
+            };
+            if let Err(error) = window.hide() {
+                eprintln!("failed to hide window `{label}`: {error}");
+            }
+        }
+    }
+
     fn handle_menu_event<R: Runtime>(app: &AppHandle<R>, menu_id: &str) {
         match menu_id {
             MENU_INPUT_TRANSLATE => {
-                show_main_window(app);
                 emit_action(app, MENU_INPUT_TRANSLATE);
             }
             MENU_OCR_TRANSLATE => {
@@ -59,13 +76,12 @@ mod desktop {
                 show_main_window(app);
                 emit_action(app, MENU_SELECTION_TRANSLATE);
             }
-            MENU_CLIPBOARD_TRANSLATE => {
-                show_main_window(app);
-                emit_action(app, MENU_CLIPBOARD_TRANSLATE);
-            }
             MENU_SHOW_MAIN_WINDOW => {
                 show_main_window(app);
                 emit_action(app, MENU_SHOW_MAIN_WINDOW);
+            }
+            MENU_HIDE_INTERFACE => {
+                hide_interface(app);
             }
             MENU_OCR_RECOGNIZE => {
                 emit_action(app, MENU_OCR_RECOGNIZE);
@@ -107,47 +123,65 @@ mod desktop {
         MenuItem::with_id(app, id, text, enabled, accelerator)
     }
 
+    fn shortcut_menu_specs() -> [MenuEntrySpec; 7] {
+        [
+            MenuEntrySpec {
+                id: MENU_INPUT_TRANSLATE,
+                text: "输入翻译",
+                accelerator: Some("Option+F"),
+            },
+            MenuEntrySpec {
+                id: MENU_OCR_TRANSLATE,
+                text: "截图翻译",
+                accelerator: Some("Option+S"),
+            },
+            MenuEntrySpec {
+                id: MENU_SELECTION_TRANSLATE,
+                text: "划词翻译",
+                accelerator: Some("Option+D"),
+            },
+            MenuEntrySpec {
+                id: MENU_SHOW_MAIN_WINDOW,
+                text: "显示主窗口",
+                accelerator: None,
+            },
+            MenuEntrySpec {
+                id: MENU_HIDE_INTERFACE,
+                text: "关闭界面",
+                accelerator: Some("Option+Q"),
+            },
+            MenuEntrySpec {
+                id: MENU_OCR_RECOGNIZE,
+                text: "静默截图 OCR",
+                accelerator: Some("Shift+Option+S"),
+            },
+            MenuEntrySpec {
+                id: MENU_OPEN_SETTINGS,
+                text: "设置...",
+                accelerator: Some("CmdOrControl+,"),
+            },
+        ]
+    }
+
     fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
+        let specs = shortcut_menu_specs();
         let input_translate = menu_item(
             app,
-            MENU_INPUT_TRANSLATE,
-            "输入翻译",
+            specs[0].id,
+            specs[0].text,
             true,
-            Some("Option+A"),
+            specs[0].accelerator,
         )?;
-        let ocr_translate = menu_item(app, MENU_OCR_TRANSLATE, "截图翻译", true, Some("Option+S"))?;
-        let selection_translate = menu_item(
-            app,
-            MENU_SELECTION_TRANSLATE,
-            "划词翻译",
-            true,
-            Some("Option+D"),
-        )?;
-        let clipboard_translate =
-            menu_item(app, MENU_CLIPBOARD_TRANSLATE, "剪贴板翻译", true, None)?;
-        let polish_replace = menu_item(app, "polish_replace", "润色并替换", false, None)?;
-        let translate_replace = menu_item(app, "translate_replace", "翻译并替换", false, None)?;
-        let show_main = menu_item(
-            app,
-            MENU_SHOW_MAIN_WINDOW,
-            "显示迷你窗口",
-            true,
-            Some("Option+F"),
-        )?;
-        let ocr_recognize = menu_item(
-            app,
-            MENU_OCR_RECOGNIZE,
-            "静默截图 OCR",
-            true,
-            Some("Shift+Option+S"),
-        )?;
-        let settings = menu_item(
-            app,
-            MENU_OPEN_SETTINGS,
-            "设置...",
-            true,
-            Some("CmdOrControl+,"),
-        )?;
+        let ocr_translate =
+            menu_item(app, specs[1].id, specs[1].text, true, specs[1].accelerator)?;
+        let selection_translate =
+            menu_item(app, specs[2].id, specs[2].text, true, specs[2].accelerator)?;
+        let show_main = menu_item(app, specs[3].id, specs[3].text, true, specs[3].accelerator)?;
+        let hide_interface =
+            menu_item(app, specs[4].id, specs[4].text, true, specs[4].accelerator)?;
+        let ocr_recognize =
+            menu_item(app, specs[5].id, specs[5].text, true, specs[5].accelerator)?;
+        let settings = menu_item(app, specs[6].id, specs[6].text, true, specs[6].accelerator)?;
         let check_update = menu_item(app, MENU_CHECK_UPDATE, "检查更新", true, None)?;
         let help_center = menu_item(app, "help_center", "帮助文档", false, None)?;
         let issue_feedback = menu_item(app, "help_feedback", "问题反馈", false, None)?;
@@ -164,10 +198,8 @@ mod desktop {
                 &input_translate,
                 &ocr_translate,
                 &selection_translate,
-                &clipboard_translate,
-                &polish_replace,
-                &translate_replace,
                 &show_main,
+                &hide_interface,
                 &divider_top,
                 &ocr_recognize,
                 &divider_mid,
@@ -194,6 +226,36 @@ mod desktop {
             .build(app)?;
 
         Ok(())
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::{
+            shortcut_menu_specs, MENU_HIDE_INTERFACE, MENU_INPUT_TRANSLATE, MENU_OCR_TRANSLATE,
+        };
+
+        #[test]
+        fn tray_shortcut_menu_matches_current_shortcuts() {
+            let specs = shortcut_menu_specs();
+
+            assert_eq!(specs[0].id, MENU_INPUT_TRANSLATE);
+            assert_eq!(specs[0].accelerator, Some("Option+F"));
+            assert_eq!(specs[1].id, MENU_OCR_TRANSLATE);
+            assert_eq!(specs[1].accelerator, Some("Option+S"));
+            assert_eq!(specs[5].id, MENU_HIDE_INTERFACE);
+            assert_eq!(specs[5].text, "关闭界面");
+            assert_eq!(specs[5].accelerator, Some("Option+Q"));
+        }
+
+        #[test]
+        fn tray_menu_does_not_include_removed_actions() {
+            let specs = shortcut_menu_specs();
+            let ids = specs.iter().map(|spec| spec.id).collect::<Vec<_>>();
+
+            assert!(!ids.contains(&"clipboard_translate"));
+            assert!(!ids.contains(&"polish_replace"));
+            assert!(!ids.contains(&"translate_replace"));
+        }
     }
 }
 
