@@ -1,18 +1,17 @@
 /// Bug Condition Exploration Test for Global Shortcut Fix
-/// 
+///
 /// **Validates: Requirements 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8**
-/// 
+///
 /// This test explores the bug condition where global shortcuts fail to respond
-/// when the main window is hidden or minimized to tray. 
-/// 
+/// when the main window is hidden or minimized to tray.
+///
 /// CRITICAL: This test is EXPECTED TO FAIL on unfixed code - failure confirms the bug exists.
-/// 
+///
 /// The test verifies that:
 /// 1. handle_pressed_shortcut function is called when shortcuts are triggered
 /// 2. For shortcuts requiring window display (Option+S, Option+D, Cmd+,): window is shown
 /// 3. For background-only shortcuts (Option+Q, Option+F, Shift+Option+S): window remains hidden
 /// 4. tray://action event is emitted to frontend
-
 use proptest::prelude::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,9 +49,7 @@ impl ShortcutKey {
     fn requires_window_display(&self) -> bool {
         matches!(
             self,
-            ShortcutKey::OptionS
-                | ShortcutKey::OptionD
-                | ShortcutKey::CmdComma
+            ShortcutKey::OptionS | ShortcutKey::OptionD | ShortcutKey::CmdComma
         )
     }
 
@@ -69,7 +66,7 @@ impl ShortcutKey {
 }
 
 /// Property 1: Bug Condition - 托盘状态下全局快捷键响应
-/// 
+///
 /// For any global shortcut event where the main window is hidden/minimized to tray
 /// and the user presses a registered shortcut, the application SHALL respond at
 /// the system level by:
@@ -158,13 +155,13 @@ mod bug_condition_tests {
             ])
         ) {
             let event = ShortcutEvent { key, window_state };
-            
+
             // Simulate current behavior (this represents the UNFIXED code)
             let result = simulate_current_buggy_behavior(&event);
-            
+
             // Check if expected behavior is met
             let meets_expectation = expected_behavior(&event, &result);
-            
+
             // For bug conditions, we expect this to FAIL (meets_expectation = false)
             // This failure confirms the bug exists
             if is_bug_condition(&event) {
@@ -190,7 +187,7 @@ mod bug_condition_tests {
             window_state: WindowState::MinimizedToTray,
         };
         let result = simulate_current_buggy_behavior(&event);
-        
+
         // This assertion SHOULD FAIL on unfixed code
         assert!(
             result.handler_called,
@@ -218,7 +215,7 @@ mod bug_condition_tests {
             window_state: WindowState::MinimizedToTray,
         };
         let result = simulate_current_buggy_behavior(&event);
-        
+
         assert!(
             result.handler_called,
             "Bug: Option+D shortcut not handled when app is in tray"
@@ -240,7 +237,7 @@ mod bug_condition_tests {
             window_state: WindowState::MinimizedToTray,
         };
         let result = simulate_current_buggy_behavior(&event);
-        
+
         assert!(
             result.handler_called,
             "Bug: Option+S shortcut not handled when app is in tray"
@@ -267,7 +264,7 @@ mod bug_condition_tests {
             window_state: WindowState::MinimizedToTray,
         };
         let result = simulate_current_buggy_behavior(&event);
-        
+
         assert!(
             result.handler_called,
             "Bug: Shift+Option+S shortcut not handled when app is in tray"
@@ -289,7 +286,7 @@ mod bug_condition_tests {
             window_state: WindowState::MinimizedToTray,
         };
         let result = simulate_current_buggy_behavior(&event);
-        
+
         assert!(
             result.handler_called,
             "Bug: Option+F shortcut not handled when app is in tray"
@@ -311,7 +308,7 @@ mod bug_condition_tests {
             window_state: WindowState::MinimizedToTray,
         };
         let result = simulate_current_buggy_behavior(&event);
-        
+
         assert!(
             result.handler_called,
             "Bug: Cmd+, shortcut not handled when app is in tray"
@@ -345,7 +342,7 @@ mod bug_condition_tests {
                 window_state: WindowState::Visible,
             };
             let result = simulate_current_buggy_behavior(&event);
-            
+
             assert!(
                 result.handler_called,
                 "Shortcut {:?} should work when window is visible",
@@ -359,4 +356,3 @@ mod bug_condition_tests {
         }
     }
 }
-

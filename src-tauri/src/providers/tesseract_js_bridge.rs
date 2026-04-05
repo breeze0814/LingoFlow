@@ -66,7 +66,8 @@ impl TesseractJsBridge {
         let payload = self.build_request_payload(&request_id, &req)?;
         let receiver = self.register_pending_request(&request_id).await;
         self.emit_request(payload)?;
-        self.wait_for_response(request_id, req.timeout_ms, receiver).await
+        self.wait_for_response(request_id, req.timeout_ms, receiver)
+            .await
     }
 
     pub async fn resolve(&self, payload: TesseractOcrResponsePayload) {
@@ -105,13 +106,15 @@ impl TesseractJsBridge {
 
     fn emit_request(&self, payload: TesseractOcrRequestPayload) -> Result<(), AppError> {
         let app = self.require_app()?;
-        let window = app.get_webview_window(OCR_RUNTIME_WINDOW_LABEL).ok_or_else(|| {
-            AppError::new(
-                ErrorCode::InternalError,
-                "Tesseract OCR runtime window is unavailable",
-                true,
-            )
-        })?;
+        let window = app
+            .get_webview_window(OCR_RUNTIME_WINDOW_LABEL)
+            .ok_or_else(|| {
+                AppError::new(
+                    ErrorCode::InternalError,
+                    "Tesseract OCR runtime window is unavailable",
+                    true,
+                )
+            })?;
 
         window
             .emit(OCR_RUNTIME_REQUEST_EVENT, payload)

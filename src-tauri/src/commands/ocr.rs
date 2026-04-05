@@ -50,7 +50,11 @@ pub async fn ocr_recognize_region(
     let (image_path, capture_rect) = capture_region_image_file(&payload.capture_rect)?;
     state
         .orchestrator
-        .execute_captured_ocr(request, image_path.to_string_lossy().into_owned(), capture_rect)
+        .execute_captured_ocr(
+            request,
+            image_path.to_string_lossy().into_owned(),
+            capture_rect,
+        )
         .await
 }
 
@@ -69,6 +73,10 @@ pub async fn ocr_translate_region(
     let (image_path, capture_rect) = capture_region_image_file(&payload.capture_rect)?;
     state
         .orchestrator
-        .execute_captured_ocr(request, image_path.to_string_lossy().into_owned(), capture_rect)
+        .execute_captured_ocr(
+            request,
+            image_path.to_string_lossy().into_owned(),
+            capture_rect,
+        )
         .await
 }

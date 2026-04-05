@@ -15,6 +15,7 @@ import { triggerOcrRecognizeRegion, triggerOcrTranslateRegion } from '../task/ta
 import {
   createOcrRecognizePayload,
   createOcrTranslatePayload,
+  createErrorPayload,
 } from '../ocr/translationWorkspacePayload';
 import { showOcrResultWindow } from '../ocr/ocrResultWindowService';
 import { ensureCaptureExcluded } from './screenshotOverlayExclude';
@@ -47,12 +48,6 @@ function buildSelectionStyle(selection: DragState | null) {
     width,
     height,
   };
-}
-
-function showCaptureFailure(message: string) {
-  if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-    window.alert(message);
-  }
 }
 
 export function ScreenshotOverlayApp() {
@@ -156,12 +151,19 @@ export function ScreenshotOverlayApp() {
     await getCurrentWindow().hide();
   }
 
-  async function prepareForCapture() {
+  async function waitForNextPaint() {
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+  }
+
+  async function hideOverlayForCapture() {
     draggingRef.current = false;
     setErrorMessage('');
     setSelection(null);
     setIsSubmitting(true);
     await ensureCaptureExcluded();
+    await waitForNextPaint();
+    await waitForNextPaint();
+    await getCurrentWindow().hide();
   }
 
   async function submitSelection(nextSelection: DragState) {
@@ -177,7 +179,7 @@ export function ScreenshotOverlayApp() {
       return;
     }
 
-    await prepareForCapture();
+    await hideOverlayForCapture();
 
     const baseState: TaskState = initialTaskState;
 
@@ -207,11 +209,11 @@ export function ScreenshotOverlayApp() {
       }
       if (next.action !== 'cancelled') {
         const message = next.payload.error?.message ?? '截图翻译失败';
+        const errorPayload = createErrorPayload(payload.mode, message, direction);
         clearCachedScreenshotOverlayPayload();
         setPayload(null);
-        setErrorMessage('');
         setIsSubmitting(false);
-        showCaptureFailure(message);
+        await showOcrResultWindow(errorPayload);
         return;
       }
       clearCachedScreenshotOverlayPayload();
@@ -239,11 +241,16 @@ export function ScreenshotOverlayApp() {
 
     if (next.action !== 'cancelled') {
       const message = next.payload.error?.message ?? '截图识别失败';
+      const errorPayload = createErrorPayload(payload.mode, message, {
+        sourceLanguageCode: payload.sourceLangHint ?? 'auto',
+        sourceLanguageLabel: payload.sourceLanguageLabel,
+        targetLanguageCode: payload.targetLanguageCode,
+        targetLanguageLabel: payload.targetLanguageLabel,
+      });
       clearCachedScreenshotOverlayPayload();
       setPayload(null);
-      setErrorMessage('');
       setIsSubmitting(false);
-      showCaptureFailure(message);
+      await showOcrResultWindow(errorPayload);
     } else {
       clearCachedScreenshotOverlayPayload();
       setPayload(null);

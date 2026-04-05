@@ -71,11 +71,7 @@ mod desktop {
         }
 
         fn requires_window_display(self) -> bool {
-            matches!(
-                self,
-                Self::SelectionTranslate
-                    | Self::OpenSettings
-            )
+            matches!(self, Self::SelectionTranslate | Self::OpenSettings)
         }
     }
 
@@ -118,7 +114,11 @@ mod desktop {
 
         let normalized = parts
             .into_iter()
-            .map(|part| normalize_modifier_token(part).map(str::to_string).unwrap_or_else(|| normalize_key_token(part)))
+            .map(|part| {
+                normalize_modifier_token(part)
+                    .map(str::to_string)
+                    .unwrap_or_else(|| normalize_key_token(part))
+            })
             .collect::<Vec<_>>()
             .join("+");
 
@@ -128,19 +128,27 @@ mod desktop {
             .map_err(|error| format!("无法解析快捷键: {shortcut} ({error})"))
     }
 
-    fn build_binding(raw_shortcut: &str, action: ShortcutAction) -> Result<ShortcutBinding, String> {
+    fn build_binding(
+        raw_shortcut: &str,
+        action: ShortcutAction,
+    ) -> Result<ShortcutBinding, String> {
         Ok(ShortcutBinding {
             action,
             shortcut: normalize_shortcut(raw_shortcut)?,
         })
     }
 
-    fn build_global_shortcut_bindings(config: &ShortcutConfig) -> Result<Vec<ShortcutBinding>, String> {
+    fn build_global_shortcut_bindings(
+        config: &ShortcutConfig,
+    ) -> Result<Vec<ShortcutBinding>, String> {
         let bindings = vec![
             build_binding(&config.input_translate, ShortcutAction::InputTranslate)?,
             build_binding(&config.ocr_translate, ShortcutAction::OcrTranslate)?,
             build_binding(&config.hide_interface, ShortcutAction::HideInterface)?,
-            build_binding(&config.selection_translate, ShortcutAction::SelectionTranslate)?,
+            build_binding(
+                &config.selection_translate,
+                ShortcutAction::SelectionTranslate,
+            )?,
             build_binding(&config.ocr_recognize, ShortcutAction::OcrRecognize)?,
             build_binding(&config.open_settings, ShortcutAction::OpenSettings)?,
         ];
@@ -160,10 +168,17 @@ mod desktop {
             .map_err(|error| format!("无法解析快捷键: {shortcut} ({error})"))
     }
 
-    fn build_action_map(bindings: &[ShortcutBinding]) -> Result<HashMap<u32, ShortcutAction>, String> {
+    fn build_action_map(
+        bindings: &[ShortcutBinding],
+    ) -> Result<HashMap<u32, ShortcutAction>, String> {
         bindings
             .iter()
-            .map(|binding| Ok((parse_plugin_shortcut(&binding.shortcut)?.id(), binding.action)))
+            .map(|binding| {
+                Ok((
+                    parse_plugin_shortcut(&binding.shortcut)?.id(),
+                    binding.action,
+                ))
+            })
             .collect()
     }
 
@@ -263,9 +278,7 @@ mod desktop {
 
     #[cfg(test)]
     mod tests {
-        use super::{
-            build_global_shortcut_bindings, ShortcutAction, ShortcutConfig,
-        };
+        use super::{build_global_shortcut_bindings, ShortcutAction, ShortcutConfig};
 
         #[test]
         fn builds_canonical_bindings_from_default_shortcuts() {

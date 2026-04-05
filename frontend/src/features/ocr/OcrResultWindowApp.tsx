@@ -1,5 +1,6 @@
 import { MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LANGUAGE_OPTIONS } from '../settings/settingsTypes';
 import { OcrResultPanel } from './OcrResultPanel';
 import { buildDisplayRows } from './ocrResultRows';
 import {
@@ -16,34 +17,87 @@ import {
   type TranslationWorkspaceState,
 } from './translationWorkspaceService';
 
+type WorkspaceDirection = {
+  sourceLanguageCode: string;
+  sourceLanguageLabel: string;
+  targetLanguageCode: string;
+  targetLanguageLabel: string;
+};
+
 function isTauriRuntime() {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+function languageLabel(code: string): string {
+  const found = LANGUAGE_OPTIONS.find((item) => item.value === code);
+  return found ? found.label : code;
+}
+
+function buildDirection(payload: OcrResultWindowPayload | null): WorkspaceDirection {
+  if (!payload) {
+    return {
+      sourceLanguageCode: 'auto',
+      sourceLanguageLabel: '自动检测',
+      targetLanguageCode: 'zh-CN',
+      targetLanguageLabel: '简体中文',
+    };
+  }
+  return {
+    sourceLanguageCode: payload.sourceLanguageCode,
+    sourceLanguageLabel: payload.sourceLanguageLabel,
+    targetLanguageCode: payload.targetLanguageCode,
+    targetLanguageLabel: payload.targetLanguageLabel,
+  };
 }
 
 function buildCachedPayload(
   payload: OcrResultWindowPayload,
   state: TranslationWorkspaceState,
+  direction: WorkspaceDirection,
+  preferredProviderId: string | null,
 ): OcrResultWindowPayload {
   return {
     ...payload,
     autoTranslate: false,
     initialText: state.text,
+    preferredProviderId: preferredProviderId ?? undefined,
     result: state.result ?? undefined,
+    sourceLanguageCode: direction.sourceLanguageCode,
+    sourceLanguageLabel: direction.sourceLanguageLabel,
+    targetLanguageCode: direction.targetLanguageCode,
+    targetLanguageLabel: direction.targetLanguageLabel,
+  };
+}
+
+function clearedWorkspaceState(text: string): TranslationWorkspaceState {
+  return {
+    errorMessage: '',
+    result: null,
+    status: 'idle',
+    text,
   };
 }
 
 export function OcrResultWindowApp() {
-  const [payload, setPayload] = useState<OcrResultWindowPayload | null>(() =>
-    readCachedOcrResultPayload(),
-  );
+  const initialPayload = readCachedOcrResultPayload();
+  const [payload, setPayload] = useState<OcrResultWindowPayload | null>(initialPayload);
   const [workspaceState, setWorkspaceState] = useState<TranslationWorkspaceState>(() =>
-    createTranslationWorkspaceState(readCachedOcrResultPayload()),
+    createTranslationWorkspaceState(initialPayload),
   );
+  const [direction, setDirection] = useState<WorkspaceDirection>(() =>
+    buildDirection(initialPayload),
+  );
+  const [preferredProviderId, setPreferredProviderId] = useState<string | null>(
+    initialPayload?.preferredProviderId ?? initialPayload?.result?.providerId ?? null,
+  );
+  const [isPinned, setIsPinned] = useState(true);
   const [listenError, setListenError] = useState('');
   const autoTranslateTokenRef = useRef('');
 
   useEffect(() => {
     setWorkspaceState(createTranslationWorkspaceState(payload));
+    setDirection(buildDirection(payload));
+    setPreferredProviderId(payload?.preferredProviderId ?? payload?.result?.providerId ?? null);
     autoTranslateTokenRef.current = '';
   }, [payload]);
 
@@ -100,43 +154,62 @@ export function OcrResultWindowApp() {
     }
   }
 
-  const handleSubmit = useCallback(async (nextText?: string) => {
-    if (!payload) {
-      return;
-    }
+  const syncCachedPayload = useCallback(
+    (
+      nextState: TranslationWorkspaceState,
+      nextDirection = direction,
+      nextProviderId = preferredProviderId,
+    ) => {
+      if (!payload) {
+        return;
+      }
+      const nextPayload = buildCachedPayload(payload, nextState, nextDirection, nextProviderId);
+      cacheOcrResultPayload(nextPayload);
+      setPayload(nextPayload);
+    },
+    [direction, payload, preferredProviderId],
+  );
 
-    const text = nextText ?? workspaceState.text;
-    setWorkspaceState((current) => ({
-      ...current,
-      errorMessage: '',
-      result: null,
-      status: 'pending',
-      text,
-    }));
-
-    const nextState = await submitTranslationWorkspaceText(payload, text);
-    const resolvedState = {
-      ...workspaceState,
-      ...nextState,
-      text,
-    };
-
-    setWorkspaceState((current) => ({
-      ...current,
-      ...nextState,
-      text,
-    }));
-
-    const nextPayload = buildCachedPayload(payload, resolvedState);
-    cacheOcrResultPayload(nextPayload);
-    setPayload(nextPayload);
-  }, [payload, workspaceState]);
+  const handleSubmit = useCallback(
+    async (nextText?: string) => {
+      if (!payload) {
+        return;
+      }
+      const text = nextText ?? workspaceState.text;
+      setWorkspaceState((current) => ({
+        ...current,
+        errorMessage: '',
+        result: null,
+        status: 'pending',
+        text,
+      }));
+      const nextState = await submitTranslationWorkspaceText(payload, text, {
+        sourceLanguageCode: direction.sourceLanguageCode,
+        targetLanguageCode: direction.targetLanguageCode,
+      });
+      const resolvedState = { ...workspaceState, ...nextState, text };
+      setWorkspaceState((current) => ({ ...current, ...nextState, text }));
+      syncCachedPayload(resolvedState);
+    },
+    [
+      direction.sourceLanguageCode,
+      direction.targetLanguageCode,
+      payload,
+      syncCachedPayload,
+      workspaceState,
+    ],
+  );
 
   useEffect(() => {
     if (!payload || !payload.autoTranslate || !payload.initialText.trim()) {
       return;
     }
-    const token = `${payload.mode}:${payload.initialText}:${payload.targetLanguageCode}`;
+    const token = [
+      payload.mode,
+      payload.initialText,
+      payload.sourceLanguageCode,
+      payload.targetLanguageCode,
+    ].join(':');
     if (autoTranslateTokenRef.current === token) {
       return;
     }
@@ -151,28 +224,102 @@ export function OcrResultWindowApp() {
     void hideCurrentWindow(true);
   }
 
+  function updateDirection(nextDirection: WorkspaceDirection) {
+    setDirection(nextDirection);
+    const nextState = clearedWorkspaceState(workspaceState.text);
+    setWorkspaceState(nextState);
+    syncCachedPayload(nextState, nextDirection);
+  }
+
+  async function handleTogglePin() {
+    const nextPinned = !isPinned;
+    setIsPinned(nextPinned);
+    if (!isTauriRuntime()) {
+      return;
+    }
+    try {
+      const currentWindow = getCurrentWindow() as {
+        setAlwaysOnTop?: (value: boolean) => Promise<void>;
+      };
+      if (currentWindow.setAlwaysOnTop) {
+        await currentWindow.setAlwaysOnTop(nextPinned);
+      }
+    } catch (error) {
+      setIsPinned(!nextPinned);
+      console.error('failed to toggle always-on-top', error);
+    }
+  }
+
+  function handlePromoteProvider(providerId: string) {
+    setPreferredProviderId(providerId);
+    syncCachedPayload(workspaceState, direction, providerId);
+  }
+
+  function handleSourceLanguageChange(code: string) {
+    updateDirection({
+      ...direction,
+      sourceLanguageCode: code,
+      sourceLanguageLabel: languageLabel(code),
+    });
+  }
+
+  function handleTargetLanguageChange(code: string) {
+    updateDirection({
+      ...direction,
+      targetLanguageCode: code,
+      targetLanguageLabel: languageLabel(code),
+    });
+  }
+
+  function handleSwapLanguages() {
+    updateDirection({
+      sourceLanguageCode: direction.targetLanguageCode,
+      sourceLanguageLabel: direction.targetLanguageLabel,
+      targetLanguageCode: direction.sourceLanguageCode,
+      targetLanguageLabel: direction.sourceLanguageLabel,
+    });
+  }
+
+  function handleClear() {
+    const nextState = clearedWorkspaceState('');
+    setWorkspaceState(nextState);
+    syncCachedPayload(nextState);
+  }
+
   if (payload) {
     return (
       <main className="ocrResultWindowRoot" onMouseDown={handleRootMouseDown}>
         <OcrResultPanel
           errorMessage={workspaceState.errorMessage}
+          isPinned={isPinned}
+          onClear={handleClear}
           onClose={() => {
             void hideCurrentWindow(true);
           }}
+          onPromoteProvider={handlePromoteProvider}
+          onSourceLanguageChange={handleSourceLanguageChange}
           onSubmit={() => {
             void handleSubmit();
           }}
+          onSwapLanguages={handleSwapLanguages}
+          onTargetLanguageChange={handleTargetLanguageChange}
           onTextChange={(text) => {
             setWorkspaceState((current) => ({
               ...current,
               text,
             }));
           }}
+          onTogglePin={() => {
+            void handleTogglePin();
+          }}
+          preferredProviderId={preferredProviderId}
           rows={buildDisplayRows(workspaceState.result)}
-          sourceLanguageLabel={payload.sourceLanguageLabel}
+          sourceLanguageCode={direction.sourceLanguageCode}
+          sourceLanguageLabel={direction.sourceLanguageLabel}
           status={workspaceState.status}
+          targetLanguageCode={direction.targetLanguageCode}
+          targetLanguageLabel={direction.targetLanguageLabel}
           text={workspaceState.text}
-          targetLanguageLabel={payload.targetLanguageLabel}
         />
       </main>
     );

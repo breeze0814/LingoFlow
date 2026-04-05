@@ -14,4 +14,18 @@ describe('ocrResultWindowBridge', () => {
       }),
     ).toBe(false);
   });
+
+  it('accepts payload with active source and target language codes', () => {
+    expect(
+      isOcrResultWindowPayload({
+        autoTranslate: false,
+        initialText: 'hello',
+        mode: 'input_translate',
+        sourceLanguageCode: 'en',
+        sourceLanguageLabel: '英语',
+        targetLanguageCode: 'zh-CN',
+        targetLanguageLabel: '简体中文',
+      }),
+    ).toBe(true);
+  });
 });

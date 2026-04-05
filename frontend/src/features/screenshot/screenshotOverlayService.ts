@@ -158,6 +158,7 @@ export async function showScreenshotOverlay(request: ScreenshotOverlayRequest) {
   };
   cacheScreenshotOverlayPayload(payload);
 
+  overlayReady = false;
   await positionScreenshotOverlayWindow(overlayWindow, monitor);
   await overlayWindow.show();
   await overlayWindow.setFocus();

@@ -9,11 +9,7 @@
   border: none;
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(255, 255, 255, 0.7) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
   backdrop-filter: blur(10px);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.04),
@@ -21,11 +17,7 @@
 }
 
 .panelError {
-  background: linear-gradient(
-    135deg,
-    rgba(254, 242, 242, 0.95) 0%,
-    rgba(254, 242, 242, 0.85) 100%
-  );
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.95) 0%, rgba(254, 242, 242, 0.85) 100%);
   border-left: 3px solid var(--color-error);
   box-shadow:
     0 4px 12px rgba(239, 68, 68, 0.15),
@@ -67,11 +59,7 @@
   border-radius: var(--radius-lg);
   padding: 48px 24px;
   text-align: center;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.6) 0%,
-    rgba(248, 250, 252, 0.4) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 250, 252, 0.4) 100%);
   position: relative;
   overflow: hidden;
 }
@@ -88,7 +76,8 @@
 }
 
 @keyframes floatPattern {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   50% {
@@ -142,11 +131,7 @@
   border: none;
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 255, 255, 0.85) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
   backdrop-filter: blur(12px);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.04),
@@ -164,11 +149,7 @@
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(
-    circle,
-    rgba(59, 130, 246, 0.08) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
   opacity: 0;
   transition: opacity var(--transition-slow);
 }
@@ -262,11 +243,7 @@
   font-size: var(--font-size-small);
   font-weight: var(--font-weight-semibold);
   font-family: var(--font-family);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(255, 255, 255, 0.7) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
   backdrop-filter: blur(10px);
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.04),
@@ -341,11 +318,7 @@
   border-left: 3px solid var(--color-primary);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 255, 255, 0.85) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
   backdrop-filter: blur(12px);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.04),
@@ -357,11 +330,21 @@
 }
 
 /* 错开动画 */
-.engineCard:nth-child(1) { animation-delay: 0ms; }
-.engineCard:nth-child(2) { animation-delay: 50ms; }
-.engineCard:nth-child(3) { animation-delay: 100ms; }
-.engineCard:nth-child(4) { animation-delay: 150ms; }
-.engineCard:nth-child(5) { animation-delay: 200ms; }
+.engineCard:nth-child(1) {
+  animation-delay: 0ms;
+}
+.engineCard:nth-child(2) {
+  animation-delay: 50ms;
+}
+.engineCard:nth-child(3) {
+  animation-delay: 100ms;
+}
+.engineCard:nth-child(4) {
+  animation-delay: 150ms;
+}
+.engineCard:nth-child(5) {
+  animation-delay: 200ms;
+}
 
 @keyframes slideInUp {
   from {
@@ -400,59 +383,59 @@
 }
 
 /* 服务商特定颜色 */
-.engineCard[data-provider="youdao_web"] {
+.engineCard[data-provider='youdao_web'] {
   border-left-color: var(--color-provider-youdao);
 }
 
-.engineCard[data-provider="youdao_web"]::before {
+.engineCard[data-provider='youdao_web']::before {
   background: var(--color-provider-youdao);
 }
 
-.engineCard[data-provider="deepl_free"] {
+.engineCard[data-provider='deepl_free'] {
   border-left-color: var(--color-provider-deepl);
 }
 
-.engineCard[data-provider="deepl_free"]::before {
+.engineCard[data-provider='deepl_free']::before {
   background: var(--color-provider-deepl);
 }
 
-.engineCard[data-provider="google_translate"] {
+.engineCard[data-provider='google_translate'] {
   border-left-color: var(--color-provider-google);
 }
 
-.engineCard[data-provider="google_translate"]::before {
+.engineCard[data-provider='google_translate']::before {
   background: var(--color-provider-google);
 }
 
-.engineCard[data-provider="tencent_tmt"] {
+.engineCard[data-provider='tencent_tmt'] {
   border-left-color: var(--color-provider-tencent);
 }
 
-.engineCard[data-provider="tencent_tmt"]::before {
+.engineCard[data-provider='tencent_tmt']::before {
   background: var(--color-provider-tencent);
 }
 
-.engineCard[data-provider="baidu_fanyi"] {
+.engineCard[data-provider='baidu_fanyi'] {
   border-left-color: var(--color-provider-baidu);
 }
 
-.engineCard[data-provider="baidu_fanyi"]::before {
+.engineCard[data-provider='baidu_fanyi']::before {
   background: var(--color-provider-baidu);
 }
 
-.engineCard[data-provider="azure_translator"] {
+.engineCard[data-provider='azure_translator'] {
   border-left-color: var(--color-provider-azure);
 }
 
-.engineCard[data-provider="azure_translator"]::before {
+.engineCard[data-provider='azure_translator']::before {
   background: var(--color-provider-azure);
 }
 
-.engineCard[data-provider="openai_compatible"] {
+.engineCard[data-provider='openai_compatible'] {
   border-left-color: var(--color-provider-openai);
 }
 
-.engineCard[data-provider="openai_compatible"]::before {
+.engineCard[data-provider='openai_compatible']::before {
   background: var(--color-provider-openai);
 }
 
@@ -508,11 +491,7 @@
    ============================================ */
 .engineCardError {
   border-left-color: var(--color-error);
-  background: linear-gradient(
-    135deg,
-    rgba(254, 242, 242, 0.95) 0%,
-    rgba(254, 242, 242, 0.85) 100%
-  );
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.95) 0%, rgba(254, 242, 242, 0.85) 100%);
   box-shadow:
     0 4px 12px rgba(239, 68, 68, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -536,7 +515,8 @@
 }
 
 @keyframes loadingPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
   }
   50% {

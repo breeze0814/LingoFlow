@@ -1,0 +1,182 @@
+.ocrSectionCard {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+}
+
+.ocrSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ocrSectionHeader h3 {
+  margin: 0;
+  color: #fafafa;
+  font-size: 14px;
+}
+
+.ocrSectionHeader span {
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+/* ============================================
+   Secondary provider list
+   ============================================ */
+.ocrSecondaryList {
+  display: grid;
+  gap: 8px;
+}
+
+.ocrSecondaryItem,
+.ocrPrimaryResult {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: #2a2a2e;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.ocrSecondaryItem:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.ocrSecondarySummary {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ocrProviderBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid var(--provider-color, rgba(96, 165, 250, 0.4));
+  color: #fafafa;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.ocrProviderMeta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ocrProviderMeta strong {
+  color: #f4f4f5;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ocrProviderMeta span {
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+.ocrDisclosure {
+  color: #71717a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transition: color 150ms ease;
+}
+
+.ocrDisclosure svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ocrSecondarySummary:hover .ocrDisclosure {
+  color: #a1a1aa;
+}
+
+.ocrSecondaryBody {
+  display: grid;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.ocrSecondaryBody p,
+.ocrResultText {
+  margin: 0;
+  color: #e4e4e7;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ============================================
+   Mini actions — icon-only
+   ============================================ */
+.ocrMiniActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ============================================
+   Primary result card
+   ============================================ */
+.ocrPrimaryResult {
+  padding: 12px;
+}
+
+.ocrPrimaryResultHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ocrPrimaryResultHeader strong {
+  display: block;
+  color: #fafafa;
+  font-size: 14px;
+}
+
+.ocrPrimaryResultHeader span {
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+.ocrResultTextCollapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.ocrEmptyState {
+  padding: 8px 2px;
+  color: #a1a1aa;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 420px) {
+  .ocrPrimaryResultHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

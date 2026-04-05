@@ -176,7 +176,7 @@ export function triggerSelectionTranslate(state: TaskState, targetLang: string) 
 
 export function triggerInputTranslate(
   state: TaskState,
-  input: { text: string; targetLang: string },
+  input: { sourceLang?: string; text: string; targetLang: string },
 ) {
   return runTask({
     state,

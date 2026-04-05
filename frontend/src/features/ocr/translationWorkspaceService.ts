@@ -18,6 +18,11 @@ type SubmitResult = {
   status: TranslationWorkspaceStatus;
 };
 
+type WorkspaceDirection = {
+  sourceLanguageCode: string;
+  targetLanguageCode: string;
+};
+
 export function createTranslationWorkspaceState(
   payload: OcrResultWindowPayload | null,
 ): TranslationWorkspaceState {
@@ -31,9 +36,9 @@ export function createTranslationWorkspaceState(
   }
 
   return {
-    errorMessage: '',
+    errorMessage: payload.initialErrorMessage ?? '',
     result: payload.result ?? null,
-    status: payload.result ? 'success' : 'idle',
+    status: payload.result ? 'success' : payload.initialErrorMessage ? 'failure' : 'idle',
     text: payload.initialText,
   };
 }
@@ -41,6 +46,7 @@ export function createTranslationWorkspaceState(
 export async function submitTranslationWorkspaceText(
   payload: OcrResultWindowPayload,
   text: string,
+  direction?: WorkspaceDirection,
 ): Promise<SubmitResult> {
   if (!text.trim()) {
     return {
@@ -51,8 +57,9 @@ export async function submitTranslationWorkspaceText(
   }
 
   const response = await triggerInputTranslate(initialTaskState, {
+    sourceLang: direction?.sourceLanguageCode ?? payload.sourceLanguageCode,
     text,
-    targetLang: payload.targetLanguageCode,
+    targetLang: direction?.targetLanguageCode ?? payload.targetLanguageCode,
   });
 
   if (response.action === 'succeeded' && response.payload.result) {

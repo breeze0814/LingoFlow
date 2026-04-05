@@ -67,35 +67,35 @@
 }
 
 /* 品牌色左边框 - 根据服务商 ID 动态设置 */
-.providerRow[data-provider="localOcr"] {
+.providerRow[data-provider='localOcr'] {
   border-left-color: #10a37f;
 }
 
-.providerRow[data-provider="deepLTranslate"] {
+.providerRow[data-provider='deepLTranslate'] {
   border-left-color: #0f2b46;
 }
 
-.providerRow[data-provider="youdao_web"] {
+.providerRow[data-provider='youdao_web'] {
   border-left-color: #0c7a9e;
 }
 
-.providerRow[data-provider="google_translate"] {
+.providerRow[data-provider='google_translate'] {
   border-left-color: #4285f4;
 }
 
-.providerRow[data-provider="tencent_tmt"] {
+.providerRow[data-provider='tencent_tmt'] {
   border-left-color: #00a4ff;
 }
 
-.providerRow[data-provider="baidu_fanyi"] {
+.providerRow[data-provider='baidu_fanyi'] {
   border-left-color: #2932e1;
 }
 
-.providerRow[data-provider="azure_translator"] {
+.providerRow[data-provider='azure_translator'] {
   border-left-color: #0078d4;
 }
 
-.providerRow[data-provider="openai_compatible"] {
+.providerRow[data-provider='openai_compatible'] {
   border-left-color: #10a37f;
 }
 

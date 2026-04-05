@@ -8,10 +8,7 @@ import {
   OcrRuntimeResponsePayload,
   isOcrRuntimeRequestPayload,
 } from './ocrRuntimeBridge';
-import {
-  recognizeImageWithTesseract,
-  terminateTesseractWorker,
-} from './tesseractWorkerService';
+import { recognizeImageWithTesseract, terminateTesseractWorker } from './tesseractWorkerService';
 
 function isTauriRuntime() {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -63,7 +60,10 @@ async function processOcrRequest(payload: OcrRuntimeRequestPayload) {
   let recognizedText = '';
 
   try {
-    recognizedText = await recognizeImageWithTesseract(payload.imageDataUrl, payload.sourceLangHint);
+    recognizedText = await recognizeImageWithTesseract(
+      payload.imageDataUrl,
+      payload.sourceLangHint,
+    );
     const response =
       recognizedText.length > 0
         ? buildSuccessPayload(payload.requestId, recognizedText)

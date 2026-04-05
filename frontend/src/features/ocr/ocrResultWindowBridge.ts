@@ -8,16 +8,16 @@ const OCR_RESULT_CACHE_KEY = 'lingoflow.ocr_result.workspace.v2';
 
 type RecordObject = Record<string, unknown>;
 
-export type TranslationWorkspaceMode =
-  | 'input_translate'
-  | 'ocr_recognize'
-  | 'ocr_translate';
+export type TranslationWorkspaceMode = 'input_translate' | 'ocr_recognize' | 'ocr_translate';
 
 export type OcrResultWindowPayload = {
   autoTranslate: boolean;
+  initialErrorMessage?: string;
   initialText: string;
   mode: TranslationWorkspaceMode;
+  preferredProviderId?: string;
   result?: TaskResult;
+  sourceLanguageCode: string;
   sourceLanguageLabel: string;
   targetLanguageCode: string;
   targetLanguageLabel: string;
@@ -48,7 +48,9 @@ export function isOcrResultWindowPayload(value: unknown): value is OcrResultWind
     (value.mode === 'input_translate' ||
       value.mode === 'ocr_recognize' ||
       value.mode === 'ocr_translate') &&
+    (value.preferredProviderId === undefined || typeof value.preferredProviderId === 'string') &&
     (value.result === undefined || isTaskResult(value.result)) &&
+    typeof value.sourceLanguageCode === 'string' &&
     typeof value.sourceLanguageLabel === 'string' &&
     typeof value.targetLanguageCode === 'string' &&
     typeof value.targetLanguageLabel === 'string'

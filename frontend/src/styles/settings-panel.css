@@ -66,11 +66,7 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-lg);
-  background: radial-gradient(
-    circle at center,
-    rgba(59, 130, 246, 0.08) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
   opacity: 0;
   transition: opacity var(--transition-normal);
 }
@@ -190,7 +186,7 @@
   transition: all var(--transition-normal);
 }
 
-.settingsShortcutPanel[data-shortcut-recording="true"] .settingsShortcutNote {
+.settingsShortcutPanel[data-shortcut-recording='true'] .settingsShortcutNote {
   border-left-color: #f59e0b;
   background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, transparent 100%);
   color: #fbbf24;
@@ -198,7 +194,8 @@
 }
 
 @keyframes notePulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -295,7 +292,12 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
 }
 
 /* 录制状态 - 琥珀色脉冲 */
@@ -312,7 +314,8 @@
 }
 
 @keyframes recordingPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 0 3px rgba(245, 158, 11, 0.3),
       inset 0 2px 4px rgba(245, 158, 11, 0.2),
@@ -421,11 +424,7 @@
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-2xl);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.6) 0%,
-    rgba(248, 250, 252, 0.4) 100%
-  );
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 250, 252, 0.4) 100%);
   text-align: center;
 }
 

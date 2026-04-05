@@ -1,13 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OcrResultWindowApp } from '../../features/ocr/OcrResultWindowApp';
-import { cacheOcrResultPayload, clearCachedOcrResultPayload } from '../../features/ocr/ocrResultWindowBridge';
+import {
+  cacheOcrResultPayload,
+  clearCachedOcrResultPayload,
+} from '../../features/ocr/ocrResultWindowBridge';
 
-const {
-  mockHide,
-  mockListen,
-  mockInputTranslate,
-} = vi.hoisted(() => ({
+const { mockHide, mockListen, mockInputTranslate } = vi.hoisted(() => ({
   mockHide: vi.fn().mockResolvedValue(undefined),
   mockListen: vi.fn().mockResolvedValue(() => undefined),
   mockInputTranslate: vi.fn(),
@@ -58,7 +57,8 @@ describe('OcrResultWindowApp', () => {
     cacheOcrResultPayload({
       autoTranslate: false,
       initialText: 'with macOS sonoma',
-      mode: 'ocr_recognize',
+      mode: 'input_translate',
+      sourceLanguageCode: 'en',
       sourceLanguageLabel: '英语',
       targetLanguageCode: 'zh-CN',
       targetLanguageLabel: '简体中文',
@@ -74,6 +74,7 @@ describe('OcrResultWindowApp', () => {
       expect(mockInputTranslate).toHaveBeenCalledTimes(1);
     });
     expect(mockInputTranslate).toHaveBeenCalledWith({
+      sourceLang: 'en',
       targetLang: 'zh-CN',
       text: 'edited text',
     });

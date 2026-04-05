@@ -17,7 +17,9 @@ pub fn capture_interactive_image() -> Result<(PathBuf, Option<CaptureRect>), App
     Ok((path, None))
 }
 
-pub fn capture_region_image_file(capture_rect: &CaptureRect) -> Result<(PathBuf, CaptureRect), AppError> {
+pub fn capture_region_image_file(
+    capture_rect: &CaptureRect,
+) -> Result<(PathBuf, CaptureRect), AppError> {
     let output_path = build_capture_output_path();
     run_region_capture_command(&output_path, capture_rect)?;
     let path = ensure_capture_file_exists(output_path)?;
@@ -52,16 +54,25 @@ fn run_capture_command(output_path: &PathBuf) -> Result<(), AppError> {
         return Ok(());
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
-    Err(map_macos_capture_failure(output.status.code(), stderr.trim()))
+    Err(map_macos_capture_failure(
+        output.status.code(),
+        stderr.trim(),
+    ))
 }
 
 #[cfg(target_os = "windows")]
-fn run_region_capture_command(output_path: &PathBuf, capture_rect: &CaptureRect) -> Result<(), AppError> {
+fn run_region_capture_command(
+    output_path: &PathBuf,
+    capture_rect: &CaptureRect,
+) -> Result<(), AppError> {
     capture_region_image(output_path, capture_rect)
 }
 
 #[cfg(not(target_os = "windows"))]
-fn run_region_capture_command(_output_path: &PathBuf, _capture_rect: &CaptureRect) -> Result<(), AppError> {
+fn run_region_capture_command(
+    _output_path: &PathBuf,
+    _capture_rect: &CaptureRect,
+) -> Result<(), AppError> {
     Err(AppError::new(
         ErrorCode::InternalError,
         "Direct region capture is only implemented on Windows",

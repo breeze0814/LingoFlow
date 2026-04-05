@@ -1,0 +1,294 @@
+body[data-window-type='ocr_result'] #root {
+  background: linear-gradient(180deg, #1f1f22 0%, #18181b 100%);
+}
+
+.ocrResultWindowRoot {
+  overscroll-behavior: contain;
+}
+
+.ocrResultPanel {
+  width: 100%;
+  max-width: 410px;
+  height: calc(100vh - 16px);
+}
+
+.ocrCompactWindow {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+  height: 100%;
+}
+
+.ocrFixedSection,
+.ocrSectionCard,
+.ocrInlineMessage {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(36, 36, 39, 0.94);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+.ocrFixedSection {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 16px;
+}
+
+/* ============================================
+   Input Wrapper: Textarea + embedded actions
+   ============================================ */
+.ocrInputWrapper {
+  position: relative;
+}
+
+.ocrCompactInput {
+  width: 100%;
+  min-height: 60px;
+  max-height: 260px;
+  padding: 10px 12px 40px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: #27272a;
+  color: #f4f4f5;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  overflow: hidden;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.ocrCompactInput:focus {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.56);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+
+.ocrInputActions {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 4px;
+}
+
+/* ============================================
+   Icon Button — with CSS-only tooltip
+   ============================================ */
+.ocrIconBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: #303033;
+  color: #d4d4d8;
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.ocrIconBtn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
+  transition: transform 180ms ease;
+}
+
+.ocrIconBtn:hover {
+  background: #3f3f46;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #fafafa;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.ocrIconBtn:hover svg {
+  transform: scale(1.08);
+}
+
+.ocrIconBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Primary variant (translate button) */
+.ocrIconBtnPrimary {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: white;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.ocrIconBtnPrimary:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: rgba(139, 92, 246, 0.6);
+  color: white;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+}
+
+/* Active variant (pinned) */
+.ocrIconBtnActive {
+  border-color: rgba(96, 165, 250, 0.48);
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.ocrIconBtnActive:hover {
+  background: rgba(59, 130, 246, 0.22);
+  color: #bfdbfe;
+}
+
+/* Small variant (for inline mini actions) */
+.ocrIconBtnSmall {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+}
+
+.ocrIconBtnSmall svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ============================================
+   CSS Tooltip (hover)
+   ============================================ */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(15, 15, 18, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e4e4e7;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================
+   Language strip
+   ============================================ */
+.ocrLanguageStrip {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 6px;
+}
+
+.ocrLanguagePicker {
+  position: relative;
+}
+
+.ocrLanguageButton,
+.ocrSwapButton,
+.ocrLanguageOption {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #303033;
+  color: #f4f4f5;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.ocrLanguageButton:hover,
+.ocrLanguageOption:hover {
+  background: #3f3f46;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.ocrSwapButton {
+  width: 32px;
+  background: rgba(59, 130, 246, 0.14);
+  color: #93c5fd;
+}
+
+.ocrSwapButton:hover {
+  background: rgba(59, 130, 246, 0.24);
+  color: #bfdbfe;
+}
+
+.ocrLanguageMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(24, 24, 27, 0.98);
+}
+
+.ocrLanguageOptionActive {
+  border-color: rgba(96, 165, 250, 0.54);
+  color: #bfdbfe;
+}
+
+/* ============================================
+   Scrollable area
+   ============================================ */
+.ocrScrollableSection {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.ocrInlineMessage {
+  padding: 8px 10px;
+  border-radius: 12px;
+  color: #bfdbfe;
+  font-size: 12px;
+}
+
+.ocrInlineMessageError {
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.22);
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+@media (max-width: 420px) {
+  .ocrInputActions {
+    gap: 2px;
+  }
+
+  .ocrPrimaryResultHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

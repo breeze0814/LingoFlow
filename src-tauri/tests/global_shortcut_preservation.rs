@@ -1,20 +1,19 @@
 /// Preservation Property Tests for Global Shortcut Fix
-/// 
+///
 /// **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5**
-/// 
+///
 /// This test suite verifies that the fix for global shortcuts in tray mode
 /// does NOT break existing functionality when the window is visible.
-/// 
+///
 /// CRITICAL: These tests are EXPECTED TO PASS on unfixed code - they establish
 /// the baseline behavior that must be preserved after the fix.
-/// 
+///
 /// The tests verify preservation of:
 /// 1. Shortcut handling when window is visible
 /// 2. show_main_window function's display, unminimize, and focus logic
 /// 3. emit_action function's event sending mechanism
 /// 4. Background-only operations (OCR recognition, OCR translation)
 /// 5. Tray menu and other trigger methods
-
 use proptest::prelude::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -68,9 +67,7 @@ impl ShortcutKey {
     fn requires_window_display(&self) -> bool {
         matches!(
             self,
-            ShortcutKey::OptionS
-                | ShortcutKey::OptionD
-                | ShortcutKey::CmdComma
+            ShortcutKey::OptionS | ShortcutKey::OptionD | ShortcutKey::CmdComma
         )
     }
 
@@ -94,7 +91,7 @@ impl ShortcutKey {
 }
 
 /// Property 2: Preservation - 窗口可见时的快捷键行为
-/// 
+///
 /// For any global shortcut event where the main window is visible,
 /// the application SHALL produce exactly the same behavior as the original code:
 /// 1. Shortcut handler is called
@@ -215,7 +212,7 @@ mod preservation_tests {
             };
 
             let result = simulate_baseline_behavior(&event);
-            
+
             prop_assert!(
                 verify_preservation(&event, &result),
                 "Preservation failed for {:?} in state {:?} via {:?}. \
@@ -529,4 +526,3 @@ mod preservation_tests {
         }
     }
 }
-

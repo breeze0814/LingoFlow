@@ -91,12 +91,18 @@ impl Orchestrator {
         let target_lang = request
             .target_lang
             .unwrap_or_else(|| self.config_store.get().app.target_lang);
-        let providers = match self.pick_translate_providers(request.translate_provider_id.as_deref()) {
-            Ok(providers) => providers,
-            Err(error) => return Ok(Self::failed(task_id, error)),
-        };
+        let providers =
+            match self.pick_translate_providers(request.translate_provider_id.as_deref()) {
+                Ok(providers) => providers,
+                Err(error) => return Ok(Self::failed(task_id, error)),
+            };
         let translation_results = self
-            .translate_with_providers(&providers, &text, source_lang.as_str(), target_lang.as_str())
+            .translate_with_providers(
+                &providers,
+                &text,
+                source_lang.as_str(),
+                target_lang.as_str(),
+            )
             .await;
         let Some(primary_result) = Self::first_successful_translation(&translation_results) else {
             return Ok(Self::failed(
@@ -165,7 +171,10 @@ impl Orchestrator {
         capture_rect: crate::orchestrator::models::CaptureRect,
     ) -> Result<TaskResponse, AppError> {
         let task_id = request.task_id.clone();
-        let ocr = match self.execute_ocr_image(&request, &image_path, capture_rect).await {
+        let ocr = match self
+            .execute_ocr_image(&request, &image_path, capture_rect)
+            .await
+        {
             Ok(result) => result,
             Err(error) => return Ok(Self::failed(task_id, error)),
         };
@@ -244,7 +253,10 @@ impl Orchestrator {
         capture_rect: crate::orchestrator::models::CaptureRect,
     ) -> Result<TaskResponse, AppError> {
         let task_id = request.task_id.clone();
-        let ocr = match self.execute_ocr_image(&request, &image_path, capture_rect).await {
+        let ocr = match self
+            .execute_ocr_image(&request, &image_path, capture_rect)
+            .await
+        {
             Ok(result) => result,
             Err(error) => return Ok(Self::failed(task_id, error)),
         };

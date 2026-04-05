@@ -2,6 +2,7 @@ import { TaskResult } from '../task/taskTypes';
 import { OcrResultWindowPayload } from './ocrResultWindowBridge';
 
 type WorkspaceLabels = {
+  sourceLanguageCode: string;
   sourceLanguageLabel: string;
   targetLanguageLabel: string;
   targetLanguageCode: string;
@@ -17,6 +18,7 @@ function createPayload(
   return {
     mode,
     initialText,
+    sourceLanguageCode: labels.sourceLanguageCode,
     sourceLanguageLabel: labels.sourceLanguageLabel,
     targetLanguageLabel: labels.targetLanguageLabel,
     targetLanguageCode: labels.targetLanguageCode,
@@ -41,4 +43,15 @@ export function createOcrTranslatePayload(
   labels: WorkspaceLabels,
 ): OcrResultWindowPayload {
   return createPayload('ocr_translate', result.sourceText, labels, false, result);
+}
+
+export function createErrorPayload(
+  mode: OcrResultWindowPayload['mode'],
+  errorMessage: string,
+  labels: WorkspaceLabels,
+): OcrResultWindowPayload {
+  return {
+    ...createPayload(mode, '', labels, false),
+    initialErrorMessage: errorMessage,
+  };
 }

@@ -165,22 +165,15 @@ mod desktop {
 
     fn build_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         let specs = shortcut_menu_specs();
-        let input_translate = menu_item(
-            app,
-            specs[0].id,
-            specs[0].text,
-            true,
-            specs[0].accelerator,
-        )?;
-        let ocr_translate =
-            menu_item(app, specs[1].id, specs[1].text, true, specs[1].accelerator)?;
+        let input_translate =
+            menu_item(app, specs[0].id, specs[0].text, true, specs[0].accelerator)?;
+        let ocr_translate = menu_item(app, specs[1].id, specs[1].text, true, specs[1].accelerator)?;
         let selection_translate =
             menu_item(app, specs[2].id, specs[2].text, true, specs[2].accelerator)?;
         let show_main = menu_item(app, specs[3].id, specs[3].text, true, specs[3].accelerator)?;
         let hide_interface =
             menu_item(app, specs[4].id, specs[4].text, true, specs[4].accelerator)?;
-        let ocr_recognize =
-            menu_item(app, specs[5].id, specs[5].text, true, specs[5].accelerator)?;
+        let ocr_recognize = menu_item(app, specs[5].id, specs[5].text, true, specs[5].accelerator)?;
         let settings = menu_item(app, specs[6].id, specs[6].text, true, specs[6].accelerator)?;
         let check_update = menu_item(app, MENU_CHECK_UPDATE, "检查更新", true, None)?;
         let help_center = menu_item(app, "help_center", "帮助文档", false, None)?;
