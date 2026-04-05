@@ -68,7 +68,8 @@ pub fn run() {
         commands::ocr::ocr_recognize,
         commands::ocr::ocr_translate,
         commands::ocr::ocr_recognize_region,
-        commands::ocr::ocr_translate_region
+        commands::ocr::ocr_translate_region,
+        commands::window_display::set_capture_excluded
     ]);
 
     #[cfg(not(test))]
@@ -81,7 +82,8 @@ pub fn run() {
             commands::ocr::ocr_translate,
             commands::ocr::ocr_recognize_region,
             commands::ocr::ocr_translate_region,
-            commands::tesseract_ocr::resolve_tesseract_ocr
+            commands::tesseract_ocr::resolve_tesseract_ocr,
+            commands::window_display::set_capture_excluded
         ]);
 
     builder

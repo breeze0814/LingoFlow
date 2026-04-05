@@ -4,3 +4,4 @@ pub mod shortcuts;
 #[cfg(not(test))]
 pub mod tesseract_ocr;
 pub mod translation;
+pub mod window_display;

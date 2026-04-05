@@ -20,6 +20,7 @@ import {
   createOcrTranslatePayload,
 } from '../ocr/translationWorkspacePayload';
 import { showOcrResultWindow } from '../ocr/ocrResultWindowService';
+import { ensureCaptureExcluded } from './screenshotOverlayExclude';
 import { TaskState } from '../task/taskTypes';
 
 type DragState = {
@@ -158,11 +159,12 @@ export function ScreenshotOverlayApp() {
     await getCurrentWindow().hide();
   }
 
-  async function hideOverlayForCapture() {
+  async function prepareForCapture() {
     draggingRef.current = false;
     setErrorMessage('');
     setSelection(null);
     setIsSubmitting(true);
+    await ensureCaptureExcluded();
   }
 
   async function submitSelection(nextSelection: DragState) {
@@ -178,7 +180,7 @@ export function ScreenshotOverlayApp() {
       return;
     }
 
-    await hideOverlayForCapture();
+    await prepareForCapture();
 
     const baseState: TaskState = initialTaskState;
 
