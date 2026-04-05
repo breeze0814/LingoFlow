@@ -143,7 +143,11 @@ export async function showScreenshotOverlay(request: ScreenshotOverlayRequest) {
     return;
   }
 
-  const monitor = await resolveActiveMonitor();
+  const [monitor, overlayWindow] = await Promise.all([
+    resolveActiveMonitor(),
+    ensureScreenshotOverlayWindow(),
+  ]);
+
   const payload: ScreenshotOverlayPayload = {
     ...request,
     monitor: {
@@ -156,7 +160,6 @@ export async function showScreenshotOverlay(request: ScreenshotOverlayRequest) {
   };
   cacheScreenshotOverlayPayload(payload);
 
-  const overlayWindow = await ensureScreenshotOverlayWindow();
   await positionScreenshotOverlayWindow(overlayWindow, monitor);
   await overlayWindow.show();
   await overlayWindow.setFocus();
