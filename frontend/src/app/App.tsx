@@ -220,7 +220,10 @@ export function App() {
   ]);
 
   const openInputTranslateWorkspace = useCallback(async () => {
-    await presentOcrResultWindow(createInputTranslatePayload(translationWorkspaceLabels()), 'input_translate');
+    await presentOcrResultWindow(
+      createInputTranslatePayload(translationWorkspaceLabels()),
+      'input_translate',
+    );
   }, [presentOcrResultWindow, translationWorkspaceLabels]);
 
   const focusSettingsWindow = useCallback(async () => {

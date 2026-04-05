@@ -90,10 +90,7 @@ async function resolveActiveMonitor(): Promise<Monitor> {
   throw new Error('无法获取当前屏幕信息');
 }
 
-async function positionScreenshotOverlayWindow(
-  target: WebviewWindow,
-  monitor: Monitor,
-) {
+async function positionScreenshotOverlayWindow(target: WebviewWindow, monitor: Monitor) {
   const logicalWidth = monitor.size.width / monitor.scaleFactor;
   const logicalHeight = monitor.size.height / monitor.scaleFactor;
 

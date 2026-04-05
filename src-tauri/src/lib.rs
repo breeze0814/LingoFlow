@@ -74,17 +74,17 @@ pub fn run() {
 
     #[cfg(not(test))]
     let builder = builder.invoke_handler(tauri::generate_handler![
-            commands::debug::debug_print,
-            commands::shortcuts::sync_global_shortcuts,
-            commands::translation::selection_translate,
-            commands::translation::input_translate,
-            commands::ocr::ocr_recognize,
-            commands::ocr::ocr_translate,
-            commands::ocr::ocr_recognize_region,
-            commands::ocr::ocr_translate_region,
-            commands::tesseract_ocr::resolve_tesseract_ocr,
-            commands::window_display::set_capture_excluded
-        ]);
+        commands::debug::debug_print,
+        commands::shortcuts::sync_global_shortcuts,
+        commands::translation::selection_translate,
+        commands::translation::input_translate,
+        commands::ocr::ocr_recognize,
+        commands::ocr::ocr_translate,
+        commands::ocr::ocr_recognize_region,
+        commands::ocr::ocr_translate_region,
+        commands::tesseract_ocr::resolve_tesseract_ocr,
+        commands::window_display::set_capture_excluded
+    ]);
 
     builder
         .run(tauri::generate_context!())

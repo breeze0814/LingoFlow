@@ -11,10 +11,7 @@ import {
 } from './screenshotOverlayBridge';
 import { buildPhysicalCaptureRect } from './screenshotOverlayGeometry';
 import { initialTaskState } from '../task/taskReducer';
-import {
-  triggerOcrRecognizeRegion,
-  triggerOcrTranslateRegion,
-} from '../task/taskService';
+import { triggerOcrRecognizeRegion, triggerOcrTranslateRegion } from '../task/taskService';
 import {
   createOcrRecognizePayload,
   createOcrTranslatePayload,
@@ -59,8 +56,8 @@ function showCaptureFailure(message: string) {
 }
 
 export function ScreenshotOverlayApp() {
-  const [payload, setPayload] = useState<ScreenshotOverlayPayload | null>(
-    () => readCachedScreenshotOverlayPayload(),
+  const [payload, setPayload] = useState<ScreenshotOverlayPayload | null>(() =>
+    readCachedScreenshotOverlayPayload(),
   );
   const [selection, setSelection] = useState<DragState | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -262,7 +259,9 @@ export function ScreenshotOverlayApp() {
 
   return (
     <main
-      className={isSubmitting ? 'screenshotOverlayRoot screenshotOverlayRootHidden' : 'screenshotOverlayRoot'}
+      className={
+        isSubmitting ? 'screenshotOverlayRoot screenshotOverlayRootHidden' : 'screenshotOverlayRoot'
+      }
       onContextMenu={(event) => event.preventDefault()}
       onMouseDown={(event) => {
         if (isSubmitting) {

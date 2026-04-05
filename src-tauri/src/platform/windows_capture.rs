@@ -69,7 +69,10 @@ pub fn build_clipboard_wait_script(output_path: &str, timeout_seconds: u64) -> S
 }
 
 #[cfg(target_os = "windows")]
-pub fn capture_region_image(output_path: &Path, capture_rect: &CaptureRect) -> Result<(), AppError> {
+pub fn capture_region_image(
+    output_path: &Path,
+    capture_rect: &CaptureRect,
+) -> Result<(), AppError> {
     let rect = normalize_capture_rect(capture_rect)?;
     native_capture_region(output_path, &rect)
 }
@@ -145,10 +148,7 @@ pub struct PixelCaptureRect {
 use std::io::Write as IoWrite;
 
 #[cfg(target_os = "windows")]
-pub fn native_capture_region(
-    output_path: &Path,
-    rect: &PixelCaptureRect,
-) -> Result<(), AppError> {
+pub fn native_capture_region(output_path: &Path, rect: &PixelCaptureRect) -> Result<(), AppError> {
     use windows::Win32::Foundation::*;
     use windows::Win32::Graphics::Gdi::*;
 
@@ -259,12 +259,7 @@ pub fn native_capture_region(
         }
 
         // Encode minimal PNG
-        write_rgba_png(
-            output_path,
-            rect.width as u32,
-            rect.height as u32,
-            &pixels,
-        )
+        write_rgba_png(output_path, rect.width as u32, rect.height as u32, &pixels)
     }
 }
 
@@ -277,8 +272,7 @@ fn write_rgba_png(
 ) -> Result<(), AppError> {
     // Build raw image data with filter byte per row
     let row_len = (width as usize) * 4;
-    let mut raw_data =
-        Vec::with_capacity((row_len + 1) * height as usize);
+    let mut raw_data = Vec::with_capacity((row_len + 1) * height as usize);
     for row in rgba_pixels.chunks_exact(row_len) {
         raw_data.push(0u8); // filter: None
         raw_data.extend_from_slice(row);
@@ -327,8 +321,7 @@ fn write_png_chunk(
     let len = data.len() as u32;
     file.write_all(&len.to_be_bytes())
         .map_err(map_png_write_error)?;
-    file.write_all(chunk_type)
-        .map_err(map_png_write_error)?;
+    file.write_all(chunk_type).map_err(map_png_write_error)?;
     file.write_all(data).map_err(map_png_write_error)?;
 
     let mut crc_input = Vec::with_capacity(4 + data.len());
@@ -409,26 +402,19 @@ mod tests {
 
     #[test]
     fn native_region_capture_produces_valid_png() {
-        let output_path =
-            std::env::temp_dir().join("test-native-capture.png");
+        let output_path = std::env::temp_dir().join("test-native-capture.png");
         let rect = PixelCaptureRect {
             x: 0,
             y: 0,
             width: 100,
             height: 100,
         };
-        native_capture_region(&output_path, &rect)
-            .expect("native capture should succeed");
+        native_capture_region(&output_path, &rect).expect("native capture should succeed");
         assert!(output_path.exists(), "output file should be created");
-        let metadata = std::fs::metadata(&output_path)
-            .expect("should read metadata");
-        assert!(
-            metadata.len() > 0,
-            "output file should not be empty"
-        );
+        let metadata = std::fs::metadata(&output_path).expect("should read metadata");
+        assert!(metadata.len() > 0, "output file should not be empty");
         // Check PNG magic bytes
-        let bytes =
-            std::fs::read(&output_path).expect("should read file");
+        let bytes = std::fs::read(&output_path).expect("should read file");
         assert_eq!(
             &bytes[..4],
             &[0x89, 0x50, 0x4E, 0x47],
@@ -439,8 +425,7 @@ mod tests {
 
     #[test]
     fn native_region_capture_rejects_zero_dimensions() {
-        let output_path =
-            std::env::temp_dir().join("test-native-capture-zero.png");
+        let output_path = std::env::temp_dir().join("test-native-capture-zero.png");
         let rect = PixelCaptureRect {
             x: 0,
             y: 0,
@@ -448,10 +433,7 @@ mod tests {
             height: 100,
         };
         let result = native_capture_region(&output_path, &rect);
-        assert!(
-            result.is_err(),
-            "zero-width capture should fail"
-        );
+        assert!(result.is_err(), "zero-width capture should fail");
         let _ = std::fs::remove_file(&output_path);
     }
 }
