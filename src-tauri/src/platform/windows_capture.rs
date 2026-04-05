@@ -71,28 +71,7 @@ pub fn build_clipboard_wait_script(output_path: &str, timeout_seconds: u64) -> S
 #[cfg(target_os = "windows")]
 pub fn capture_region_image(output_path: &Path, capture_rect: &CaptureRect) -> Result<(), AppError> {
     let rect = normalize_capture_rect(capture_rect)?;
-    let output = Command::new("powershell")
-        .arg("-NoProfile")
-        .arg("-STA")
-        .arg("-Command")
-        .arg(build_region_capture_script(
-            &output_path.to_string_lossy(),
-            rect.x,
-            rect.y,
-            rect.width,
-            rect.height,
-        ))
-        .output()
-        .map_err(map_region_capture_spawn_error)?;
-    if output.status.success() {
-        return Ok(());
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    Err(AppError::new(
-        ErrorCode::InternalError,
-        format!("Region capture failed: {}", stderr.trim()),
-        true,
-    ))
+    native_capture_region(output_path, &rect)
 }
 
 #[cfg(target_os = "windows")]
