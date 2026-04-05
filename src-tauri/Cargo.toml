@@ -33,5 +33,12 @@ aes = "0.8"
 cbc = "0.1"
 base64 = "0.22"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Graphics_Gdi",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation",
+] }
+
 [dev-dependencies]
 proptest = "1.5"
