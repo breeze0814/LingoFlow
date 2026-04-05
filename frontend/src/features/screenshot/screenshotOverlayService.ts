@@ -136,6 +136,7 @@ async function waitForOverlayReady() {
 
 export async function primeScreenshotOverlayService() {
   await bindOverlayReadyListener();
+  await ensureScreenshotOverlayWindow();
 }
 
 export async function showScreenshotOverlay(request: ScreenshotOverlayRequest) {

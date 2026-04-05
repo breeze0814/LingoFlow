@@ -16,7 +16,10 @@ import { isTrayActionPayload, TRAY_ACTION_EVENT, TrayAction } from '../features/
 import { TaskResult, TaskState, TaskType } from '../features/task/taskTypes';
 import { matchesShortcut } from '../features/settings/shortcutMatcher';
 import { reportTask } from '../features/task/taskReporter';
-import { showOcrResultWindow } from '../features/ocr/ocrResultWindowService';
+import {
+  showOcrResultWindow,
+  primeOcrResultWindowService,
+} from '../features/ocr/ocrResultWindowService';
 import { OcrResultWindowPayload } from '../features/ocr/ocrResultWindowBridge';
 import { syncNativeShortcuts } from '../features/settings/nativeShortcutSyncService';
 import {
@@ -125,6 +128,7 @@ export function App() {
 
   const translationWorkspaceLabels = useCallback(
     () => ({
+      sourceLanguageCode: settings.primaryLanguage,
       sourceLanguageLabel: languageLabel(settings.primaryLanguage),
       targetLanguageCode: settings.secondaryLanguage,
       targetLanguageLabel: languageLabel(settings.secondaryLanguage),
@@ -368,6 +372,9 @@ export function App() {
 
     void primeScreenshotOverlayService().catch((error) => {
       console.error('screenshot overlay service init failed', error);
+    });
+    void primeOcrResultWindowService().catch((error) => {
+      console.error('ocr result window service init failed', error);
     });
   }, []);
 

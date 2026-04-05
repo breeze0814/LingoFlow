@@ -212,3 +212,10 @@ export async function showCachedOcrResultWindow() {
     await emitResultPayload(payload);
   }
 }
+
+export async function primeOcrResultWindowService() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await ensureOcrResultWindow();
+}
