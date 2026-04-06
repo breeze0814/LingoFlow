@@ -1,0 +1,250 @@
+.settingsPanel {
+  border-color: rgb(255 255 255 / 8%);
+  border-radius: 16px;
+  background: #10161f;
+  box-shadow: 0 18px 44px rgb(0 0 0 / 32%);
+  backdrop-filter: none;
+}
+
+.settingsWindowBar {
+  min-height: 56px;
+  padding: 0 16px;
+  background: #10161f;
+}
+
+.settingsWindowHeading {
+  gap: 12px;
+}
+
+.settingsWindowTitleBlock {
+  display: grid;
+  gap: 2px;
+}
+
+.settingsWindowMark {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  flex: none;
+}
+
+.settingsWindowMeta {
+  margin: 0;
+  color: rgb(255 255 255 / 44%);
+  font-family: var(--font-family-display);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.settingsWindowBar h1 {
+  font-size: 18px;
+}
+
+.settingsWindowMeta {
+  display: none;
+}
+
+.settingsWindowBarTabs {
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.settingsTabButton {
+  grid-template-columns: 16px auto;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settingsTabButton:hover {
+  border-color: rgb(255 255 255 / 8%);
+  background: #161d27;
+  transform: none;
+}
+
+.settingsTabButtonActive {
+  border-color: rgb(255 255 255 / 12%);
+  background: #1a2430;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 2%);
+}
+
+.settingsTabIconShell {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.tabIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.settingsTabLabelRow {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.settingsTabMeta {
+  display: none;
+}
+
+.settingsContentHeader {
+  padding: 16px 18px 14px;
+}
+
+.settingsContentHeader h2 {
+  font-size: 22px;
+}
+
+.settingsContentStatus {
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.settingsBody {
+  gap: 16px;
+  padding: 14px 18px 18px;
+}
+
+.settingsSection {
+  gap: 10px;
+}
+
+.settingsSectionHeader {
+  gap: 5px;
+}
+
+.settingsSection h3,
+.settingLabel {
+  font-size: 14px;
+}
+
+.settingsGroup {
+  border-color: rgb(255 255 255 / 8%);
+  border-radius: 16px;
+  background: #121923;
+  box-shadow: none;
+}
+
+.settingRow {
+  min-height: 58px;
+  padding: 12px 14px;
+}
+
+.settingRow::before {
+  display: none;
+}
+
+.settingRow select {
+  min-width: 172px;
+  min-height: 38px;
+  border-color: rgb(255 255 255 / 10%);
+  border-radius: 10px;
+  background:
+    linear-gradient(45deg, transparent 50%, rgb(255 255 255 / 42%) 50%),
+    linear-gradient(135deg, rgb(255 255 255 / 42%) 50%, transparent 50%), #0f141c;
+  font-size: 13px;
+  box-shadow: none;
+}
+
+.switch {
+  width: 44px;
+  height: 24px;
+  border-color: rgb(255 255 255 / 10%);
+  background: #2a3340;
+  box-shadow: none;
+}
+
+.switchOn {
+  border-color: rgb(24 165 141 / 28%);
+  background: #177767;
+  box-shadow: none;
+}
+
+.switchOn:hover {
+  background: #1a8472;
+}
+
+.switchKnob {
+  width: 16px;
+  height: 16px;
+  background: #f3f6fb;
+  box-shadow: none;
+}
+
+.switchOn .switchKnob {
+  transform: translateX(20px);
+}
+
+.settingsShortcutPanel {
+  gap: 12px;
+}
+
+.settingsShortcutPanel h3 {
+  font-size: 16px;
+}
+
+.settingsShortcutNote,
+.settingsShortcutDescription {
+  font-size: 12px;
+}
+
+.settingsShortcutField {
+  gap: 10px;
+  padding: 14px;
+  border-color: rgb(255 255 255 / 8%);
+  border-radius: 16px;
+  background: #121923;
+  box-shadow: none;
+}
+
+.settingsShortcutBindingRow {
+  gap: 10px;
+}
+
+.settingsShortcutValue {
+  min-height: 40px;
+  padding: 0 12px;
+  border-color: rgb(255 255 255 / 10%);
+  border-radius: 10px;
+  background: #0f141c;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.settingsShortcutValueRecording {
+  border-color: rgb(245 165 58 / 22%);
+  background: #2a2115;
+  box-shadow: none;
+}
+
+.settingsShortcutEditButton {
+  min-width: 82px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-color: rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  background: #161d27;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.settingsShortcutEditButton:hover {
+  border-color: rgb(255 255 255 / 12%);
+  background: #1c2530;
+  transform: none;
+  box-shadow: none;
+}
+
+.settingsShortcutEditButtonActive {
+  border-color: rgb(245 165 58 / 20%);
+  background: #2a2115;
+  color: #ffd6a0;
+}

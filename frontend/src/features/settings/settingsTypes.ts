@@ -163,7 +163,7 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
   },
   {
     id: 'youdao_web',
-    name: 'Youdao 网页翻译',
+    name: 'Youdao翻译',
     group: 'no_api_key',
     category: '翻译',
     description: '直接使用有道网页翻译能力，无需官方 API Key。',
@@ -173,7 +173,7 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
   },
   {
     id: 'bing_web',
-    name: 'Bing 网页翻译',
+    name: 'Bing 翻译',
     group: 'no_api_key',
     category: '翻译',
     description: '直接使用 Bing Translator 网页翻译能力，无需官方 API Key。',
@@ -183,29 +183,17 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
   },
   {
     id: 'deepl_free',
-    name: 'DeepL API Free',
+    name: 'DeepL',
     group: 'requires_api_key',
     category: '翻译',
     description: '高质量文本翻译，运行时读取 DEEPL_API_KEY / DEEPL_BASE_URL。',
     fields: [{ key: 'apiKey', label: 'API Key', placeholder: 'deepl-...', secret: true }, { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api-free.deepl.com/v2/translate' }],
     links: [{ label: '前往 DeepL 获取密钥', url: 'https://www.deepl.com/pro-api' }],
   },
-  {
-    id: 'azure_translator',
-    name: 'Azure Translator',
-    group: 'requires_api_key',
-    category: '翻译',
-    description: '微软官方翻译服务，运行时读取 AZURE_TRANSLATOR_KEY / REGION / BASE_URL。',
-    fields: [
-      { key: 'apiKey', label: 'API Key', placeholder: 'azure-translator-key', secret: true },
-      { key: 'region', label: 'Region', placeholder: 'eastasia' },
-      { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api.cognitive.microsofttranslator.com' },
-    ],
-    links: [{ label: '前往 Azure Translator 获取密钥', url: 'https://learn.microsoft.com/azure/ai-services/translator/text-translation/how-to/create-translator-resource' }],
-  },
+
   {
     id: 'google_translate',
-    name: 'Google Cloud Translation',
+    name: 'Google 翻译',
     group: 'requires_api_key',
     category: '翻译',
     description: 'Google Cloud 官方翻译 API，运行时读取 GOOGLE_TRANSLATE_API_KEY / BASE_URL。',
@@ -214,7 +202,7 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
   },
   {
     id: 'tencent_tmt',
-    name: '腾讯云机器翻译',
+    name: '腾讯云翻译',
     group: 'requires_api_key',
     category: '翻译',
     description: '腾讯云机器翻译，运行时读取 SECRET_ID / SECRET_KEY / REGION / BASE_URL。',
@@ -228,7 +216,7 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
   },
   {
     id: 'baidu_fanyi',
-    name: '百度翻译开放平台',
+    name: '百度翻译',
     group: 'requires_api_key',
     category: '翻译',
     description: '百度翻译开放平台，运行时读取 APP_ID / SECRET / BASE_URL。',

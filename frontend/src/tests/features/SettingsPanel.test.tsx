@@ -70,13 +70,13 @@ describe('SettingsPanel', () => {
     render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', { name: '工具' }));
 
-    expect(screen.getByText('Youdao 网页翻译')).toBeInTheDocument();
-    expect(screen.getByText('Bing 网页翻译')).toBeInTheDocument();
-    expect(screen.getByText('DeepL API Free')).toBeInTheDocument();
-    expect(screen.getByText('Azure Translator')).toBeInTheDocument();
-    expect(screen.getByText('Google Cloud Translation')).toBeInTheDocument();
-    expect(screen.getByText('腾讯云机器翻译')).toBeInTheDocument();
-    expect(screen.getByText('百度翻译开放平台')).toBeInTheDocument();
+    expect(screen.getAllByText('Youdao 网页翻译').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Bing 网页翻译').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('DeepL API Free').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Azure Translator').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Google Cloud Translation').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('腾讯云机器翻译').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('百度翻译开放平台').length).toBeGreaterThan(0);
   });
 
   it('shows provider key links for api-based translators', () => {
@@ -84,13 +84,24 @@ describe('SettingsPanel', () => {
     fireEvent.click(screen.getByRole('tab', { name: '工具' }));
     fireEvent.click(screen.getByRole('button', { name: 'Azure Translator' }));
 
-    expect(
-      screen.getByRole('link', { name: '前往 Azure Translator 获取密钥' }),
-    ).toHaveAttribute('href');
+    expect(screen.getByRole('link', { name: '前往 Azure Translator 获取密钥' })).toHaveAttribute(
+      'href',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: '腾讯云机器翻译' }));
-    expect(
-      screen.getByRole('link', { name: '前往腾讯云机器翻译获取密钥' }),
-    ).toHaveAttribute('href');
+    expect(screen.getByRole('link', { name: '前往腾讯云机器翻译获取密钥' })).toHaveAttribute(
+      'href',
+    );
+  });
+
+  it('renders top navigation beside the window title', () => {
+    render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={vi.fn()} />);
+    const tablist = screen.getByRole('tablist', { name: '设置分组' });
+    expect(tablist.closest('.settingsWindowBarTabs')).not.toBeNull();
+  });
+
+  it('does not render the titlebar subtitle copy', () => {
+    render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={vi.fn()} />);
+    expect(screen.queryByText('LingoFlow Desktop · 本地配置')).not.toBeInTheDocument();
   });
 });

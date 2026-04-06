@@ -1,0 +1,176 @@
+.settingsBody {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  min-height: 0;
+  padding: 28px 32px 36px;
+  overflow: auto;
+}
+
+.settingsBody::-webkit-scrollbar {
+  width: 10px;
+}
+
+.settingsBody::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 10%);
+  border-radius: var(--radius-full);
+}
+
+.settingsSection {
+  display: grid;
+  gap: 14px;
+}
+
+.settingsSectionHeader {
+  display: grid;
+  gap: 8px;
+}
+
+.settingsSection h3,
+.settingLabel {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.settingsGroup {
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 4%) 0%, rgb(255 255 255 / 2%) 100%),
+    var(--color-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.settingRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 76px;
+  padding: 18px 20px;
+  border-top: 1px solid var(--color-border-subtle);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.settingRow:first-child {
+  border-top: none;
+}
+
+.settingRow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(24 165 141 / 8%), transparent 40%);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+.settingRow:hover {
+  background: rgb(255 255 255 / 3%);
+}
+
+.settingRow:hover::before {
+  opacity: 1;
+}
+
+.settingRow select {
+  min-width: 220px;
+  min-height: 44px;
+  padding: 0 42px 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%),
+    linear-gradient(180deg, rgb(255 255 255 / 6%) 0%, rgb(255 255 255 / 3%) 100%);
+  background-position:
+    calc(100% - 18px) calc(50% - 1px),
+    calc(100% - 12px) calc(50% - 1px),
+    center;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: 14px;
+  appearance: none;
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.settingRow select:hover {
+  border-color: var(--color-border-hover);
+}
+
+.settingRow select:focus-visible {
+  border-color: var(--color-border-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+.settingSwitchRow .settingTextBlock {
+  padding-right: 12px;
+}
+
+.switch {
+  width: 50px;
+  height: 28px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: linear-gradient(180deg, #3a4658 0%, #2c3544 100%);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.switch:hover {
+  border-color: var(--color-border-hover);
+}
+
+.switchKnob {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #f8fbff 0%, #cfd9e7 100%);
+  box-shadow: 0 3px 8px rgb(5 10 18 / 34%);
+  transition: transform var(--transition-bounce);
+}
+
+.switchOn {
+  border-color: rgb(24 165 141 / 44%);
+  background: linear-gradient(135deg, #157765 0%, #1ca28b 100%);
+  box-shadow: 0 0 0 4px rgb(24 165 141 / 12%);
+}
+
+.switchOn:hover {
+  background: linear-gradient(135deg, #18927c 0%, #22b49c 100%);
+}
+
+.switchOn .switchKnob {
+  transform: translateX(22px);
+}
+
+@media (max-width: 760px) {
+  .settingRow {
+    grid-template-columns: 1fr;
+  }
+
+  .settingRow select {
+    width: 100%;
+  }
+}

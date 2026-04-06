@@ -6,7 +6,6 @@ import { OcrRuntimeApp } from './features/ocr/OcrRuntimeApp';
 import { OcrResultWindowApp } from './features/ocr/OcrResultWindowApp';
 import { ScreenshotOverlayApp } from './features/screenshot/ScreenshotOverlayApp';
 import './styles/design-tokens.css';
-import './styles/variables.css';
 import './styles/layout.css';
 import './styles/settings-panel.css';
 import './styles/provider-panel.css';

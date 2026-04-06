@@ -32,7 +32,9 @@ type SettingsUpdater = (next: SettingsState) => void;
 function SelectRow({ label, value, options, onChange }: SelectRowProps) {
   return (
     <label className="settingRow">
-      <span>{label}</span>
+      <span className="settingTextBlock">
+        <span className="settingLabel">{label}</span>
+      </span>
       <select value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -47,7 +49,9 @@ function SelectRow({ label, value, options, onChange }: SelectRowProps) {
 function ToggleRow({ label, checked, onChange }: ToggleRowProps) {
   return (
     <label className="settingRow settingSwitchRow">
-      <span>{label}</span>
+      <span className="settingTextBlock">
+        <span className="settingLabel">{label}</span>
+      </span>
       <button
         type="button"
         aria-pressed={checked}
@@ -60,10 +64,15 @@ function ToggleRow({ label, checked, onChange }: ToggleRowProps) {
   );
 }
 
-function Section(props: { title: string; children: ReactNode }) {
+function Section(props: { title: string; description?: string; children: ReactNode }) {
   return (
     <section className="settingsSection">
-      <h3>{props.title}</h3>
+      <header className="settingsSectionHeader">
+        <h3>{props.title}</h3>
+        {props.description ? (
+          <p className="settingsSectionDescription">{props.description}</p>
+        ) : null}
+      </header>
       <div className="settingsGroup">{props.children}</div>
     </section>
   );
@@ -118,7 +127,10 @@ function updateProviderSetting(
 function renderGeneralTab(current: SettingsState, onChange: SettingsUpdater) {
   return (
     <>
-      <Section title="查询语言">
+      <Section
+        title="查询语言"
+        description="设置默认语种方向和识别策略，决定翻译工作区的初始行为。"
+      >
         <SelectRow
           label="第一语言"
           value={current.primaryLanguage}
@@ -139,7 +151,7 @@ function renderGeneralTab(current: SettingsState, onChange: SettingsUpdater) {
         />
       </Section>
 
-      <Section title="输入框">
+      <Section title="输入框" description="微调主窗口打开、提交和保留结果时的交互细节。">
         <ToggleRow
           label="输入翻译时，清空查询内容"
           checked={current.clearInputOnTranslate}
@@ -163,7 +175,7 @@ function renderGeneralTab(current: SettingsState, onChange: SettingsUpdater) {
 function renderServiceTab(current: SettingsState, onChange: SettingsUpdater) {
   return (
     <>
-      <Section title="自动查询">
+      <Section title="自动查询" description="控制划词、截图和粘贴后的自动化动作，减少重复点击。">
         <ToggleRow
           label="划词后自动查询"
           checked={current.autoQueryOnSelection}
@@ -198,7 +210,7 @@ function renderServiceTab(current: SettingsState, onChange: SettingsUpdater) {
         />
       </Section>
 
-      <Section title="服务能力">
+      <Section title="服务能力" description="定义结果输出和本地接口暴露方式，决定外部集成行为。">
         <ToggleRow
           label="翻译成功后自动复制结果"
           checked={current.autoCopyResult}
