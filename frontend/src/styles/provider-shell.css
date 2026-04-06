@@ -1,6 +1,7 @@
 .providerStudio {
   display: grid;
   grid-template-columns: 228px minmax(0, 1fr);
+  align-items: start;
   gap: 14px;
   min-height: 0;
 }
@@ -16,12 +17,12 @@
 }
 
 .providerListPanel {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .providerEditorPanel {
   min-width: 0;
-  overflow: auto;
+  overflow: visible;
 }
 
 .providerSectionHeader {
@@ -42,10 +43,10 @@
 .providerSectionList {
   display: grid;
   gap: 4px;
-  height: 100%;
+  height: auto;
   min-height: 0;
   padding: 8px;
-  overflow: auto;
+  overflow: visible;
 }
 
 .providerSectionList::-webkit-scrollbar {

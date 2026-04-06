@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { SettingsPanel } from '../../features/settings/SettingsPanel';
 import { DEFAULT_SETTINGS } from '../../features/settings/settingsTypes';
 
@@ -64,6 +64,29 @@ describe('SettingsPanel', () => {
       ...DEFAULT_SETTINGS,
       ocrPanelPosition: 'center',
     });
+  });
+
+  it('marks settings that are not implemented yet', () => {
+    render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '通用' }));
+
+    const primaryLanguageRow = screen.getByText('第一语言').closest('.settingRow');
+    const detectionModeRow = screen.getByText('语种识别').closest('.settingRow');
+
+    expect(primaryLanguageRow).not.toBeNull();
+    expect(within(primaryLanguageRow as HTMLElement).queryByText('未实现')).not.toBeInTheDocument();
+    expect(detectionModeRow).not.toBeNull();
+    expect(within(detectionModeRow as HTMLElement).getByText('未实现')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: '服务' }));
+
+    const ocrPanelPositionRow = screen.getByText('OCR 结果面板位置').closest('.settingRow');
+    const httpApiRow = screen.getByText('启用本地 HTTP API').closest('.settingRow');
+
+    expect(ocrPanelPositionRow).not.toBeNull();
+    expect(within(ocrPanelPositionRow as HTMLElement).getByText('未实现')).toBeInTheDocument();
+    expect(httpApiRow).not.toBeNull();
+    expect(within(httpApiRow as HTMLElement).getByText('未实现')).toBeInTheDocument();
   });
 
   it('renders all translate providers in tool settings', () => {

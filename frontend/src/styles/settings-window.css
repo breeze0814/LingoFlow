@@ -1,8 +1,8 @@
 .settingsPanel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  height: 100%;
-  min-height: 0;
+  grid-template-rows: auto auto;
+  height: auto;
+  min-height: 100%;
   border: 1px solid var(--color-window-border);
   border-radius: 28px;
   overflow: hidden;
@@ -77,7 +77,6 @@
 }
 .settingsShell {
   min-height: 0;
-  height: 100%;
 }
 
 .settingsWindowBarTabs {
@@ -169,7 +168,7 @@
 
 .settingsContentPane {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   min-width: 0;
   min-height: 0;
 }
