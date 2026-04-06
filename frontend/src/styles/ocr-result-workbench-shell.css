@@ -34,11 +34,21 @@ body[data-window-type='ocr_result'] #root {
   border-radius: 16px;
 }
 
+.ocrCompactWindowCondensed .ocrFixedSection {
+  gap: 10px;
+  padding: 10px;
+}
+
 /* ============================================
    Input Wrapper: Textarea + embedded actions
    ============================================ */
 .ocrInputWrapper {
   position: relative;
+}
+
+.ocrCompactWindowCondensed .ocrInputWrapper {
+  display: grid;
+  gap: 8px;
 }
 
 .ocrCompactInput {
@@ -59,6 +69,11 @@ body[data-window-type='ocr_result'] #root {
     box-shadow 180ms ease;
 }
 
+.ocrCompactWindowCondensed .ocrCompactInput {
+  min-height: 96px;
+  padding: 10px 12px;
+}
+
 .ocrCompactInput:focus {
   outline: none;
   border-color: rgba(96, 165, 250, 0.56);
@@ -71,6 +86,13 @@ body[data-window-type='ocr_result'] #root {
   bottom: 8px;
   display: flex;
   gap: 4px;
+}
+
+.ocrCompactWindowCondensed .ocrInputActions {
+  position: static;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 /* ============================================
@@ -197,12 +219,14 @@ body[data-window-type='ocr_result'] #root {
 .ocrLanguageStrip {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: 6px;
 }
 
 .ocrLanguagePicker {
   position: relative;
+  min-width: 0;
 }
 
 .ocrLanguageButton,
@@ -217,6 +241,18 @@ body[data-window-type='ocr_result'] #root {
   font-size: 12px;
   cursor: pointer;
   transition: all 150ms ease;
+}
+
+.ocrLanguageButton,
+.ocrLanguageOption {
+  padding: 0 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ocrCompactWindowCondensed .ocrLanguageStrip {
+  gap: 4px;
 }
 
 .ocrLanguageButton:hover,
@@ -264,7 +300,15 @@ body[data-window-type='ocr_result'] #root {
   gap: 10px;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 2px;
+  padding-right: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ocrScrollableSection::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .ocrInlineMessage {

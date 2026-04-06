@@ -6,21 +6,25 @@ export type CopyHandler = (content: string, successMessage: string) => void;
 
 export type ProviderState = {
   color: string;
+  content: string;
+  hasResult: boolean;
+  icon: string;
+  isError: boolean;
+  isPinned: boolean;
   label: string;
   providerId: string;
-  row: DisplayRow | null;
+  rankLabel: string;
   statusLabel: string;
 };
 
 export type ResultState = {
-  featuredRow: DisplayRow | null;
-  providerStates: ProviderState[];
-  secondaryRows: DisplayRow[];
+  orderedRows: ProviderState[];
 };
 
 const PROVIDER_ORDER = [
   'deepl_free',
   'google_translate',
+  'bing_web',
   'openai_compatible',
   'azure_translator',
   'tencent_tmt',
@@ -41,8 +45,8 @@ export function statusLabel(status: TranslationWorkspaceStatus): string {
   return '待输入';
 }
 
-function featuredProviderId(rows: DisplayRow[], preferredProviderId: string | null): string | null {
-  const preferredRow = rows.find((row) => row.providerId === preferredProviderId && !row.isError);
+function pinnedProviderId(rows: DisplayRow[], preferredProviderId: string | null): string | null {
+  const preferredRow = rows.find((row) => row.providerId === preferredProviderId);
   if (preferredRow) {
     return preferredRow.providerId;
   }
@@ -50,41 +54,74 @@ function featuredProviderId(rows: DisplayRow[], preferredProviderId: string | nu
 }
 
 function providerStatusLabel(
-  row: DisplayRow | null,
-  featuredId: string | null,
-  providerId: string,
+  row: DisplayRow,
+  isPinned: boolean,
 ): string {
-  if (featuredId === providerId) {
-    return '主结果';
-  }
-  if (!row) {
-    return '等待中';
+  if (isPinned) {
+    return '置顶结果';
   }
   return row.isError ? '失败' : '已返回';
 }
 
-export function providerMark(providerId: string): string {
-  return providerLabel(providerId).slice(0, 2).toUpperCase();
+function rankLabel(index: number, isPinned: boolean): string {
+  if (isPinned) {
+    return 'Pinned';
+  }
+  return String(index + 1).padStart(2, '0');
+}
+
+function compareRows(left: DisplayRow, right: DisplayRow): number {
+  const leftIndex = PROVIDER_ORDER.indexOf(left.providerId as (typeof PROVIDER_ORDER)[number]);
+  const rightIndex = PROVIDER_ORDER.indexOf(right.providerId as (typeof PROVIDER_ORDER)[number]);
+  if (leftIndex >= 0 && rightIndex >= 0) {
+    return leftIndex - rightIndex;
+  }
+  if (leftIndex >= 0) {
+    return -1;
+  }
+  if (rightIndex >= 0) {
+    return 1;
+  }
+  return left.providerId.localeCompare(right.providerId);
 }
 
 export function buildResultState(
   rows: DisplayRow[],
   preferredProviderId: string | null,
+  enabledProviderIds: string[],
 ): ResultState {
   const rowMap = new Map(rows.map((row) => [row.providerId, row] as const));
-  const featuredId = featuredProviderId(rows, preferredProviderId);
+  const completeRows = Array.from(new Set([...enabledProviderIds, ...rows.map((row) => row.providerId)]))
+    .map((providerId) => rowMap.get(providerId) ?? { providerId, content: '等待翻译...', isError: false })
+    .sort(compareRows);
+  const pinnedId = pinnedProviderId(completeRows, preferredProviderId);
   return {
-    featuredRow: featuredId ? (rowMap.get(featuredId) ?? null) : null,
-    providerStates: PROVIDER_ORDER.map((providerId) => {
-      const row = rowMap.get(providerId) ?? null;
-      return {
-        color: providerMeta(providerId).color,
-        label: providerLabel(providerId),
-        providerId,
-        row,
-        statusLabel: providerStatusLabel(row, featuredId, providerId),
-      };
-    }),
-    secondaryRows: rows.filter((row) => row.providerId !== featuredId),
+    orderedRows: completeRows
+      .sort((left, right) => {
+        if (left.providerId === pinnedId) {
+          return -1;
+        }
+        if (right.providerId === pinnedId) {
+          return 1;
+        }
+        return compareRows(left, right);
+      })
+      .map((row, index) => {
+        const meta = providerMeta(row.providerId);
+        const isPinned = row.providerId === pinnedId;
+        const hasResult = rowMap.has(row.providerId);
+        return {
+          color: meta.color,
+          content: row.content,
+          hasResult,
+          icon: meta.icon,
+          isError: row.isError,
+          isPinned,
+          label: providerLabel(row.providerId),
+          providerId: row.providerId,
+          rankLabel: rankLabel(index, isPinned),
+          statusLabel: hasResult ? providerStatusLabel(row, isPinned) : '等待中',
+        };
+      }),
   };
 }

@@ -15,6 +15,8 @@ pub struct OcrRegionCommandPayload {
     pub target_lang: Option<String>,
     pub provider_id: Option<String>,
     pub ocr_provider_id: Option<String>,
+    pub translate_provider_configs:
+        Option<Vec<crate::apiprovider::runtime_config::TranslateProviderRuntimeConfig>>,
 }
 
 #[tauri::command]
@@ -37,6 +39,7 @@ pub async fn ocr_translate(
         target_lang: payload.target_lang,
         provider_id: payload.provider_id,
         ocr_provider_id: payload.ocr_provider_id,
+        provider_configs: payload.translate_provider_configs,
     });
     state.orchestrator.execute(request).await
 }
@@ -69,6 +72,7 @@ pub async fn ocr_translate_region(
         target_lang: payload.target_lang,
         provider_id: payload.provider_id,
         ocr_provider_id: payload.ocr_provider_id,
+        provider_configs: payload.translate_provider_configs,
     });
     let (image_path, capture_rect) = capture_region_image_file(&payload.capture_rect)?;
     state

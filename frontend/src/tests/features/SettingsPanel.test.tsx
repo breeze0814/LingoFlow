@@ -42,13 +42,13 @@ describe('SettingsPanel', () => {
   it('toggles provider from tools list', () => {
     const onChange = vi.fn();
     render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={onChange} />);
-    fireEvent.click(screen.getByRole('button', { name: '启用DeepL 翻译' }));
+    fireEvent.click(screen.getByRole('button', { name: '启用DeepL API Free' }));
     expect(onChange).toHaveBeenCalledWith({
       ...DEFAULT_SETTINGS,
       providers: {
         ...DEFAULT_SETTINGS.providers,
-        deepLTranslate: {
-          ...DEFAULT_SETTINGS.providers.deepLTranslate,
+        deepl_free: {
+          ...DEFAULT_SETTINGS.providers.deepl_free,
           enabled: true,
         },
       },
@@ -64,5 +64,33 @@ describe('SettingsPanel', () => {
       ...DEFAULT_SETTINGS,
       ocrPanelPosition: 'center',
     });
+  });
+
+  it('renders all translate providers in tool settings', () => {
+    render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '工具' }));
+
+    expect(screen.getByText('Youdao 网页翻译')).toBeInTheDocument();
+    expect(screen.getByText('Bing 网页翻译')).toBeInTheDocument();
+    expect(screen.getByText('DeepL API Free')).toBeInTheDocument();
+    expect(screen.getByText('Azure Translator')).toBeInTheDocument();
+    expect(screen.getByText('Google Cloud Translation')).toBeInTheDocument();
+    expect(screen.getByText('腾讯云机器翻译')).toBeInTheDocument();
+    expect(screen.getByText('百度翻译开放平台')).toBeInTheDocument();
+  });
+
+  it('shows provider key links for api-based translators', () => {
+    render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: '工具' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Azure Translator' }));
+
+    expect(
+      screen.getByRole('link', { name: '前往 Azure Translator 获取密钥' }),
+    ).toHaveAttribute('href');
+
+    fireEvent.click(screen.getByRole('button', { name: '腾讯云机器翻译' }));
+    expect(
+      screen.getByRole('link', { name: '前往腾讯云机器翻译获取密钥' }),
+    ).toHaveAttribute('href');
   });
 });

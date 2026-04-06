@@ -11,18 +11,18 @@ use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateRes
 
 const PROVIDER_ID: &str = "google_translate";
 const PROVIDER_LABEL: &str = "Google Translate";
-const DEFAULT_BASE_URL: &str = "https://translation.googleapis.com/language/translate/v2";
+pub(crate) const DEFAULT_BASE_URL: &str = "https://translation.googleapis.com/language/translate/v2";
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 
 pub struct GoogleTranslateProvider {
-    config: GoogleTranslateConfig,
-    client: reqwest::Client,
+    pub(crate) config: GoogleTranslateConfig,
+    pub(crate) client: reqwest::Client,
 }
 
 #[derive(Clone)]
-struct GoogleTranslateConfig {
-    api_key: String,
-    base_url: String,
+pub(crate) struct GoogleTranslateConfig {
+    pub(crate) api_key: String,
+    pub(crate) base_url: String,
 }
 
 #[derive(Deserialize)]

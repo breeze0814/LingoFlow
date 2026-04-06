@@ -12,19 +12,19 @@ use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateRes
 
 const PROVIDER_ID: &str = "azure_translator";
 const PROVIDER_LABEL: &str = "Azure Translator";
-const DEFAULT_BASE_URL: &str = "https://api.cognitive.microsofttranslator.com";
+pub(crate) const DEFAULT_BASE_URL: &str = "https://api.cognitive.microsofttranslator.com";
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 
 pub struct MicrosoftTranslatorProvider {
-    config: MicrosoftTranslatorConfig,
-    client: reqwest::Client,
+    pub(crate) config: MicrosoftTranslatorConfig,
+    pub(crate) client: reqwest::Client,
 }
 
 #[derive(Clone)]
-struct MicrosoftTranslatorConfig {
-    api_key: String,
-    region: Option<String>,
-    base_url: String,
+pub(crate) struct MicrosoftTranslatorConfig {
+    pub(crate) api_key: String,
+    pub(crate) region: Option<String>,
+    pub(crate) base_url: String,
 }
 
 #[derive(Serialize)]

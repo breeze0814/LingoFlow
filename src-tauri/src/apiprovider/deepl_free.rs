@@ -11,18 +11,18 @@ use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateRes
 
 const PROVIDER_ID: &str = "deepl_free";
 const PROVIDER_LABEL: &str = "DeepL";
-const DEFAULT_BASE_URL: &str = "https://api-free.deepl.com/v2/translate";
+pub(crate) const DEFAULT_BASE_URL: &str = "https://api-free.deepl.com/v2/translate";
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 
 pub struct DeepLFreeProvider {
-    config: DeepLConfig,
-    client: reqwest::Client,
+    pub(crate) config: DeepLConfig,
+    pub(crate) client: reqwest::Client,
 }
 
 #[derive(Clone)]
-struct DeepLConfig {
-    api_key: String,
-    base_url: String,
+pub(crate) struct DeepLConfig {
+    pub(crate) api_key: String,
+    pub(crate) base_url: String,
 }
 
 #[derive(Deserialize)]

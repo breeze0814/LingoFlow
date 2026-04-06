@@ -9,7 +9,10 @@ use crate::orchestrator::models::{
 };
 use crate::platform::capture::capture_interactive_image;
 use crate::providers::registry::ProviderRegistry;
-use crate::providers::traits::{OcrRequest, TranslateProvider, TranslateRequest};
+use crate::providers::runtime_translate_factory::{
+    build_runtime_translate_targets, TranslateExecutionTarget,
+};
+use crate::providers::traits::{OcrRequest, TranslateRequest};
 use crate::storage::config_store::ConfigStore;
 
 const DEFAULT_TRANSLATE_TIMEOUT_MS: u64 = 15000;
@@ -91,11 +94,13 @@ impl Orchestrator {
         let target_lang = request
             .target_lang
             .unwrap_or_else(|| self.config_store.get().app.target_lang);
-        let providers =
-            match self.pick_translate_providers(request.translate_provider_id.as_deref()) {
-                Ok(providers) => providers,
-                Err(error) => return Ok(Self::failed(task_id, error)),
-            };
+        let providers = match self.pick_translate_providers(
+            request.translate_provider_id.as_deref(),
+            request.translate_provider_configs.as_deref(),
+        ) {
+            Ok(providers) => providers,
+            Err(error) => return Ok(Self::failed(task_id, error)),
+        };
         let translation_results = self
             .translate_with_providers(
                 &providers,
@@ -206,11 +211,13 @@ impl Orchestrator {
         };
         println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
 
-        let providers =
-            match self.pick_translate_providers(request.translate_provider_id.as_deref()) {
-                Ok(providers) => providers,
-                Err(error) => return Ok(Self::failed(task_id, error)),
-            };
+        let providers = match self.pick_translate_providers(
+            request.translate_provider_id.as_deref(),
+            request.translate_provider_configs.as_deref(),
+        ) {
+            Ok(providers) => providers,
+            Err(error) => return Ok(Self::failed(task_id, error)),
+        };
         let source_lang = request
             .source_lang
             .unwrap_or_else(|| self.config_store.get().app.source_lang);
@@ -262,11 +269,13 @@ impl Orchestrator {
         };
         println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
 
-        let providers =
-            match self.pick_translate_providers(request.translate_provider_id.as_deref()) {
-                Ok(providers) => providers,
-                Err(error) => return Ok(Self::failed(task_id, error)),
-            };
+        let providers = match self.pick_translate_providers(
+            request.translate_provider_id.as_deref(),
+            request.translate_provider_configs.as_deref(),
+        ) {
+            Ok(providers) => providers,
+            Err(error) => return Ok(Self::failed(task_id, error)),
+        };
         let source_lang = request
             .source_lang
             .unwrap_or_else(|| self.config_store.get().app.source_lang);
@@ -368,10 +377,43 @@ impl Orchestrator {
     fn pick_translate_providers(
         &self,
         requested_provider_id: Option<&str>,
-    ) -> Result<Vec<(String, Arc<dyn TranslateProvider>)>, AppError> {
+        runtime_configs: Option<
+            &[crate::apiprovider::runtime_config::TranslateProviderRuntimeConfig],
+        >,
+    ) -> Result<Vec<TranslateExecutionTarget>, AppError> {
+        if let Some(configs) = runtime_configs {
+            let providers = if let Some(provider_id) = requested_provider_id {
+                let targets = build_runtime_translate_targets(configs);
+                let filtered = targets
+                    .into_iter()
+                    .filter(|target| target.provider_id() == provider_id)
+                    .collect::<Vec<TranslateExecutionTarget>>();
+                if filtered.is_empty() {
+                    return Err(AppError::new(
+                        ErrorCode::ProviderNotEnabled,
+                        format!("Translate provider `{provider_id}` is not enabled"),
+                        false,
+                    ));
+                }
+                filtered
+            } else {
+                build_runtime_translate_targets(configs)
+            };
+            if providers.is_empty() {
+                return Err(AppError::new(
+                    ErrorCode::ProviderNotConfigured,
+                    "No translate provider configured.",
+                    false,
+                ));
+            }
+            return Ok(providers);
+        }
         if let Some(provider_id) = requested_provider_id {
             let provider = self.pick_translate_provider(Some(provider_id))?;
-            return Ok(vec![(provider_id.to_string(), provider)]);
+            return Ok(vec![TranslateExecutionTarget::Ready {
+                provider_id: provider_id.to_string(),
+                provider,
+            }]);
         }
         let providers = self.providers.all_translate_providers();
         if providers.is_empty() {
@@ -381,7 +423,13 @@ impl Orchestrator {
                 false,
             ));
         }
-        Ok(providers)
+        Ok(providers
+            .into_iter()
+            .map(|(provider_id, provider)| TranslateExecutionTarget::Ready {
+                provider_id,
+                provider,
+            })
+            .collect())
     }
 
     fn pick_ocr_provider(
@@ -461,30 +509,44 @@ impl Orchestrator {
 
     async fn translate_with_providers(
         &self,
-        providers: &[(String, Arc<dyn TranslateProvider>)],
+        providers: &[TranslateExecutionTarget],
         text: &str,
         source_lang: &str,
         target_lang: &str,
     ) -> Vec<ProviderTranslationData> {
         let mut results = Vec::with_capacity(providers.len());
-        for (provider_id, provider) in providers {
-            let request = TranslateRequest {
-                text: text.to_string(),
-                source_lang: source_lang.to_string(),
-                target_lang: target_lang.to_string(),
-                timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
-            };
-            let result = match provider.translate(request).await {
-                Ok(translation) => ProviderTranslationData {
-                    provider_id: provider_id.clone(),
-                    translated_text: Some(translation.translated_text),
-                    error: None,
-                },
-                Err(error) => ProviderTranslationData {
-                    provider_id: provider_id.clone(),
-                    translated_text: None,
-                    error: Some(error),
-                },
+        for target in providers {
+            let result = match target {
+                TranslateExecutionTarget::Ready {
+                    provider_id,
+                    provider,
+                } => {
+                    let request = TranslateRequest {
+                        text: text.to_string(),
+                        source_lang: source_lang.to_string(),
+                        target_lang: target_lang.to_string(),
+                        timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
+                    };
+                    match provider.translate(request).await {
+                        Ok(translation) => ProviderTranslationData {
+                            provider_id: provider_id.clone(),
+                            translated_text: Some(translation.translated_text),
+                            error: None,
+                        },
+                        Err(error) => ProviderTranslationData {
+                            provider_id: provider_id.clone(),
+                            translated_text: None,
+                            error: Some(error),
+                        },
+                    }
+                }
+                TranslateExecutionTarget::BuildError { provider_id, error } => {
+                    ProviderTranslationData {
+                        provider_id: provider_id.clone(),
+                        translated_text: None,
+                        error: Some(error.clone()),
+                    }
+                }
             };
             results.push(result);
         }

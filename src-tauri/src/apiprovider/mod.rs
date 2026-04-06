@@ -1,8 +1,11 @@
 pub mod baidu_fanyi;
+pub mod bing_web;
+pub mod bing_web_support;
 pub mod deepl_free;
 pub mod google_translate;
 pub mod http_error;
 pub mod microsoft_translator;
+pub mod runtime_config;
 pub mod tencent_tmt;
 pub mod tencent_tmt_signer;
 pub mod youdao_web;

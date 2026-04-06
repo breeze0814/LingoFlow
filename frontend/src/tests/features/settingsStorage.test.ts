@@ -61,4 +61,46 @@ describe('settingsStorage', () => {
     expect(loaded.shortcuts.ocrTranslate).toBe('Option + S');
     expect(loaded.shortcuts.hideInterface).toBe('Option + Q');
   });
+
+  it('exposes the full translate provider set in default settings', () => {
+    expect(Object.keys(DEFAULT_SETTINGS.providers)).toEqual([
+      'localOcr',
+      'youdao_web',
+      'bing_web',
+      'deepl_free',
+      'azure_translator',
+      'google_translate',
+      'tencent_tmt',
+      'baidu_fanyi',
+    ]);
+  });
+
+  it('migrates legacy deepLTranslate settings into deepl_free', () => {
+    window.localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_SETTINGS,
+        providers: {
+          localOcr: {
+            enabled: true,
+            apiKey: '',
+            baseUrl: '',
+            model: '',
+          },
+          deepLTranslate: {
+            enabled: true,
+            apiKey: 'deepl-legacy-key',
+            baseUrl: 'https://api-free.deepl.com/v2',
+            model: '',
+          },
+        },
+      }),
+    );
+
+    const loaded = loadSettingsFromStorage();
+
+    expect(loaded.providers.deepl_free.enabled).toBe(true);
+    expect(loaded.providers.deepl_free.apiKey).toBe('deepl-legacy-key');
+    expect(loaded.providers.deepl_free.baseUrl).toBe('https://api-free.deepl.com/v2');
+  });
 });

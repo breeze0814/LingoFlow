@@ -23,6 +23,18 @@ body[data-window-type='ocr_result'] #root {
   position: relative;
 }
 
+body[data-window-type='ocr_result'] * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body[data-window-type='ocr_result'] *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
 body[data-window-type='ocr_result'] #root::before {
   display: none;
 }

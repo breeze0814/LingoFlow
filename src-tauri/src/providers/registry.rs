@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::apiprovider::baidu_fanyi::BaiduFanyiProvider;
+use crate::apiprovider::bing_web::BingWebProvider;
 use crate::apiprovider::deepl_free::DeepLFreeProvider;
 use crate::apiprovider::google_translate::GoogleTranslateProvider;
 use crate::apiprovider::microsoft_translator::MicrosoftTranslatorProvider;
@@ -37,6 +38,11 @@ impl ProviderRegistry {
             &mut translate_providers,
             &mut default_translate_provider_id,
             YoudaoWebProvider::from_env(),
+        );
+        register_translate_provider(
+            &mut translate_providers,
+            &mut default_translate_provider_id,
+            BingWebProvider::from_env(),
         );
         register_translate_provider(
             &mut translate_providers,

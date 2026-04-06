@@ -54,6 +54,7 @@ export function OcrPreviewApp() {
         onTargetLanguageChange={setTargetLanguageCode}
         onTextChange={setText}
         onTogglePin={() => setIsPinned((current) => !current)}
+        enabledProviderIds={['deepl_free', 'google_translate', 'openai_compatible', 'youdao_web']}
         preferredProviderId={preferredProviderId}
         rows={[...PREVIEW_ROWS]}
         sourceLanguageCode={sourceLanguageCode}

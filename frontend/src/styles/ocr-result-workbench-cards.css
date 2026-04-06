@@ -1,8 +1,8 @@
 .ocrSectionCard {
   display: grid;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 16px;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
 }
 
 .ocrSectionHeader {
@@ -10,12 +10,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .ocrSectionHeader h3 {
   margin: 0;
   color: #fafafa;
   font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .ocrSectionHeader span {
@@ -23,141 +26,135 @@
   font-size: 12px;
 }
 
-/* ============================================
-   Secondary provider list
-   ============================================ */
-.ocrSecondaryList {
+.ocrProviderStack {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
-.ocrSecondaryItem,
-.ocrPrimaryResult {
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  background: #2a2a2e;
+.ocrProviderCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 50%), #2a2a2e;
   transition:
     border-color 180ms ease,
+    transform 180ms ease,
     box-shadow 180ms ease;
 }
 
-.ocrSecondaryItem:hover {
-  border-color: rgba(255, 255, 255, 0.1);
+.ocrProviderCard:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
 }
 
-.ocrSecondarySummary {
-  width: 100%;
+.ocrProviderCardPinned {
+  border-color: rgba(96, 165, 250, 0.4);
+  background:
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 38%),
+    linear-gradient(180deg, rgba(96, 165, 250, 0.08), transparent 50%), #23252b;
+  box-shadow: 0 12px 26px rgba(30, 64, 175, 0.2);
+}
+
+.ocrProviderCardHeader {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.ocrProviderCardLead {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ocrProviderOrder {
+  min-width: 36px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  display: inline-flex;
   align-items: center;
-  padding: 10px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
+  justify-content: center;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ocrProviderOrderPinned {
+  color: #dbeafe;
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(59, 130, 246, 0.16);
 }
 
 .ocrProviderBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 34px;
-  height: 34px;
-  padding: 0 8px;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
-  border: 1px solid var(--provider-color, rgba(96, 165, 250, 0.4));
-  color: #fafafa;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  border: 1px solid color-mix(in srgb, var(--provider-color) 44%, rgba(255, 255, 255, 0.2));
+  background: color-mix(in srgb, var(--provider-color) 18%, rgba(255, 255, 255, 0.04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.ocrProviderBadge svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .ocrProviderMeta {
   display: grid;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
+}
+
+.ocrProviderMetaTopline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ocrProviderStatus {
+  color: #a1a1aa;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .ocrProviderMeta strong {
   color: #f4f4f5;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
-.ocrProviderMeta span {
-  color: #a1a1aa;
-  font-size: 12px;
-}
-
-.ocrDisclosure {
-  color: #71717a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  transition: color 150ms ease;
-}
-
-.ocrDisclosure svg {
-  width: 16px;
-  height: 16px;
-}
-
-.ocrSecondarySummary:hover .ocrDisclosure {
-  color: #a1a1aa;
-}
-
-.ocrSecondaryBody {
+.ocrProviderCardBody {
   display: grid;
-  gap: 8px;
-  padding: 0 10px 10px;
+  gap: 6px;
 }
 
-.ocrSecondaryBody p,
 .ocrResultText {
   margin: 0;
   color: #e4e4e7;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-/* ============================================
-   Mini actions — icon-only
-   ============================================ */
-.ocrMiniActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-/* ============================================
-   Primary result card
-   ============================================ */
-.ocrPrimaryResult {
-  padding: 12px;
-}
-
-.ocrPrimaryResultHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.ocrPrimaryResultHeader strong {
-  display: block;
-  color: #fafafa;
-  font-size: 14px;
-}
-
-.ocrPrimaryResultHeader span {
-  color: #a1a1aa;
-  font-size: 12px;
 }
 
 .ocrResultTextCollapsed {
@@ -165,6 +162,22 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   overflow: hidden;
+}
+
+.ocrMiniActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.ocrCompactWindowCondensed .ocrProviderCardHeader {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ocrCompactWindowCondensed .ocrProviderMetaTopline {
+  flex-wrap: wrap;
 }
 
 .ocrEmptyState {
@@ -175,8 +188,16 @@
 }
 
 @media (max-width: 420px) {
-  .ocrPrimaryResultHeader {
-    flex-direction: column;
-    align-items: flex-start;
+  .ocrProviderCardHeader {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .ocrProviderCardLead {
+    grid-template-columns: auto 1fr;
+  }
+
+  .ocrProviderMetaTopline {
+    flex-wrap: wrap;
   }
 }

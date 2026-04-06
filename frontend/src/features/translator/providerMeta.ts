@@ -1,5 +1,6 @@
 export const PROVIDER_LABEL_MAP: Record<string, string> = {
   youdao_web: '有道翻译',
+  bing_web: 'Bing 翻译',
   deepl_free: 'DeepL 翻译',
   google_translate: 'Google 翻译',
   tencent_tmt: '腾讯翻译',
@@ -17,37 +18,42 @@ export type ProviderMeta = {
 export const PROVIDER_META: Record<string, ProviderMeta> = {
   youdao_web: {
     label: '有道翻译',
-    icon: '📘',
+    icon: 'youdao',
     color: '#0c7a9e',
+  },
+  bing_web: {
+    label: 'Bing 翻译',
+    icon: 'bing',
+    color: '#008373',
   },
   deepl_free: {
     label: 'DeepL 翻译',
-    icon: '🔷',
+    icon: 'deepl',
     color: '#0f2b46',
   },
   google_translate: {
     label: 'Google 翻译',
-    icon: '🌐',
+    icon: 'google',
     color: '#4285f4',
   },
   tencent_tmt: {
     label: '腾讯翻译',
-    icon: '🐧',
+    icon: 'tencent',
     color: '#00a4ff',
   },
   baidu_fanyi: {
     label: '百度翻译',
-    icon: '🐻',
+    icon: 'baidu',
     color: '#2932e1',
   },
   azure_translator: {
     label: 'Azure 翻译',
-    icon: '☁️',
+    icon: 'azure',
     color: '#0078d4',
   },
   openai_compatible: {
     label: 'OpenAI 兼容翻译',
-    icon: '🤖',
+    icon: 'openai',
     color: '#10a37f',
   },
 };
@@ -60,7 +66,7 @@ export function providerMeta(providerId: string): ProviderMeta {
   return (
     PROVIDER_META[providerId] ?? {
       label: providerId,
-      icon: '🔧',
+      icon: 'default',
       color: '#6b7280',
     }
   );

@@ -9,6 +9,7 @@ export type DisplayRow = {
 const PROVIDER_PRIORITY = [
   'deepl_free',
   'google_translate',
+  'bing_web',
   'openai_compatible',
   'azure_translator',
   'tencent_tmt',

@@ -62,27 +62,34 @@
 - 可选：`YOUDAO_WEB_KEY_ENDPOINT`（默认 `https://dict.youdao.com/webtranslate/key`）
 - 可选：`YOUDAO_WEB_TRANSLATE_ENDPOINT`（默认 `https://dict.youdao.com/webtranslate`）
 
-2. `deepl_free`
+2. `bing_web`（网页端免 key）
+- 默认无需用户单独配置 API Key。
+- 注意：该方案依赖 Bing Translator 网页端动态 token 与页面参数，接口策略变化时可能失效。
+- 可选：`BING_WEB_BASE_URL`（默认 `https://www.bing.com`）
+- 可选：`BING_WEB_TRANSLATOR_URL`（默认 `https://www.bing.com/translator`）
+- 可选：`BING_WEB_USER_AGENT`
+
+3. `deepl_free`
 - `DEEPL_API_KEY`
 - 可选：`DEEPL_BASE_URL`（默认 `https://api-free.deepl.com/v2/translate`）
 
-3. `azure_translator`
+4. `azure_translator`
 - `AZURE_TRANSLATOR_KEY`
 - 可选：`AZURE_TRANSLATOR_REGION`
 - 可选：`AZURE_TRANSLATOR_BASE_URL`（默认 `https://api.cognitive.microsofttranslator.com`）
 
-4. `google_translate`
+5. `google_translate`
 - `GOOGLE_TRANSLATE_API_KEY`
 - 可选：`GOOGLE_TRANSLATE_BASE_URL`（默认 `https://translation.googleapis.com/language/translate/v2`）
 
-5. `tencent_tmt`
+6. `tencent_tmt`
 - `TENCENT_TRANSLATE_SECRET_ID`
 - `TENCENT_TRANSLATE_SECRET_KEY`
 - 可选：`TENCENT_TRANSLATE_REGION`（默认 `ap-guangzhou`）
 - 可选：`TENCENT_TRANSLATE_BASE_URL`（默认 `https://tmt.tencentcloudapi.com`）
 - 可选：`TENCENT_TRANSLATE_HOST`（默认 `tmt.tencentcloudapi.com`）
 
-6. `baidu_fanyi`
+7. `baidu_fanyi`
 - `BAIDU_TRANSLATE_APP_ID`
 - `BAIDU_TRANSLATE_SECRET`
 - 可选：`BAIDU_TRANSLATE_BASE_URL`（默认 `https://fanyi-api.baidu.com/api/trans/vip/translate`）

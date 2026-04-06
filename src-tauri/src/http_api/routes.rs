@@ -50,6 +50,7 @@ async fn post_translate(
         target_lang: body.target_lang,
         provider_id: body.provider_id,
         ocr_provider_id: None,
+        translate_provider_configs: None,
     };
     let request = TaskRequest::input(
         payload.text,
@@ -57,6 +58,7 @@ async fn post_translate(
             source_lang: payload.source_lang,
             target_lang: payload.target_lang,
             provider_id: payload.provider_id,
+            provider_configs: None,
         },
     );
     let response = orchestrator.execute(request).await?;
@@ -114,6 +116,7 @@ async fn get_ocr_translate(
         target_lang: query.target_lang,
         provider_id: query.provider_id,
         ocr_provider_id: query.ocr_provider_id,
+        provider_configs: None,
     });
     let response = orchestrator.execute(request).await?;
     Ok(Json(response))

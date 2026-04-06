@@ -132,10 +132,28 @@ function parseProviderConfig(value: unknown, key: ToolProviderId): ToolProviderC
     throw new Error(`invalid settings field: providers.${key}`);
   }
   return {
-    enabled: parseBoolean(value.enabled, `providers.${key}.enabled`),
-    apiKey: parseString(value.apiKey, `providers.${key}.apiKey`),
-    baseUrl: parseString(value.baseUrl, `providers.${key}.baseUrl`),
-    model: parseString(value.model, `providers.${key}.model`),
+    enabled:
+      value.enabled === undefined
+        ? fallback.enabled
+        : parseBoolean(value.enabled, `providers.${key}.enabled`),
+    apiKey: value.apiKey === undefined ? fallback.apiKey : parseString(value.apiKey, `providers.${key}.apiKey`),
+    baseUrl:
+      value.baseUrl === undefined ? fallback.baseUrl : parseString(value.baseUrl, `providers.${key}.baseUrl`),
+    model: value.model === undefined ? fallback.model : parseString(value.model, `providers.${key}.model`),
+    region: value.region === undefined ? fallback.region : parseString(value.region, `providers.${key}.region`),
+    secretId:
+      value.secretId === undefined
+        ? fallback.secretId
+        : parseString(value.secretId, `providers.${key}.secretId`),
+    secretKey:
+      value.secretKey === undefined
+        ? fallback.secretKey
+        : parseString(value.secretKey, `providers.${key}.secretKey`),
+    appId: value.appId === undefined ? fallback.appId : parseString(value.appId, `providers.${key}.appId`),
+    appSecret:
+      value.appSecret === undefined
+        ? fallback.appSecret
+        : parseString(value.appSecret, `providers.${key}.appSecret`),
   };
 }
 
@@ -143,15 +161,28 @@ function parseProviders(value: unknown): ToolProviderConfigMap {
   if (value === undefined) {
     return {
       localOcr: parseProviderConfig(undefined, 'localOcr'),
-      deepLTranslate: parseProviderConfig(undefined, 'deepLTranslate'),
+      youdao_web: parseProviderConfig(undefined, 'youdao_web'),
+      bing_web: parseProviderConfig(undefined, 'bing_web'),
+      deepl_free: parseProviderConfig(undefined, 'deepl_free'),
+      azure_translator: parseProviderConfig(undefined, 'azure_translator'),
+      google_translate: parseProviderConfig(undefined, 'google_translate'),
+      tencent_tmt: parseProviderConfig(undefined, 'tencent_tmt'),
+      baidu_fanyi: parseProviderConfig(undefined, 'baidu_fanyi'),
     };
   }
   if (!isSettingsRecord(value)) {
     throw new Error('invalid settings field: providers');
   }
+  const legacyDeepL = value.deepLTranslate;
   return {
     localOcr: parseProviderConfig(value.localOcr, 'localOcr'),
-    deepLTranslate: parseProviderConfig(value.deepLTranslate, 'deepLTranslate'),
+    youdao_web: parseProviderConfig(value.youdao_web, 'youdao_web'),
+    bing_web: parseProviderConfig(value.bing_web, 'bing_web'),
+    deepl_free: parseProviderConfig(value.deepl_free ?? legacyDeepL, 'deepl_free'),
+    azure_translator: parseProviderConfig(value.azure_translator, 'azure_translator'),
+    google_translate: parseProviderConfig(value.google_translate, 'google_translate'),
+    tencent_tmt: parseProviderConfig(value.tencent_tmt, 'tencent_tmt'),
+    baidu_fanyi: parseProviderConfig(value.baidu_fanyi, 'baidu_fanyi'),
   };
 }
 

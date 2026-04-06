@@ -4,6 +4,7 @@ import { OcrResultWorkbench } from './OcrResultWorkbench';
 import { TranslationWorkspaceStatus } from './translationWorkspaceService';
 
 type OcrResultPanelProps = {
+  enabledProviderIds: string[];
   errorMessage: string;
   isPinned: boolean;
   onClear: () => void;
@@ -30,6 +31,7 @@ async function copyToClipboard(text: string) {
 }
 
 export function OcrResultPanel({
+  enabledProviderIds,
   errorMessage,
   isPinned,
   onClear,
@@ -80,6 +82,7 @@ export function OcrResultPanel({
     <aside className="ocrResultPanel" role="dialog" aria-label="OCR 结果面板">
       <OcrResultWorkbench
         copyMessage={copyMessage}
+        enabledProviderIds={enabledProviderIds}
         errorMessage={errorMessage}
         isPinned={isPinned}
         onClear={onClear}

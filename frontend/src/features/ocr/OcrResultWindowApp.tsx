@@ -1,6 +1,8 @@
 import { MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LANGUAGE_OPTIONS } from '../settings/settingsTypes';
+import { buildEnabledTranslateProviderIds } from '../settings/translateProviderRequest';
+import { loadSettingsFromStorage } from '../settings/settingsStorage';
 import { OcrResultPanel } from './OcrResultPanel';
 import { buildDisplayRows } from './ocrResultRows';
 import {
@@ -93,6 +95,7 @@ export function OcrResultWindowApp() {
   const [isPinned, setIsPinned] = useState(true);
   const [listenError, setListenError] = useState('');
   const autoTranslateTokenRef = useRef('');
+  const enabledProviderIds = buildEnabledTranslateProviderIds(loadSettingsFromStorage().providers);
 
   useEffect(() => {
     setWorkspaceState(createTranslationWorkspaceState(payload));
@@ -290,6 +293,7 @@ export function OcrResultWindowApp() {
     return (
       <main className="ocrResultWindowRoot" onMouseDown={handleRootMouseDown}>
         <OcrResultPanel
+          enabledProviderIds={enabledProviderIds}
           errorMessage={workspaceState.errorMessage}
           isPinned={isPinned}
           onClear={handleClear}

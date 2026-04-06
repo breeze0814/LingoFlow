@@ -4,10 +4,21 @@ type TranslateInput = {
   text: string;
   sourceLang?: string;
   targetLang: string;
+  translateProviderConfigs?: {
+    id: string;
+    apiKey?: string;
+    baseUrl?: string;
+    region?: string;
+    secretId?: string;
+    secretKey?: string;
+    appId?: string;
+    appSecret?: string;
+  }[];
 };
 
 type SelectionInput = {
   targetLang: string;
+  translateProviderConfigs?: TranslateInput['translateProviderConfigs'];
 };
 
 type OcrRecognizeInput = {
@@ -18,6 +29,7 @@ type OcrTranslateInput = {
   sourceLang?: string;
   targetLang: string;
   sourceLangHint?: string;
+  translateProviderConfigs?: TranslateInput['translateProviderConfigs'];
 };
 
 type CaptureRect = {
@@ -37,6 +49,7 @@ type OcrTranslateRegionInput = {
   sourceLang?: string;
   targetLang: string;
   sourceLangHint?: string;
+  translateProviderConfigs?: TranslateInput['translateProviderConfigs'];
 };
 
 type DebugPrintInput = {
@@ -76,6 +89,16 @@ export const commandsClient = {
         text: input.text,
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
+        translate_provider_configs: input.translateProviderConfigs?.map((item) => ({
+          id: item.id,
+          api_key: item.apiKey,
+          base_url: item.baseUrl,
+          region: item.region,
+          secret_id: item.secretId,
+          secret_key: item.secretKey,
+          app_id: item.appId,
+          app_secret: item.appSecret,
+        })),
       },
     });
   },
@@ -83,6 +106,16 @@ export const commandsClient = {
     return invoke('selection_translate', {
       payload: {
         target_lang: input.targetLang,
+        translate_provider_configs: input.translateProviderConfigs?.map((item) => ({
+          id: item.id,
+          api_key: item.apiKey,
+          base_url: item.baseUrl,
+          region: item.region,
+          secret_id: item.secretId,
+          secret_key: item.secretKey,
+          app_id: item.appId,
+          app_secret: item.appSecret,
+        })),
       },
     });
   },
@@ -107,6 +140,16 @@ export const commandsClient = {
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
         source_lang_hint: input.sourceLangHint,
+        translate_provider_configs: input.translateProviderConfigs?.map((item) => ({
+          id: item.id,
+          api_key: item.apiKey,
+          base_url: item.baseUrl,
+          region: item.region,
+          secret_id: item.secretId,
+          secret_key: item.secretKey,
+          app_id: item.appId,
+          app_secret: item.appSecret,
+        })),
       },
     });
   },
@@ -117,6 +160,16 @@ export const commandsClient = {
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
         source_lang_hint: input.sourceLangHint,
+        translate_provider_configs: input.translateProviderConfigs?.map((item) => ({
+          id: item.id,
+          api_key: item.apiKey,
+          base_url: item.baseUrl,
+          region: item.region,
+          secret_id: item.secretId,
+          secret_key: item.secretKey,
+          app_id: item.appId,
+          app_secret: item.appSecret,
+        })),
       },
     });
   },

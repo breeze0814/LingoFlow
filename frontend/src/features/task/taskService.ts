@@ -1,5 +1,6 @@
 import { commandsClient } from '../../infra/tauri/commands';
 import { AppError, ProviderTranslationResult, TaskState, TaskType } from './taskTypes';
+import { TranslateProviderRequestConfig } from '../settings/translateProviderRequest';
 
 type TriggerResponse = {
   action: 'triggered' | 'succeeded' | 'failed' | 'cancelled';
@@ -166,17 +167,26 @@ async function runTask(input: RunnerInput): Promise<TriggerResponse> {
   }
 }
 
-export function triggerSelectionTranslate(state: TaskState, targetLang: string) {
+export function triggerSelectionTranslate(
+  state: TaskState,
+  targetLang: string,
+  translateProviderConfigs?: TranslateProviderRequestConfig[],
+) {
   return runTask({
     state,
     taskType: 'selection_translate',
-    request: () => commandsClient.selectionTranslate({ targetLang }),
+    request: () => commandsClient.selectionTranslate({ targetLang, translateProviderConfigs }),
   });
 }
 
 export function triggerInputTranslate(
   state: TaskState,
-  input: { sourceLang?: string; text: string; targetLang: string },
+  input: {
+    sourceLang?: string;
+    text: string;
+    targetLang: string;
+    translateProviderConfigs?: TranslateProviderRequestConfig[];
+  },
 ) {
   return runTask({
     state,
@@ -215,11 +225,18 @@ export function triggerOcrTranslate(
   targetLang: string,
   sourceLang?: string,
   sourceLangHint?: string,
+  translateProviderConfigs?: TranslateProviderRequestConfig[],
 ) {
   return runTask({
     state,
     taskType: 'ocr_translate',
-    request: () => commandsClient.ocrTranslate({ sourceLang, targetLang, sourceLangHint }),
+    request: () =>
+      commandsClient.ocrTranslate({
+        sourceLang,
+        targetLang,
+        sourceLangHint,
+        translateProviderConfigs,
+      }),
   });
 }
 
@@ -234,6 +251,7 @@ export function triggerOcrTranslateRegion(
   targetLang: string,
   sourceLang?: string,
   sourceLangHint?: string,
+  translateProviderConfigs?: TranslateProviderRequestConfig[],
 ) {
   return runTask({
     state,
@@ -244,6 +262,7 @@ export function triggerOcrTranslateRegion(
         sourceLang,
         targetLang,
         sourceLangHint,
+        translateProviderConfigs,
       }),
   });
 }

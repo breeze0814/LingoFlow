@@ -6,6 +6,7 @@ import {
   OCR_PANEL_POSITION_OPTIONS,
   SettingsState,
   ShortcutId,
+  ToolProviderConfig,
   ToolProviderId,
   VOICE_OPTIONS,
 } from './settingsTypes';
@@ -99,7 +100,7 @@ function updateProviderSetting(
   value: SettingsState,
   onChange: SettingsUpdater,
   key: ToolProviderId,
-  patch: { enabled?: boolean; apiKey?: string; baseUrl?: string; model?: string },
+  patch: Partial<ToolProviderConfig>,
 ) {
   const currentProvider = value.providers[key] ?? DEFAULT_TOOL_PROVIDERS[key];
   onChange({

@@ -12,19 +12,19 @@ use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateRes
 
 const PROVIDER_ID: &str = "baidu_fanyi";
 const PROVIDER_LABEL: &str = "Baidu Fanyi";
-const DEFAULT_BASE_URL: &str = "https://fanyi-api.baidu.com/api/trans/vip/translate";
+pub(crate) const DEFAULT_BASE_URL: &str = "https://fanyi-api.baidu.com/api/trans/vip/translate";
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 
 pub struct BaiduFanyiProvider {
-    config: BaiduFanyiConfig,
-    client: reqwest::Client,
+    pub(crate) config: BaiduFanyiConfig,
+    pub(crate) client: reqwest::Client,
 }
 
 #[derive(Clone)]
-struct BaiduFanyiConfig {
-    app_id: String,
-    secret: String,
-    base_url: String,
+pub(crate) struct BaiduFanyiConfig {
+    pub(crate) app_id: String,
+    pub(crate) secret: String,
+    pub(crate) base_url: String,
 }
 
 #[derive(Deserialize)]

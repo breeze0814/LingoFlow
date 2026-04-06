@@ -14,24 +14,24 @@ use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateRes
 
 const PROVIDER_ID: &str = "tencent_tmt";
 const PROVIDER_LABEL: &str = "Tencent TMT";
-const DEFAULT_BASE_URL: &str = "https://tmt.tencentcloudapi.com";
-const DEFAULT_HOST: &str = "tmt.tencentcloudapi.com";
-const DEFAULT_REGION: &str = "ap-guangzhou";
+pub(crate) const DEFAULT_BASE_URL: &str = "https://tmt.tencentcloudapi.com";
+pub(crate) const DEFAULT_HOST: &str = "tmt.tencentcloudapi.com";
+pub(crate) const DEFAULT_REGION: &str = "ap-guangzhou";
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 const ACTION_TEXT_TRANSLATE: &str = "TextTranslate";
 const API_VERSION: &str = "2018-03-21";
 
 pub struct TencentTmtProvider {
-    config: TencentTmtConfig,
-    client: reqwest::Client,
+    pub(crate) config: TencentTmtConfig,
+    pub(crate) client: reqwest::Client,
 }
 
 #[derive(Clone)]
-struct TencentTmtConfig {
-    region: String,
-    base_url: String,
-    host: String,
-    signer: TencentTmtSigner,
+pub(crate) struct TencentTmtConfig {
+    pub(crate) region: String,
+    pub(crate) base_url: String,
+    pub(crate) host: String,
+    pub(crate) signer: TencentTmtSigner,
 }
 
 #[derive(Serialize)]

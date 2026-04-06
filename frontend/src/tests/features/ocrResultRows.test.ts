@@ -9,6 +9,7 @@ describe('ocrResultRows', () => {
       sourceText: 'with macOS sonoma',
       translationResults: [
         { providerId: 'youdao_web', translatedText: '通过 macOS Sonoma' },
+        { providerId: 'bing_web', translatedText: '使用 macOS Sonoma' },
         { providerId: 'google_translate', translatedText: '借助 macOS Sonoma' },
         { providerId: 'deepl_free', translatedText: '采用 macOS Sonoma' },
       ],
@@ -17,6 +18,7 @@ describe('ocrResultRows', () => {
     expect(rows.map((row) => row.providerId)).toEqual([
       'deepl_free',
       'google_translate',
+      'bing_web',
       'youdao_web',
     ]);
   });

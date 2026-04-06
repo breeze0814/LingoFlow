@@ -1,11 +1,25 @@
 import { KeyboardEvent, useEffect, useMemo, useState } from 'react';
-import { TOOL_PROVIDER_DEFINITIONS, ToolProviderConfigMap, ToolProviderId } from './settingsTypes';
+import {
+  TOOL_PROVIDER_DEFINITIONS,
+  ToolProviderConfig,
+  ToolProviderConfigMap,
+  ToolProviderDefinition,
+  ToolProviderFieldDefinition,
+  ToolProviderId,
+} from './settingsTypes';
+import { ProviderGlyph } from '../ocr/ProviderGlyph';
 
-type ProviderPatch = {
-  enabled?: boolean;
-  apiKey?: string;
-  baseUrl?: string;
-  model?: string;
+type ProviderPatch = Partial<ToolProviderConfig>;
+
+const PROVIDER_ICON_MAP: Record<ToolProviderId, string> = {
+  localOcr: 'ocr',
+  youdao_web: 'youdao',
+  bing_web: 'bing',
+  deepl_free: 'deepl',
+  azure_translator: 'azure',
+  google_translate: 'google',
+  tencent_tmt: 'tencent',
+  baidu_fanyi: 'baidu',
 };
 
 type ProviderPanelProps = {
@@ -15,13 +29,18 @@ type ProviderPanelProps = {
 
 type ProviderRowProps = {
   active: boolean;
+  category: ToolProviderDefinition['category'];
   enabled: boolean;
+  icon: string;
   id: ToolProviderId;
-  logoText: string;
   name: string;
   onSelect: (id: ToolProviderId) => void;
   onToggle: (id: ToolProviderId, enabled: boolean) => void;
 };
+
+function providerRowMeta(category: ToolProviderDefinition['category'], enabled: boolean) {
+  return `${category} · ${enabled ? '已启用' : '未启用'}`;
+}
 
 function ProviderRow(props: ProviderRowProps) {
   const rowClass = props.active ? 'providerRow providerRowActive' : 'providerRow';
@@ -41,14 +60,26 @@ function ProviderRow(props: ProviderRowProps) {
     <div
       role="button"
       tabIndex={0}
+      aria-label={props.name}
       aria-pressed={props.active}
       className={rowClass}
       data-provider={props.id}
       onClick={() => props.onSelect(props.id)}
       onKeyDown={onKeyDown}
     >
-      <span className="providerLogo">{props.logoText}</span>
-      <span className="providerRowName">{props.name}</span>
+      <span className="providerRowLead">
+        <span className="providerRowIconShell" aria-hidden="true">
+          <span className="providerRowIcon">
+            <ProviderGlyph icon={props.icon} />
+          </span>
+        </span>
+        <span className="providerRowText">
+          <span className="providerRowName">{props.name}</span>
+          <span className="providerRowMeta">
+            {providerRowMeta(props.category, props.enabled)}
+          </span>
+        </span>
+      </span>
       <button
         type="button"
         aria-pressed={props.enabled}
@@ -86,8 +117,9 @@ function ProviderSection(props: {
             <ProviderRow
               key={id}
               id={id}
-              logoText={definition.logoText}
               name={definition.name}
+              category={definition.category}
+              icon={PROVIDER_ICON_MAP[id]}
               active={props.activeProviderId === id}
               enabled={props.providers[id].enabled}
               onSelect={props.onSelect}
@@ -100,13 +132,6 @@ function ProviderSection(props: {
   );
 }
 
-function tokenPlaceholder(providerId: ToolProviderId) {
-  if (providerId === 'deepLTranslate') {
-    return 'deepl-...';
-  }
-  return '';
-}
-
 function activeProviderOrThrow(providerId: ToolProviderId) {
   const found = TOOL_PROVIDER_DEFINITIONS.find((item) => item.id === providerId);
   if (!found) {
@@ -115,9 +140,13 @@ function activeProviderOrThrow(providerId: ToolProviderId) {
   return found;
 }
 
+function fieldValue(config: ToolProviderConfig, field: ToolProviderFieldDefinition): string {
+  return config[field.key];
+}
+
 export function ProviderPanel({ providers, onChangeProvider }: ProviderPanelProps) {
   const [activeProviderId, setActiveProviderId] = useState<ToolProviderId>('localOcr');
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [showSecrets, setShowSecrets] = useState(false);
 
   const noApiKeyIds = useMemo(
     () =>
@@ -137,7 +166,7 @@ export function ProviderPanel({ providers, onChangeProvider }: ProviderPanelProp
   const activeConfig = providers[activeProviderId];
 
   useEffect(() => {
-    setShowApiKey(false);
+    setShowSecrets(false);
   }, [activeProviderId]);
 
   return (
@@ -162,7 +191,13 @@ export function ProviderPanel({ providers, onChangeProvider }: ProviderPanelProp
       </aside>
 
       <section className="providerEditorPanel" aria-live="polite">
-        <h3>{activeProvider.name}</h3>
+        <header className="providerEditorHeader">
+          <div>
+            <h3>{activeProvider.name}</h3>
+            <p className="providerEditorDescription">{activeProvider.description}</p>
+          </div>
+        </header>
+
         <div className="providerEditorBody">
           <label className="providerEditorSwitchRow">
             <span>启用该工具</span>
@@ -170,69 +205,69 @@ export function ProviderPanel({ providers, onChangeProvider }: ProviderPanelProp
               type="button"
               aria-pressed={activeConfig.enabled}
               className={activeConfig.enabled ? 'switch switchOn' : 'switch switchOff'}
-              onClick={() =>
-                onChangeProvider(activeProviderId, {
-                  enabled: !activeConfig.enabled,
-                })
-              }
+              onClick={() => onChangeProvider(activeProviderId, { enabled: !activeConfig.enabled })}
             >
               <span className="switchKnob" />
             </button>
           </label>
 
-          {activeProvider.requiresApiKey ? (
+          {activeProvider.fields.length > 0 ? (
             <>
-              <label className="providerTokenField">
-                <span>Token</span>
-                <div className="providerTokenInputWrap">
+              {activeProvider.fields.some((field) => field.secret) ? (
+                <button
+                  type="button"
+                  className="providerSecretToggle"
+                  onClick={() => setShowSecrets((prev) => !prev)}
+                >
+                  {showSecrets ? '隐藏敏感字段' : '显示敏感字段'}
+                </button>
+              ) : null}
+
+              {activeProvider.fields.map((field) => {
+                const input = (
                   <input
-                    type={showApiKey ? 'text' : 'password'}
-                    value={activeConfig.apiKey}
-                    placeholder={tokenPlaceholder(activeProviderId)}
+                    type={field.secret && !showSecrets ? 'password' : 'text'}
+                    value={fieldValue(activeConfig, field)}
+                    placeholder={field.placeholder}
                     autoComplete="off"
                     spellCheck={false}
                     onChange={(event) =>
-                      onChangeProvider(activeProviderId, { apiKey: event.target.value })
+                      onChangeProvider(activeProviderId, { [field.key]: event.target.value })
                     }
                   />
-                  <button
-                    type="button"
-                    className="providerEyeButton"
-                    aria-label={showApiKey ? '隐藏 Token' : '显示 Token'}
-                    onClick={() => setShowApiKey((prev) => !prev)}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M12 5c5.5 0 9.4 3.6 11 7-1.6 3.4-5.5 7-11 7S2.6 15.4 1 12c1.6-3.4 5.5-7 11-7Zm0 2C8.2 7 5.2 9.3 3.4 12 5.2 14.7 8.2 17 12 17s6.8-2.3 8.6-5C18.8 9.3 15.8 7 12 7Zm0 2.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z" />
-                    </svg>
-                  </button>
-                </div>
-              </label>
-
-              <label className="providerTokenField">
-                <span>Base URL</span>
-                <input
-                  type="text"
-                  value={activeConfig.baseUrl}
-                  placeholder="https://api-free.deepl.com/v2"
-                  autoComplete="off"
-                  spellCheck={false}
-                  onChange={(event) =>
-                    onChangeProvider(activeProviderId, { baseUrl: event.target.value })
-                  }
-                />
-              </label>
-
-              <div className="providerEditorActions">
-                <button type="button" className="providerVerifyButton" disabled>
-                  验证
-                </button>
-              </div>
+                );
+                return (
+                  <label key={field.key} className="providerTokenField">
+                    <span>{field.label}</span>
+                    {field.secret ? <div className="providerTokenInputWrap">{input}</div> : input}
+                  </label>
+                );
+              })}
             </>
           ) : (
             <section className="providerEditorHint">
-              <p>当前工具走系统本地能力，不需要配置 API Key。</p>
+              <p>{activeProvider.helpText ?? '当前工具不需要额外配置。'}</p>
             </section>
           )}
+
+          {activeProvider.links.length > 0 ? (
+            <section className="providerLinks">
+              <h4>获取配置</h4>
+              <div className="providerLinkList">
+                {activeProvider.links.map((link) => (
+                  <a
+                    key={link.url}
+                    className="providerDocLink"
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       </section>
     </section>

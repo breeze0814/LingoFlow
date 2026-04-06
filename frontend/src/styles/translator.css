@@ -407,6 +407,14 @@
   background: var(--color-provider-google);
 }
 
+.engineCard[data-provider='bing_web'] {
+  border-left-color: var(--color-provider-bing);
+}
+
+.engineCard[data-provider='bing_web']::before {
+  background: var(--color-provider-bing);
+}
+
 .engineCard[data-provider='tencent_tmt'] {
   border-left-color: var(--color-provider-tencent);
 }

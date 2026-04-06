@@ -5,6 +5,7 @@ import {
   cacheOcrResultPayload,
   clearCachedOcrResultPayload,
 } from '../../features/ocr/ocrResultWindowBridge';
+import { DEFAULT_SETTINGS } from '../../features/settings/settingsTypes';
 
 const { mockHide, mockListen, mockInputTranslate } = vi.hoisted(() => ({
   mockHide: vi.fn().mockResolvedValue(undefined),
@@ -54,6 +55,23 @@ describe('OcrResultWindowApp', () => {
   });
 
   it('submits edited text from the workspace input on Enter', async () => {
+    window.localStorage.setItem(
+      'lingoflow.settings.v1',
+      JSON.stringify({
+        ...DEFAULT_SETTINGS,
+        providers: {
+          ...DEFAULT_SETTINGS.providers,
+          youdao_web: { ...DEFAULT_SETTINGS.providers.youdao_web, enabled: true },
+          bing_web: { ...DEFAULT_SETTINGS.providers.bing_web, enabled: true },
+          deepl_free: {
+            ...DEFAULT_SETTINGS.providers.deepl_free,
+            enabled: true,
+            apiKey: 'deepl-key',
+          },
+        },
+      }),
+    );
+
     cacheOcrResultPayload({
       autoTranslate: false,
       initialText: 'with macOS sonoma',
@@ -77,6 +95,15 @@ describe('OcrResultWindowApp', () => {
       sourceLang: 'en',
       targetLang: 'zh-CN',
       text: 'edited text',
+      translateProviderConfigs: [
+        { id: 'youdao_web' },
+        { id: 'bing_web' },
+        {
+          id: 'deepl_free',
+          apiKey: 'deepl-key',
+          baseUrl: 'https://api-free.deepl.com/v2/translate',
+        },
+      ],
     });
   });
 });

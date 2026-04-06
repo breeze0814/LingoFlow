@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MainLayout } from './layout/MainLayout';
 import { SettingsPanel } from '../features/settings/SettingsPanel';
 import { initialTaskState, taskReducer } from '../features/task/taskReducer';
@@ -16,6 +16,7 @@ import { isTrayActionPayload, TRAY_ACTION_EVENT, TrayAction } from '../features/
 import { TaskResult, TaskState, TaskType } from '../features/task/taskTypes';
 import { matchesShortcut } from '../features/settings/shortcutMatcher';
 import { reportTask } from '../features/task/taskReporter';
+import { buildEnabledTranslateProviderConfigs } from '../features/settings/translateProviderRequest';
 import {
   showOcrResultWindow,
   primeOcrResultWindowService,
@@ -106,6 +107,10 @@ export function App() {
   const pendingShortcutActionRef = useRef<ShortcutAction | null>(null);
 
   const targetLang = settings.secondaryLanguage;
+  const enabledTranslateProviderConfigs = useMemo(
+    () => buildEnabledTranslateProviderConfigs(settings.providers),
+    [settings.providers],
+  );
 
   const applyTaskState = useCallback(
     (next: Awaited<ReturnType<typeof triggerSelectionTranslate>>) => {
@@ -165,9 +170,13 @@ export function App() {
   );
 
   const runSelectionTranslate = useCallback(async () => {
-    const next = await triggerSelectionTranslate(taskState, targetLang);
+    const next = await triggerSelectionTranslate(
+      taskState,
+      targetLang,
+      enabledTranslateProviderConfigs,
+    );
     applyTaskState(next);
-  }, [applyTaskState, targetLang, taskState]);
+  }, [applyTaskState, enabledTranslateProviderConfigs, targetLang, taskState]);
 
   const runOcrTranslate = useCallback(async () => {
     if (isWindowsTauriRuntime()) {
@@ -181,7 +190,13 @@ export function App() {
       });
       return;
     }
-    const next = await triggerOcrTranslate(taskState, targetLang, 'auto', settings.primaryLanguage);
+    const next = await triggerOcrTranslate(
+      taskState,
+      targetLang,
+      'auto',
+      settings.primaryLanguage,
+      enabledTranslateProviderConfigs,
+    );
     applyTaskState(next);
     if (next.action === 'succeeded') {
       await presentTranslatedTextWorkspace(next.payload.taskType, next.payload.result);
@@ -191,6 +206,7 @@ export function App() {
     presentTranslatedTextWorkspace,
     settings.primaryLanguage,
     settings.secondaryLanguage,
+    enabledTranslateProviderConfigs,
     targetLang,
     taskState,
   ]);
