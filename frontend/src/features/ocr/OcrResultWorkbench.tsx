@@ -3,6 +3,7 @@ import {
   KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -48,20 +49,30 @@ function LanguageMenu(props: {
   activeCode: string;
   activeLabel: string;
   isOpen: boolean;
+  menuId: string;
   onSelect: (code: string) => void;
   onToggle: () => void;
 }) {
   return (
     <div className="ocrLanguagePicker">
-      <button type="button" className="ocrLanguageButton" onClick={props.onToggle}>
+      <button
+        type="button"
+        className="ocrLanguageButton"
+        aria-controls={props.menuId}
+        aria-expanded={props.isOpen}
+        aria-haspopup="listbox"
+        onClick={props.onToggle}
+      >
         {props.activeLabel}
       </button>
       {props.isOpen ? (
-        <div className="ocrLanguageMenu">
+        <div id={props.menuId} className="ocrLanguageMenu" role="listbox">
           {LANGUAGE_OPTIONS.map((option) => (
             <button
               key={option.value}
               type="button"
+              role="option"
+              aria-selected={option.value === props.activeCode}
               className={
                 option.value === props.activeCode
                   ? 'ocrLanguageOption ocrLanguageOptionActive'
@@ -127,6 +138,9 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
     [props.enabledProviderIds, props.preferredProviderId, props.rows],
   );
   const [activeLanguageMenu, setActiveLanguageMenu] = useState<'source' | 'target' | null>(null);
+  const sourceMenuId = useId();
+  const targetMenuId = useId();
+  const languageStripRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isCondensedLayout = useCondensedWorkbenchLayout();
 
@@ -158,6 +172,35 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
       }
     }, 0);
   }, [props.autoSelectTextOnOpen, props.textSelectionToken]);
+
+  useEffect(() => {
+    if (!activeLanguageMenu) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (languageStripRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      setActiveLanguageMenu(null);
+    }
+
+    function handleEscapeKey(event: KeyboardEvent) {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      setActiveLanguageMenu(null);
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('keydown', handleEscapeKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscapeKey, true);
+    };
+  }, [activeLanguageMenu]);
 
   function handleTextKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
@@ -196,11 +239,12 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
       }
     >
       <div className="ocrFixedSection">
-        <div className="ocrLanguageStrip">
+        <div ref={languageStripRef} className="ocrLanguageStrip">
           <LanguageMenu
             activeCode={props.sourceLanguageCode}
             activeLabel={props.sourceLanguageLabel}
             isOpen={activeLanguageMenu === 'source'}
+            menuId={sourceMenuId}
             onSelect={(code) => {
               props.onSourceLanguageChange(code);
               setActiveLanguageMenu(null);
@@ -221,6 +265,7 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
             activeCode={props.targetLanguageCode}
             activeLabel={props.targetLanguageLabel}
             isOpen={activeLanguageMenu === 'target'}
+            menuId={targetMenuId}
             onSelect={(code) => {
               props.onTargetLanguageChange(code);
               setActiveLanguageMenu(null);
@@ -273,7 +318,11 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
       </div>
 
       <div className="ocrScrollableSection">
-        {props.copyMessage ? <div className="ocrInlineMessage">{props.copyMessage}</div> : null}
+        {props.copyMessage ? (
+          <div className="ocrInlineMessage" role="status" aria-live="polite" aria-atomic="true">
+            {props.copyMessage}
+          </div>
+        ) : null}
         {props.errorMessage ? (
           <div className="ocrInlineMessage ocrInlineMessageError" role="alert">
             {props.errorMessage}

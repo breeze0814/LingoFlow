@@ -103,7 +103,11 @@ export function ShortcutPanel({ shortcuts, onChangeShortcut }: ShortcutPanelProp
           return (
             <article
               key={item.id}
-              className={isRecording ? 'settingsShortcutRow settingsShortcutRowRecording' : 'settingsShortcutRow'}
+              className={
+                isRecording
+                  ? 'settingsShortcutRow settingsShortcutRowRecording'
+                  : 'settingsShortcutRow'
+              }
             >
               <div className="settingsShortcutTextBlock">
                 <span className="settingsShortcutLabel">{item.action}</span>
@@ -123,7 +127,9 @@ export function ShortcutPanel({ shortcuts, onChangeShortcut }: ShortcutPanelProp
               <button
                 type="button"
                 className={
-                  isRecording ? 'settingsShortcutButton settingsShortcutButtonActive' : 'settingsShortcutButton'
+                  isRecording
+                    ? 'settingsShortcutButton settingsShortcutButtonActive'
+                    : 'settingsShortcutButton'
                 }
                 aria-label={`修改${item.action}快捷键`}
                 onClick={() => setRecordingShortcutId(item.id)}

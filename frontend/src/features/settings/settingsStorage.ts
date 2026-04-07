@@ -136,11 +136,22 @@ function parseProviderConfig(value: unknown, key: ToolProviderId): ToolProviderC
       value.enabled === undefined
         ? fallback.enabled
         : parseBoolean(value.enabled, `providers.${key}.enabled`),
-    apiKey: value.apiKey === undefined ? fallback.apiKey : parseString(value.apiKey, `providers.${key}.apiKey`),
+    apiKey:
+      value.apiKey === undefined
+        ? fallback.apiKey
+        : parseString(value.apiKey, `providers.${key}.apiKey`),
     baseUrl:
-      value.baseUrl === undefined ? fallback.baseUrl : parseString(value.baseUrl, `providers.${key}.baseUrl`),
-    model: value.model === undefined ? fallback.model : parseString(value.model, `providers.${key}.model`),
-    region: value.region === undefined ? fallback.region : parseString(value.region, `providers.${key}.region`),
+      value.baseUrl === undefined
+        ? fallback.baseUrl
+        : parseString(value.baseUrl, `providers.${key}.baseUrl`),
+    model:
+      value.model === undefined
+        ? fallback.model
+        : parseString(value.model, `providers.${key}.model`),
+    region:
+      value.region === undefined
+        ? fallback.region
+        : parseString(value.region, `providers.${key}.region`),
     secretId:
       value.secretId === undefined
         ? fallback.secretId
@@ -149,7 +160,10 @@ function parseProviderConfig(value: unknown, key: ToolProviderId): ToolProviderC
       value.secretKey === undefined
         ? fallback.secretKey
         : parseString(value.secretKey, `providers.${key}.secretKey`),
-    appId: value.appId === undefined ? fallback.appId : parseString(value.appId, `providers.${key}.appId`),
+    appId:
+      value.appId === undefined
+        ? fallback.appId
+        : parseString(value.appId, `providers.${key}.appId`),
     appSecret:
       value.appSecret === undefined
         ? fallback.appSecret

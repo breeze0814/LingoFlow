@@ -53,10 +53,7 @@ function pinnedProviderId(rows: DisplayRow[], preferredProviderId: string | null
   return rows.find((row) => !row.isError)?.providerId ?? preferredProviderId;
 }
 
-function providerStatusLabel(
-  row: DisplayRow,
-  isPinned: boolean,
-): string {
+function providerStatusLabel(row: DisplayRow, isPinned: boolean): string {
   if (isPinned) {
     return '置顶结果';
   }
@@ -91,8 +88,13 @@ export function buildResultState(
   enabledProviderIds: string[],
 ): ResultState {
   const rowMap = new Map(rows.map((row) => [row.providerId, row] as const));
-  const completeRows = Array.from(new Set([...enabledProviderIds, ...rows.map((row) => row.providerId)]))
-    .map((providerId) => rowMap.get(providerId) ?? { providerId, content: '等待翻译...', isError: false })
+  const completeRows = Array.from(
+    new Set([...enabledProviderIds, ...rows.map((row) => row.providerId)]),
+  )
+    .map(
+      (providerId) =>
+        rowMap.get(providerId) ?? { providerId, content: '等待翻译...', isError: false },
+    )
     .sort(compareRows);
   const pinnedId = pinnedProviderId(completeRows, preferredProviderId);
   return {

@@ -1,5 +1,18 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, vi } from 'vitest';
 import { OcrResultPanel } from '../../features/ocr/OcrResultPanel';
+
+const clipboardWriteText = vi.fn().mockResolvedValue(undefined);
+
+beforeEach(() => {
+  clipboardWriteText.mockClear();
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      writeText: clipboardWriteText,
+    },
+  });
+});
 
 describe('OcrResultPanel', () => {
   it('renders editable workspace input and submits on Enter', () => {
@@ -138,5 +151,83 @@ describe('OcrResultPanel', () => {
     expect(orderedRows).toEqual(['deepl_free', 'bing_web', 'youdao_web']);
     expect(screen.queryByText('当前没有 Provider 结果。')).not.toBeInTheDocument();
     expect(screen.getAllByText('等待中').length).toBeGreaterThan(0);
+  });
+
+  it('announces copy feedback through a live status region', async () => {
+    render(
+      <OcrResultPanel
+        autoQueryOnPaste={false}
+        autoSelectTextOnOpen={false}
+        errorMessage=""
+        isPinned={false}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+        onPromoteProvider={vi.fn()}
+        onSourceLanguageChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onSwapLanguages={vi.fn()}
+        onTargetLanguageChange={vi.fn()}
+        onTextChange={vi.fn()}
+        onTogglePin={vi.fn()}
+        enabledProviderIds={['deepl_free']}
+        preferredProviderId="deepl_free"
+        rows={[{ providerId: 'deepl_free', content: '采用 macOS Sonoma', isError: false }]}
+        sourceLanguageCode="en"
+        sourceLanguageLabel="英语"
+        status="success"
+        text="with macOS sonoma"
+        textSelectionToken="copy-status"
+        targetLanguageCode="zh-CN"
+        targetLanguageLabel="简体中文"
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: '复制' })[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('已复制输入内容');
+    });
+  });
+
+  it('closes the language menu on Escape without closing the full panel', async () => {
+    const onClose = vi.fn();
+
+    render(
+      <OcrResultPanel
+        autoQueryOnPaste={false}
+        autoSelectTextOnOpen={false}
+        errorMessage=""
+        isPinned={false}
+        onClear={vi.fn()}
+        onClose={onClose}
+        onPromoteProvider={vi.fn()}
+        onSourceLanguageChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onSwapLanguages={vi.fn()}
+        onTargetLanguageChange={vi.fn()}
+        onTextChange={vi.fn()}
+        onTogglePin={vi.fn()}
+        enabledProviderIds={['deepl_free']}
+        preferredProviderId="deepl_free"
+        rows={[{ providerId: 'deepl_free', content: '采用 macOS Sonoma', isError: false }]}
+        sourceLanguageCode="en"
+        sourceLanguageLabel="英语"
+        status="success"
+        text="with macOS sonoma"
+        textSelectionToken="escape-menu"
+        targetLanguageCode="zh-CN"
+        targetLanguageLabel="简体中文"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '英语' }));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    });
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

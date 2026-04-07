@@ -68,7 +68,9 @@ export function OcrProviderResults(props: OcrProviderResultsProps) {
             return (
               <article
                 key={item.providerId}
-                className={item.isPinned ? 'ocrProviderCard ocrProviderCardPinned' : 'ocrProviderCard'}
+                className={
+                  item.isPinned ? 'ocrProviderCard ocrProviderCardPinned' : 'ocrProviderCard'
+                }
                 data-provider-row={item.providerId}
               >
                 <header className="ocrProviderCardHeader">
@@ -109,7 +111,11 @@ export function OcrProviderResults(props: OcrProviderResultsProps) {
                 </header>
 
                 <div className="ocrProviderCardBody">
-                  <p className={isExpanded ? 'ocrResultText' : 'ocrResultText ocrResultTextCollapsed'}>
+                  <p
+                    className={
+                      isExpanded ? 'ocrResultText' : 'ocrResultText ocrResultTextCollapsed'
+                    }
+                  >
                     {item.content}
                   </p>
                   {canExpand ? (

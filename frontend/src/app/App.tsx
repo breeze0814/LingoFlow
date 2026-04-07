@@ -1,350 +1,53 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import { getCurrentWindow } from '@tauri-apps/api/window';
 import { MainLayout } from './layout/MainLayout';
 import { SettingsPanel } from '../features/settings/SettingsPanel';
-import { initialTaskState, taskReducer } from '../features/task/taskReducer';
-import { triggerOcrRecognize, triggerOcrTranslate } from '../features/task/taskService';
-import { LANGUAGE_OPTIONS, SettingsState } from '../features/settings/settingsTypes';
+import { initialTaskState } from '../features/task/taskReducer';
+import { SettingsState } from '../features/settings/settingsTypes';
 import {
   loadSettingsFromStorage,
   saveSettingsToStorage,
 } from '../features/settings/settingsStorage';
-import { isTrayActionPayload, TRAY_ACTION_EVENT, TrayAction } from '../features/tray/trayEvents';
-import { TaskResult, TaskState, TaskType } from '../features/task/taskTypes';
+import { isTrayActionPayload, TRAY_ACTION_EVENT } from '../features/tray/trayEvents';
 import { matchesShortcut } from '../features/settings/shortcutMatcher';
-import { reportTask } from '../features/task/taskReporter';
-import { buildEnabledTranslateProviderConfigs } from '../features/settings/translateProviderRequest';
-import {
-  showOcrResultWindow,
-  showCachedOcrResultWindow,
-  primeOcrResultWindowService,
-} from '../features/ocr/ocrResultWindowService';
-import { OcrResultWindowPayload } from '../features/ocr/ocrResultWindowBridge';
+import { primeOcrResultWindowService } from '../features/ocr/ocrResultWindowService';
 import { syncNativeShortcuts } from '../features/settings/nativeShortcutSyncService';
 import { syncRuntimeSettings } from '../features/settings/runtimeSettingsSyncService';
-import { resolveConfiguredSourceLanguage } from '../features/settings/settingsRuntime';
-import { resolveSelectionWorkflowOutcome } from '../features/selection/selectionWorkflow';
+import { primeScreenshotOverlayService } from '../features/screenshot/screenshotOverlayService';
 import {
-  createInputTranslatePayload,
-  createOcrRecognizePayload,
-  createOcrTranslatePayload,
-} from '../features/ocr/translationWorkspacePayload';
-import {
-  primeScreenshotOverlayService,
-  showScreenshotOverlay,
-} from '../features/screenshot/screenshotOverlayService';
-
-function makeTaskId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `task_${Date.now()}`;
-}
-
-function makeUiError(taskType: TaskType, message: string): TaskState {
-  return {
-    taskId: makeTaskId(),
-    taskType,
-    status: 'failure',
-    result: null,
-    error: {
-      code: 'ui_error',
-      message,
-      retryable: true,
-    },
-  };
-}
-
-function languageLabel(code: string): string {
-  const found = LANGUAGE_OPTIONS.find((item) => item.value === code);
-  return found ? found.label : code;
-}
-
-function shouldSkipKeybindingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-  const tagName = target.tagName.toLowerCase();
-  if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
-    return true;
-  }
-  return target.isContentEditable;
-}
-
-function isShortcutRecording(): boolean {
-  if (typeof document === 'undefined') {
-    return false;
-  }
-  return document.querySelector('[data-shortcut-recording="true"]') !== null;
-}
-
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
-
-function isWindowsTauriRuntime(): boolean {
-  if (!isTauriRuntime() || typeof navigator === 'undefined') {
-    return false;
-  }
-  return navigator.userAgent.includes('Windows');
-}
-
-function hasActiveModifiers(event: KeyboardEvent): boolean {
-  return event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
-}
-
-type ShortcutAction =
-  | 'input_translate'
-  | 'selection_translate'
-  | 'ocr_translate'
-  | 'ocr_recognize'
-  | 'hide_interface'
-  | 'show_main_window'
-  | 'open_settings';
+  hasActiveModifiers,
+  isShortcutRecording,
+  isTauriRuntime,
+  isWindowsTauriRuntime,
+  ShortcutAction,
+  shouldSkipKeybindingTarget,
+} from './appRuntime';
+import { useAppActions } from './useAppActions';
 
 export function App() {
-  const [taskState, setTaskState] = useState(initialTaskState);
+  const [taskState, updateTaskState] = useState(initialTaskState);
   const [settings, setSettings] = useState<SettingsState>(() => loadSettingsFromStorage());
   const pendingShortcutActionRef = useRef<ShortcutAction | null>(null);
-
-  const targetLang = settings.secondaryLanguage;
-  const enabledTranslateProviderConfigs = useMemo(
-    () => buildEnabledTranslateProviderConfigs(settings.providers),
-    [settings.providers],
-  );
-
-  const applyTaskState = useCallback((next: Awaited<ReturnType<typeof triggerOcrTranslate>>) => {
-    setTaskState(taskReducer(next.action, next.payload));
-    reportTask(next);
-  }, []);
-
-  const presentOcrResultWindow = useCallback(
-    async (payload: OcrResultWindowPayload, taskType: TaskType) => {
-      try {
-        await showOcrResultWindow(payload);
-      } catch (error) {
-        setTaskState(makeUiError(taskType, `打开 OCR 结果窗口失败: ${String(error)}`));
-      }
-    },
-    [],
-  );
-
-  const translationWorkspaceLabels = useCallback(
-    () => ({
-      sourceLanguageCode: settings.primaryLanguage,
-      sourceLanguageLabel: languageLabel(settings.primaryLanguage),
-      targetLanguageCode: settings.secondaryLanguage,
-      targetLanguageLabel: languageLabel(settings.secondaryLanguage),
-    }),
-    [settings.primaryLanguage, settings.secondaryLanguage],
-  );
-
-  const presentRecognizedTextWorkspace = useCallback(
-    async (taskType: TaskType, result: TaskResult | undefined) => {
-      if (!result) {
-        return;
-      }
-
-      await presentOcrResultWindow(
-        createOcrRecognizePayload(result, translationWorkspaceLabels(), settings.autoQueryOnOcr),
-        taskType,
-      );
-    },
-    [presentOcrResultWindow, settings.autoQueryOnOcr, translationWorkspaceLabels],
-  );
-
-  const presentTranslatedTextWorkspace = useCallback(
-    async (taskType: TaskType, result: TaskResult | undefined) => {
-      if (!result) {
-        return;
-      }
-
-      await presentOcrResultWindow(
-        createOcrTranslatePayload(result, translationWorkspaceLabels()),
-        taskType,
-      );
-    },
-    [presentOcrResultWindow, translationWorkspaceLabels],
-  );
-
-  const presentPendingTranslatedTextWorkspace = useCallback(
-    async (taskType: TaskType, result: TaskResult | undefined) => {
-      if (!result) {
-        return;
-      }
-
-      await presentOcrResultWindow(
-        createOcrTranslatePayload(result, translationWorkspaceLabels(), true),
-        taskType,
-      );
-    },
-    [presentOcrResultWindow, translationWorkspaceLabels],
-  );
-
-  const runSelectionTranslate = useCallback(async () => {
-    const outcome = await resolveSelectionWorkflowOutcome(
-      {
-        autoQueryOnSelection: settings.autoQueryOnSelection,
-        keepResultForSelection: settings.keepResultForSelection,
-      },
-      translationWorkspaceLabels(),
-    );
-    if (outcome.kind === 'show_cached') {
-      await showCachedOcrResultWindow();
-      return;
-    }
-    await presentOcrResultWindow(outcome.payload, 'selection_translate');
-  }, [
-    presentOcrResultWindow,
-    settings.autoQueryOnSelection,
-    settings.keepResultForSelection,
-    translationWorkspaceLabels,
-  ]);
-
-  const runOcrTranslate = useCallback(async () => {
-    if (isWindowsTauriRuntime()) {
-      await showScreenshotOverlay({
-        mode: 'ocr_translate',
-        sourceLanguageLabel: languageLabel(settings.primaryLanguage),
-        sourceLangHint: settings.primaryLanguage,
-        targetLang: targetLang,
-        targetLanguageCode: settings.secondaryLanguage,
-        targetLanguageLabel: languageLabel(settings.secondaryLanguage),
-      });
-      return;
-    }
-    const next = await triggerOcrRecognize(taskState, settings.primaryLanguage);
-    applyTaskState(next);
-    if (next.action === 'succeeded') {
-      await presentPendingTranslatedTextWorkspace('ocr_translate', next.payload.result);
-    }
-  }, [applyTaskState, presentPendingTranslatedTextWorkspace, settings.primaryLanguage, taskState]);
-
-  const runOcrRecognize = useCallback(async () => {
-    if (isWindowsTauriRuntime()) {
-      await showScreenshotOverlay({
-        mode: 'ocr_recognize',
-        sourceLanguageLabel: languageLabel(settings.primaryLanguage),
-        sourceLangHint: settings.primaryLanguage,
-        targetLanguageCode: settings.secondaryLanguage,
-        targetLanguageLabel: languageLabel(settings.secondaryLanguage),
-      });
-      return;
-    }
-    const next = await triggerOcrRecognize(taskState, settings.primaryLanguage);
-    applyTaskState(next);
-    if (next.action === 'succeeded') {
-      await presentRecognizedTextWorkspace(next.payload.taskType, next.payload.result);
-    }
-  }, [
-    applyTaskState,
-    presentRecognizedTextWorkspace,
-    settings.primaryLanguage,
-    settings.secondaryLanguage,
+  const { executeShortcutAction, handleTrayAction } = useAppActions({
+    settings,
     taskState,
-  ]);
+    setTaskState: updateTaskState,
+  });
+  const trayActionHandlerRef = useRef(handleTrayAction);
+  const shortcutExecutorRef = useRef(executeShortcutAction);
+  const shortcutConfigRef = useRef(settings.shortcuts);
 
-  const openInputTranslateWorkspace = useCallback(async () => {
-    await presentOcrResultWindow(
-      createInputTranslatePayload(translationWorkspaceLabels()),
-      'input_translate',
-    );
-  }, [presentOcrResultWindow, translationWorkspaceLabels]);
+  useEffect(() => {
+    trayActionHandlerRef.current = handleTrayAction;
+  }, [handleTrayAction]);
 
-  const focusSettingsWindow = useCallback(async () => {
-    try {
-      const currentWindow = getCurrentWindow();
-      await currentWindow.show();
-      await currentWindow.unminimize();
-      await currentWindow.setFocus();
-    } catch (error) {
-      console.error('failed to focus settings window', error);
-    }
-  }, []);
+  useEffect(() => {
+    shortcutExecutorRef.current = executeShortcutAction;
+  }, [executeShortcutAction]);
 
-  const hideCurrentWindow = useCallback(async () => {
-    try {
-      await getCurrentWindow().hide();
-    } catch (error) {
-      console.error('failed to hide current window', error);
-    }
-  }, []);
-
-  const executeShortcutAction = useCallback(
-    (action: ShortcutAction) => {
-      if (action === 'input_translate') {
-        void openInputTranslateWorkspace();
-        return;
-      }
-      if (action === 'selection_translate') {
-        void runSelectionTranslate();
-        return;
-      }
-      if (action === 'ocr_translate') {
-        void runOcrTranslate();
-        return;
-      }
-      if (action === 'hide_interface') {
-        void hideCurrentWindow();
-        return;
-      }
-      if (action === 'show_main_window') {
-        return;
-      }
-      if (action === 'open_settings') {
-        void focusSettingsWindow();
-        return;
-      }
-      void runOcrRecognize();
-    },
-    [
-      focusSettingsWindow,
-      hideCurrentWindow,
-      openInputTranslateWorkspace,
-      runOcrRecognize,
-      runOcrTranslate,
-      runSelectionTranslate,
-    ],
-  );
-
-  const handleTrayAction = useCallback(
-    async (action: TrayAction) => {
-      if (action === 'input_translate') {
-        await openInputTranslateWorkspace();
-        return;
-      }
-      if (action === 'selection_translate') {
-        await runSelectionTranslate();
-        return;
-      }
-      if (action === 'ocr_translate') {
-        await runOcrTranslate();
-        return;
-      }
-      if (action === 'ocr_recognize') {
-        await runOcrRecognize();
-        return;
-      }
-      if (action === 'show_main_window') {
-        return;
-      }
-      if (action === 'open_settings') {
-        await focusSettingsWindow();
-        return;
-      }
-      if (action === 'check_update') {
-        return;
-      }
-    },
-    [
-      focusSettingsWindow,
-      openInputTranslateWorkspace,
-      runOcrRecognize,
-      runOcrTranslate,
-      runSelectionTranslate,
-    ],
-  );
+  useEffect(() => {
+    shortcutConfigRef.current = settings.shortcuts;
+  }, [settings.shortcuts]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -360,7 +63,7 @@ export function App() {
           if (!isTrayActionPayload(event.payload)) {
             return;
           }
-          void handleTrayAction(event.payload.action);
+          void trayActionHandlerRef.current(event.payload.action);
         });
         if (disposed) {
           unlisten();
@@ -379,7 +82,7 @@ export function App() {
         cleanup();
       }
     };
-  }, [handleTrayAction]);
+  }, []);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -426,6 +129,7 @@ export function App() {
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
+      const shortcuts = shortcutConfigRef.current;
       if (isShortcutRecording()) {
         return;
       }
@@ -433,32 +137,32 @@ export function App() {
         return;
       }
 
-      if (matchesShortcut(event, settings.shortcuts.inputTranslate)) {
+      if (matchesShortcut(event, shortcuts.inputTranslate)) {
         event.preventDefault();
         pendingShortcutActionRef.current = 'input_translate';
         return;
       }
-      if (matchesShortcut(event, settings.shortcuts.ocrTranslate)) {
+      if (matchesShortcut(event, shortcuts.ocrTranslate)) {
         event.preventDefault();
         pendingShortcutActionRef.current = 'ocr_translate';
         return;
       }
-      if (matchesShortcut(event, settings.shortcuts.hideInterface)) {
+      if (matchesShortcut(event, shortcuts.hideInterface)) {
         event.preventDefault();
         pendingShortcutActionRef.current = 'hide_interface';
         return;
       }
-      if (matchesShortcut(event, settings.shortcuts.selectionTranslate)) {
+      if (matchesShortcut(event, shortcuts.selectionTranslate)) {
         event.preventDefault();
         pendingShortcutActionRef.current = 'selection_translate';
         return;
       }
-      if (matchesShortcut(event, settings.shortcuts.ocrRecognize)) {
+      if (matchesShortcut(event, shortcuts.ocrRecognize)) {
         event.preventDefault();
         pendingShortcutActionRef.current = 'ocr_recognize';
         return;
       }
-      if (matchesShortcut(event, settings.shortcuts.openSettings)) {
+      if (matchesShortcut(event, shortcuts.openSettings)) {
         event.preventDefault();
         pendingShortcutActionRef.current = 'open_settings';
       }
@@ -473,7 +177,7 @@ export function App() {
         return;
       }
       pendingShortcutActionRef.current = null;
-      executeShortcutAction(pendingAction);
+      shortcutExecutorRef.current(pendingAction);
     };
 
     const onWindowBlur = () => {
@@ -488,7 +192,7 @@ export function App() {
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onWindowBlur);
     };
-  }, [executeShortcutAction, settings.shortcuts]);
+  }, []);
 
   return (
     <MainLayout>

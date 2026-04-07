@@ -15,12 +15,7 @@ import './styles/ocr-result-workbench-cards.css';
 import './styles/screenshot-overlay.css';
 import './styles/translator.css';
 
-type WindowViewMode =
-  | 'main'
-  | 'ocr_preview'
-  | 'ocr_result'
-  | 'ocr_runtime'
-  | 'screenshot_overlay';
+type WindowViewMode = 'main' | 'ocr_preview' | 'ocr_result' | 'ocr_runtime' | 'screenshot_overlay';
 
 function detectWindowViewMode(): WindowViewMode {
   if (typeof window === 'undefined') {

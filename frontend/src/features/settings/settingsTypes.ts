@@ -187,7 +187,10 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
     group: 'requires_api_key',
     category: '翻译',
     description: '高质量文本翻译，运行时读取 DEEPL_API_KEY / DEEPL_BASE_URL。',
-    fields: [{ key: 'apiKey', label: 'API Key', placeholder: 'deepl-...', secret: true }, { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api-free.deepl.com/v2/translate' }],
+    fields: [
+      { key: 'apiKey', label: 'API Key', placeholder: 'deepl-...', secret: true },
+      { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api-free.deepl.com/v2/translate' },
+    ],
     links: [{ label: '前往 DeepL 获取密钥', url: 'https://www.deepl.com/pro-api' }],
   },
 
@@ -197,8 +200,17 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
     group: 'requires_api_key',
     category: '翻译',
     description: 'Google Cloud 官方翻译 API，运行时读取 GOOGLE_TRANSLATE_API_KEY / BASE_URL。',
-    fields: [{ key: 'apiKey', label: 'API Key', placeholder: 'AIza...', secret: true }, { key: 'baseUrl', label: 'Base URL', placeholder: 'https://translation.googleapis.com/language/translate/v2' }],
-    links: [{ label: '前往 Google Cloud 获取密钥', url: 'https://cloud.google.com/translate/docs/setup' }],
+    fields: [
+      { key: 'apiKey', label: 'API Key', placeholder: 'AIza...', secret: true },
+      {
+        key: 'baseUrl',
+        label: 'Base URL',
+        placeholder: 'https://translation.googleapis.com/language/translate/v2',
+      },
+    ],
+    links: [
+      { label: '前往 Google Cloud 获取密钥', url: 'https://cloud.google.com/translate/docs/setup' },
+    ],
   },
   {
     id: 'tencent_tmt',
@@ -212,7 +224,9 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
       { key: 'region', label: 'Region', placeholder: 'ap-guangzhou' },
       { key: 'baseUrl', label: 'Base URL', placeholder: 'https://tmt.tencentcloudapi.com' },
     ],
-    links: [{ label: '前往腾讯云机器翻译获取密钥', url: 'https://console.cloud.tencent.com/cam/capi' }],
+    links: [
+      { label: '前往腾讯云机器翻译获取密钥', url: 'https://console.cloud.tencent.com/cam/capi' },
+    ],
   },
   {
     id: 'baidu_fanyi',
@@ -223,9 +237,18 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
     fields: [
       { key: 'appId', label: 'App ID', placeholder: '2026xxxxxx', secret: true },
       { key: 'appSecret', label: 'Secret', placeholder: '******', secret: true },
-      { key: 'baseUrl', label: 'Base URL', placeholder: 'https://fanyi-api.baidu.com/api/trans/vip/translate' },
+      {
+        key: 'baseUrl',
+        label: 'Base URL',
+        placeholder: 'https://fanyi-api.baidu.com/api/trans/vip/translate',
+      },
     ],
-    links: [{ label: '前往百度翻译开放平台获取密钥', url: 'https://fanyi-api.baidu.com/manage/developer' }],
+    links: [
+      {
+        label: '前往百度翻译开放平台获取密钥',
+        url: 'https://fanyi-api.baidu.com/manage/developer',
+      },
+    ],
   },
 ];
 
@@ -240,8 +263,13 @@ export const DEFAULT_TOOL_PROVIDERS: ToolProviderConfigMap = {
   google_translate: createProviderConfig(false, {
     baseUrl: 'https://translation.googleapis.com/language/translate/v2',
   }),
-  tencent_tmt: createProviderConfig(false, { region: 'ap-guangzhou', baseUrl: 'https://tmt.tencentcloudapi.com' }),
-  baidu_fanyi: createProviderConfig(false, { baseUrl: 'https://fanyi-api.baidu.com/api/trans/vip/translate' }),
+  tencent_tmt: createProviderConfig(false, {
+    region: 'ap-guangzhou',
+    baseUrl: 'https://tmt.tencentcloudapi.com',
+  }),
+  baidu_fanyi: createProviderConfig(false, {
+    baseUrl: 'https://fanyi-api.baidu.com/api/trans/vip/translate',
+  }),
 };
 
 export const DEFAULT_SETTINGS: SettingsState = {

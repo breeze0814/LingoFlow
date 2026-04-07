@@ -59,11 +59,16 @@ const CLOSING_NOISE = new Set([
   '^',
 ]);
 
+const IGNORED_CONTROL_CODEPOINTS = new Set([
+  0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x000b, 0x000c, 0x000e,
+  0x000f, 0x0010, 0x0011, 0x0012, 0x0013, 0x0014, 0x0015, 0x0016, 0x0017, 0x0018, 0x0019, 0x001a,
+  0x001b, 0x001c, 0x001d, 0x001e, 0x001f, 0x007f, 0x200b, 0x200c, 0x200d, 0x2060, 0xfeff,
+]);
+
 function removeIgnoredCharacters(text: string) {
-  return text.replace(
-    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B\u200C\u200D\u2060\uFEFF]/g,
-    '',
-  );
+  return Array.from(text)
+    .filter((char) => !IGNORED_CONTROL_CODEPOINTS.has(char.codePointAt(0) ?? -1))
+    .join('');
 }
 
 function normalizeLine(line: string) {

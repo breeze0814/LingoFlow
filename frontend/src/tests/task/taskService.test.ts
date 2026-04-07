@@ -45,7 +45,11 @@ describe('taskService', () => {
       targetLang: 'zh-CN',
       translateProviderConfigs: [
         { id: 'youdao_web' },
-        { id: 'deepl_free', apiKey: 'deepl-key', baseUrl: 'https://api-free.deepl.com/v2/translate' },
+        {
+          id: 'deepl_free',
+          apiKey: 'deepl-key',
+          baseUrl: 'https://api-free.deepl.com/v2/translate',
+        },
       ],
     });
 
@@ -54,7 +58,11 @@ describe('taskService', () => {
       targetLang: 'zh-CN',
       translateProviderConfigs: [
         { id: 'youdao_web' },
-        { id: 'deepl_free', apiKey: 'deepl-key', baseUrl: 'https://api-free.deepl.com/v2/translate' },
+        {
+          id: 'deepl_free',
+          apiKey: 'deepl-key',
+          baseUrl: 'https://api-free.deepl.com/v2/translate',
+        },
       ],
     });
   });

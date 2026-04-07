@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_SETTINGS,
-  ToolProviderConfigMap,
-} from '../../features/settings/settingsTypes';
+import { DEFAULT_SETTINGS, ToolProviderConfigMap } from '../../features/settings/settingsTypes';
 import { buildEnabledTranslateProviderConfigs } from '../../features/settings/translateProviderRequest';
 
 describe('translateProviderRequest', () => {

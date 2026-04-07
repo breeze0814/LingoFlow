@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DisplayRow } from './ocrResultRows';
 import { OcrResultWorkbench } from './OcrResultWorkbench';
 import { TranslationWorkspaceStatus } from './translationWorkspaceService';
@@ -59,6 +59,7 @@ export function OcrResultPanel({
   targetLanguageLabel,
 }: OcrResultPanelProps) {
   const [copyMessage, setCopyMessage] = useState('');
+  const copyMessageTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -70,8 +71,29 @@ export function OcrResultPanel({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  useEffect(() => {
+    return () => {
+      if (copyMessageTimeoutRef.current === null) {
+        return;
+      }
+      window.clearTimeout(copyMessageTimeoutRef.current);
+    };
+  }, []);
+
+  function clearPendingCopyMessageTimer() {
+    if (copyMessageTimeoutRef.current === null) {
+      return;
+    }
+    window.clearTimeout(copyMessageTimeoutRef.current);
+    copyMessageTimeoutRef.current = null;
+  }
+
   function clearCopyMessageSoon() {
-    window.setTimeout(() => setCopyMessage(''), 1200);
+    clearPendingCopyMessageTimer();
+    copyMessageTimeoutRef.current = window.setTimeout(() => {
+      setCopyMessage('');
+      copyMessageTimeoutRef.current = null;
+    }, 1200);
   }
 
   async function handleCopy(content: string, successMessage: string) {

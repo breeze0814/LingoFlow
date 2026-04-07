@@ -21,7 +21,6 @@ import { showOcrResultWindow } from '../ocr/ocrResultWindowService';
 import { ensureCaptureExcluded } from './screenshotOverlayExclude';
 import { TaskState } from '../task/taskTypes';
 import { loadSettingsFromStorage } from '../settings/settingsStorage';
-import { resolveConfiguredSourceLanguage } from '../settings/settingsRuntime';
 
 type DragState = {
   startX: number;

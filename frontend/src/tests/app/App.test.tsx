@@ -1,10 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../app/App';
 import { DEFAULT_SETTINGS } from '../../features/settings/settingsTypes';
+import { TRAY_ACTION_EVENT } from '../../features/tray/trayEvents';
 
 const {
   mockShowOcrResultWindow,
   mockShowCachedOcrResultWindow,
+  mockPrimeOcrResultWindowService,
+  mockShowScreenshotOverlay,
+  mockPrimeScreenshotOverlayService,
   mockReadSelectionText,
   mockTriggerOcrRecognize,
   mockMainWindowShow,
@@ -18,6 +22,9 @@ const {
 } = vi.hoisted(() => ({
   mockShowOcrResultWindow: vi.fn().mockResolvedValue(undefined),
   mockShowCachedOcrResultWindow: vi.fn().mockResolvedValue(undefined),
+  mockPrimeOcrResultWindowService: vi.fn().mockResolvedValue(undefined),
+  mockShowScreenshotOverlay: vi.fn().mockResolvedValue(undefined),
+  mockPrimeScreenshotOverlayService: vi.fn().mockResolvedValue(undefined),
   mockReadSelectionText: vi.fn(),
   mockTriggerOcrRecognize: vi.fn(),
   mockMainWindowShow: vi.fn().mockResolvedValue(undefined),
@@ -36,6 +43,12 @@ const {
 vi.mock('../../features/ocr/ocrResultWindowService', () => ({
   showOcrResultWindow: mockShowOcrResultWindow,
   showCachedOcrResultWindow: mockShowCachedOcrResultWindow,
+  primeOcrResultWindowService: mockPrimeOcrResultWindowService,
+}));
+
+vi.mock('../../features/screenshot/screenshotOverlayService', () => ({
+  showScreenshotOverlay: mockShowScreenshotOverlay,
+  primeScreenshotOverlayService: mockPrimeScreenshotOverlayService,
 }));
 
 vi.mock('../../infra/tauri/commands', () => ({
@@ -80,6 +93,9 @@ describe('App', () => {
     window.localStorage.clear();
     mockShowOcrResultWindow.mockClear();
     mockShowCachedOcrResultWindow.mockClear();
+    mockPrimeOcrResultWindowService.mockClear();
+    mockShowScreenshotOverlay.mockClear();
+    mockPrimeScreenshotOverlayService.mockClear();
     mockReadSelectionText.mockReset();
     mockReadSelectionText.mockResolvedValue({ selectedText: 'selected text' });
     mockTriggerOcrRecognize.mockReset();
@@ -105,6 +121,10 @@ describe('App', () => {
     mockListen.mockClear();
     mockTrayListeners.length = 0;
     delete (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__;
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0',
+    });
   });
 
   it('renders settings tabs', () => {
@@ -297,6 +317,37 @@ describe('App', () => {
       expect(mockMainWindowShow).not.toHaveBeenCalled();
       expect(mockMainWindowUnminimize).not.toHaveBeenCalled();
       expect(mockMainWindowSetFocus).not.toHaveBeenCalled();
+    });
+  });
+
+  it('uses the latest target language for windows screenshot translate payload without rebinding tray listeners', async () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    });
+    (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ = {};
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: '通用' }));
+    fireEvent.change(screen.getByLabelText('第二语言'), { target: { value: 'ja' } });
+
+    await waitFor(() => {
+      expect(mockListen).toHaveBeenCalledTimes(1);
+      expect(mockListen).toHaveBeenCalledWith(TRAY_ACTION_EVENT, expect.any(Function));
+    });
+
+    const trayListener = mockTrayListeners[0];
+    trayListener?.({ payload: { action: 'ocr_translate' } });
+
+    await waitFor(() => {
+      expect(mockShowScreenshotOverlay).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: 'ocr_translate',
+          targetLanguageCode: 'ja',
+          targetLanguageLabel: '日语',
+        }),
+      );
     });
   });
 });
