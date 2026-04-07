@@ -261,6 +261,11 @@ describe('ScreenshotOverlayApp', () => {
       expect(mockTriggerOcrRecognizeRegion).toHaveBeenCalledTimes(1);
       expect(mockShowOcrResultWindow).toHaveBeenCalledTimes(1);
     });
+    expect(mockTriggerOcrRecognizeRegion).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Object),
+      'auto',
+    );
     expect(mockTriggerOcrTranslateRegion).not.toHaveBeenCalled();
     expect(mockShowOcrResultWindow).toHaveBeenCalledWith(
       expect.objectContaining({

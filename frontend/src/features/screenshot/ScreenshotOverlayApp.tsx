@@ -176,6 +176,10 @@ export function ScreenshotOverlayApp() {
       return;
     }
     const settings = loadSettingsFromStorage();
+    const sourceLanguageHint = resolveConfiguredSourceLanguage(
+      payload.sourceLangHint ?? 'auto',
+      settings,
+    );
 
     const captureRect = buildPhysicalCaptureRect(nextSelection, payload.monitor, {
       width: window.innerWidth,
@@ -191,12 +195,12 @@ export function ScreenshotOverlayApp() {
 
     if (payload.mode === 'ocr_translate') {
       const direction = {
-        sourceLanguageCode: payload.sourceLangHint ?? 'auto',
+        sourceLanguageCode: sourceLanguageHint,
         sourceLanguageLabel: payload.sourceLanguageLabel,
         targetLanguageCode: payload.targetLanguageCode,
         targetLanguageLabel: payload.targetLanguageLabel,
       };
-      const next = await triggerOcrRecognizeRegion(baseState, captureRect, payload.sourceLangHint);
+      const next = await triggerOcrRecognizeRegion(baseState, captureRect, sourceLanguageHint);
 
       if (next.action === 'succeeded' && next.payload.result) {
         const resultPayload = createOcrTranslatePayload(next.payload.result, direction, true);
@@ -222,13 +226,13 @@ export function ScreenshotOverlayApp() {
     }
 
     // ocr_recognize mode
-    const next = await triggerOcrRecognizeRegion(baseState, captureRect, payload.sourceLangHint);
+    const next = await triggerOcrRecognizeRegion(baseState, captureRect, sourceLanguageHint);
 
     if (next.action === 'succeeded' && next.payload.result) {
       const resultPayload = createOcrRecognizePayload(
         next.payload.result,
         {
-          sourceLanguageCode: payload.sourceLangHint ?? 'auto',
+          sourceLanguageCode: sourceLanguageHint,
           sourceLanguageLabel: payload.sourceLanguageLabel,
           targetLanguageCode: payload.targetLanguageCode,
           targetLanguageLabel: payload.targetLanguageLabel,
@@ -245,7 +249,7 @@ export function ScreenshotOverlayApp() {
     if (next.action !== 'cancelled') {
       const message = next.payload.error?.message ?? '截图识别失败';
       const errorPayload = createErrorPayload(payload.mode, message, {
-        sourceLanguageCode: payload.sourceLangHint ?? 'auto',
+        sourceLanguageCode: sourceLanguageHint,
         sourceLanguageLabel: payload.sourceLanguageLabel,
         targetLanguageCode: payload.targetLanguageCode,
         targetLanguageLabel: payload.targetLanguageLabel,

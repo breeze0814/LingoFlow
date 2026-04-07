@@ -1,4 +1,4 @@
-#[cfg(desktop)]
+#[cfg(all(desktop, not(test)))]
 mod desktop {
     use serde::Serialize;
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
@@ -254,10 +254,10 @@ mod desktop {
     }
 }
 
-#[cfg(desktop)]
+#[cfg(all(desktop, not(test)))]
 pub use desktop::setup;
 
-#[cfg(not(desktop))]
+#[cfg(any(not(desktop), test))]
 pub fn setup<R: tauri::Runtime>(_app: &tauri::AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }

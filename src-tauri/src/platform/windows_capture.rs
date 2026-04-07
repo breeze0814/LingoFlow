@@ -1,3 +1,6 @@
+#[path = "windows_capture_png.rs"]
+mod png;
+
 #[cfg(target_os = "windows")]
 use std::path::Path;
 #[cfg(target_os = "windows")]
@@ -145,11 +148,7 @@ pub struct PixelCaptureRect {
 }
 
 #[cfg(target_os = "windows")]
-use std::io::Write as IoWrite;
-
-#[cfg(target_os = "windows")]
 pub fn native_capture_region(output_path: &Path, rect: &PixelCaptureRect) -> Result<(), AppError> {
-    use windows::Win32::Foundation::*;
     use windows::Win32::Graphics::Gdi::*;
 
     if rect.width <= 0 || rect.height <= 0 {
@@ -259,141 +258,8 @@ pub fn native_capture_region(output_path: &Path, rect: &PixelCaptureRect) -> Res
         }
 
         // Encode minimal PNG
-        write_rgba_png(output_path, rect.width as u32, rect.height as u32, &pixels)
+        png::write_rgba_png(output_path, rect.width as u32, rect.height as u32, &pixels)
     }
-}
-
-#[cfg(target_os = "windows")]
-fn write_rgba_png(
-    output_path: &Path,
-    width: u32,
-    height: u32,
-    rgba_pixels: &[u8],
-) -> Result<(), AppError> {
-    // Build raw image data with filter byte per row
-    let row_len = (width as usize) * 4;
-    let mut raw_data = Vec::with_capacity((row_len + 1) * height as usize);
-    for row in rgba_pixels.chunks_exact(row_len) {
-        raw_data.push(0u8); // filter: None
-        raw_data.extend_from_slice(row);
-    }
-
-    let compressed = deflate_zlib(&raw_data);
-
-    let mut file = std::fs::File::create(output_path).map_err(|e| {
-        AppError::new(
-            ErrorCode::InternalError,
-            format!("Failed to create capture file: {e}"),
-            false,
-        )
-    })?;
-
-    // PNG signature
-    file.write_all(&[137, 80, 78, 71, 13, 10, 26, 10])
-        .map_err(map_png_write_error)?;
-
-    // IHDR chunk
-    let mut ihdr = Vec::with_capacity(13);
-    ihdr.extend_from_slice(&width.to_be_bytes());
-    ihdr.extend_from_slice(&height.to_be_bytes());
-    ihdr.push(8); // bit depth
-    ihdr.push(6); // color type: RGBA
-    ihdr.push(0); // compression
-    ihdr.push(0); // filter
-    ihdr.push(0); // interlace
-    write_png_chunk(&mut file, b"IHDR", &ihdr)?;
-
-    // IDAT chunk
-    write_png_chunk(&mut file, b"IDAT", &compressed)?;
-
-    // IEND chunk
-    write_png_chunk(&mut file, b"IEND", &[])?;
-
-    Ok(())
-}
-
-#[cfg(target_os = "windows")]
-fn write_png_chunk(
-    file: &mut std::fs::File,
-    chunk_type: &[u8; 4],
-    data: &[u8],
-) -> Result<(), AppError> {
-    let len = data.len() as u32;
-    file.write_all(&len.to_be_bytes())
-        .map_err(map_png_write_error)?;
-    file.write_all(chunk_type).map_err(map_png_write_error)?;
-    file.write_all(data).map_err(map_png_write_error)?;
-
-    let mut crc_input = Vec::with_capacity(4 + data.len());
-    crc_input.extend_from_slice(chunk_type);
-    crc_input.extend_from_slice(data);
-    let crc = png_crc32(&crc_input);
-    file.write_all(&crc.to_be_bytes())
-        .map_err(map_png_write_error)?;
-    Ok(())
-}
-
-#[cfg(target_os = "windows")]
-fn map_png_write_error(e: std::io::Error) -> AppError {
-    AppError::new(
-        ErrorCode::InternalError,
-        format!("Failed to write PNG: {e}"),
-        false,
-    )
-}
-
-#[cfg(target_os = "windows")]
-fn png_crc32(data: &[u8]) -> u32 {
-    let mut crc: u32 = 0xFFFFFFFF;
-    for &byte in data {
-        crc ^= byte as u32;
-        for _ in 0..8 {
-            if crc & 1 != 0 {
-                crc = (crc >> 1) ^ 0xEDB88320;
-            } else {
-                crc >>= 1;
-            }
-        }
-    }
-    crc ^ 0xFFFFFFFF
-}
-
-#[cfg(target_os = "windows")]
-fn deflate_zlib(data: &[u8]) -> Vec<u8> {
-    let mut output = Vec::new();
-
-    // zlib header: CM=8, CINFO=7, FCHECK so header % 31 == 0
-    output.push(0x78);
-    output.push(0x01); // no compression level
-
-    // Split data into DEFLATE stored blocks (max 65535 bytes each)
-    let chunks: Vec<&[u8]> = data.chunks(65535).collect();
-    for (i, chunk) in chunks.iter().enumerate() {
-        let is_last = i == chunks.len() - 1;
-        output.push(if is_last { 0x01 } else { 0x00 });
-        let len = chunk.len() as u16;
-        let nlen = !len;
-        output.extend_from_slice(&len.to_le_bytes());
-        output.extend_from_slice(&nlen.to_le_bytes());
-        output.extend_from_slice(chunk);
-    }
-
-    // Adler-32 checksum
-    let adler = adler32(data);
-    output.extend_from_slice(&adler.to_be_bytes());
-
-    output
-}
-
-#[cfg(target_os = "windows")]
-fn adler32(data: &[u8]) -> u32 {
-    let mut a: u32 = 1;
-    let mut b: u32 = 0;
-    for &byte in data {
-        a = (a + byte as u32) % 65521;
-        b = (b + a) % 65521;
-    }
-    (b << 16) | a
 }
 
 #[cfg(test)]

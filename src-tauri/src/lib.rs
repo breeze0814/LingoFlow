@@ -1,5 +1,7 @@
 mod apiprovider;
+#[cfg(not(test))]
 mod app_state;
+#[cfg(not(test))]
 mod commands;
 mod errors;
 mod http_api;
@@ -11,13 +13,17 @@ mod storage;
 mod tray;
 mod window_lifecycle;
 
+#[cfg(not(test))]
 use app_state::AppState;
+#[cfg(not(test))]
 use tauri::Manager;
+#[cfg(not(test))]
 use window_lifecycle::{close_request_action, CloseRequestAction};
 
 #[cfg(target_os = "windows")]
 pub use platform::windows_capture::{build_clipboard_wait_script, build_region_capture_script};
 
+#[cfg(not(test))]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -108,4 +114,9 @@ pub fn run() {
     builder
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+pub fn run() {
+    panic!("run() is unavailable in unit tests");
 }

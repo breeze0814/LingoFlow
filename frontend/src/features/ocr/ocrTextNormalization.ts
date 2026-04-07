@@ -1,4 +1,11 @@
 const MAX_PARAGRAPH_BREAKS = 2;
+const DELETE_CODE = 0x7f;
+const MAX_C0_CONTROL_CODE = 0x1f;
+const MIN_C0_CONTROL_CODE = 0x00;
+const TAB_CODE = 0x09;
+const LF_CODE = 0x0a;
+const CR_CODE = 0x0d;
+const ZERO_WIDTH_CODES = new Set([0x200b, 0x200c, 0x200d, 0x2060, 0xfeff]);
 
 const MATCHING_CLOSERS = new Map<string, string>([
   ['"', '"'],
@@ -60,10 +67,29 @@ const CLOSING_NOISE = new Set([
 ]);
 
 function removeIgnoredCharacters(text: string) {
-  return text.replace(
-    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B\u200C\u200D\u2060\uFEFF]/g,
-    '',
-  );
+  return Array.from(text)
+    .filter((char) => !isIgnoredCharacter(char))
+    .join('');
+}
+
+function isIgnoredCharacter(char: string) {
+  const code = char.codePointAt(0);
+  if (code === undefined) {
+    return false;
+  }
+  if (code === DELETE_CODE) {
+    return true;
+  }
+  if (
+    code >= MIN_C0_CONTROL_CODE &&
+    code <= MAX_C0_CONTROL_CODE &&
+    code !== TAB_CODE &&
+    code !== LF_CODE &&
+    code !== CR_CODE
+  ) {
+    return true;
+  }
+  return ZERO_WIDTH_CODES.has(code);
 }
 
 function normalizeLine(line: string) {

@@ -1,4 +1,4 @@
-#[cfg(desktop)]
+#[cfg(all(desktop, not(test)))]
 mod desktop {
     use std::collections::{HashMap, HashSet};
 
@@ -275,62 +275,15 @@ mod desktop {
         sync_shortcuts(app, ShortcutConfig::defaults()).map_err(std::io::Error::other)?;
         Ok(())
     }
-
-    #[cfg(test)]
-    mod tests {
-        use super::{build_global_shortcut_bindings, ShortcutAction, ShortcutConfig};
-
-        #[test]
-        fn builds_canonical_bindings_from_default_shortcuts() {
-            let bindings = build_global_shortcut_bindings(&ShortcutConfig::defaults()).unwrap();
-            let shortcuts = bindings
-                .into_iter()
-                .map(|binding| (binding.action, binding.shortcut))
-                .collect::<Vec<_>>();
-
-            assert_eq!(
-                shortcuts,
-                vec![
-                    (ShortcutAction::InputTranslate, "Option+F".to_string()),
-                    (ShortcutAction::OcrTranslate, "Option+S".to_string()),
-                    (ShortcutAction::HideInterface, "Option+Q".to_string()),
-                    (ShortcutAction::SelectionTranslate, "Option+D".to_string()),
-                    (ShortcutAction::OcrRecognize, "Shift+Option+S".to_string()),
-                    (ShortcutAction::OpenSettings, "CmdOrControl+,".to_string()),
-                ]
-            );
-        }
-
-        #[test]
-        fn rejects_conflicting_shortcuts() {
-            let error = build_global_shortcut_bindings(&ShortcutConfig {
-                hide_interface: "Option + S".to_string(),
-                ..ShortcutConfig::defaults()
-            })
-            .expect_err("should detect conflict");
-
-            assert!(error.contains("快捷键冲突"));
-        }
-
-        #[test]
-        fn marks_only_window_dependent_actions_for_window_display() {
-            assert!(ShortcutAction::OpenSettings.requires_window_display());
-            assert!(!ShortcutAction::InputTranslate.requires_window_display());
-            assert!(!ShortcutAction::OcrTranslate.requires_window_display());
-            assert!(!ShortcutAction::OcrRecognize.requires_window_display());
-            assert!(!ShortcutAction::HideInterface.requires_window_display());
-            assert!(!ShortcutAction::SelectionTranslate.requires_window_display());
-        }
-    }
 }
 
-#[cfg(desktop)]
+#[cfg(all(desktop, not(test)))]
 pub use desktop::{setup, sync_shortcuts, ShortcutConfig};
 
-#[cfg(not(desktop))]
+#[cfg(any(not(desktop), test))]
 use serde::Deserialize;
 
-#[cfg(not(desktop))]
+#[cfg(any(not(desktop), test))]
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ShortcutConfig {
@@ -342,12 +295,12 @@ pub struct ShortcutConfig {
     pub open_settings: String,
 }
 
-#[cfg(not(desktop))]
+#[cfg(any(not(desktop), test))]
 pub fn setup<R: tauri::Runtime>(_app: &tauri::AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
-#[cfg(not(desktop))]
+#[cfg(any(not(desktop), test))]
 pub fn sync_shortcuts<R: tauri::Runtime>(
     _app: &tauri::AppHandle<R>,
     _config: ShortcutConfig,

@@ -11,9 +11,9 @@ use crate::apiprovider::youdao_web::YoudaoWebProvider;
 #[cfg(target_os = "macos")]
 use crate::providers::apple_vision_ocr::AppleVisionOcrProvider;
 use crate::providers::openai_compatible_ocr::OpenAiCompatibleOcrProvider;
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(test)))]
 use crate::providers::tesseract_js_bridge::TesseractJsBridge;
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(test)))]
 use crate::providers::tesseract_js_ocr::TesseractJsOcrProvider;
 use crate::providers::traits::{OcrProvider, TranslateProvider};
 
@@ -22,7 +22,7 @@ pub struct ProviderRegistry {
     default_translate_provider_id: Option<String>,
     ocr_providers: HashMap<String, Arc<dyn OcrProvider>>,
     default_ocr_provider_id: Option<String>,
-    #[cfg(target_os = "windows")]
+    #[cfg(all(target_os = "windows", not(test)))]
     tesseract_js_bridge: Arc<TesseractJsBridge>,
 }
 
@@ -31,7 +31,7 @@ impl ProviderRegistry {
         let mut translate_providers: HashMap<String, Arc<dyn TranslateProvider>> = HashMap::new();
         let mut ocr_providers: HashMap<String, Arc<dyn OcrProvider>> = HashMap::new();
         let mut default_translate_provider_id: Option<String> = None;
-        #[cfg(target_os = "windows")]
+        #[cfg(all(target_os = "windows", not(test)))]
         let tesseract_js_bridge = Arc::new(TesseractJsBridge::new());
 
         register_translate_provider(
@@ -81,7 +81,7 @@ impl ProviderRegistry {
         #[cfg(not(target_os = "macos"))]
         let mut default_ocr_provider_id: Option<String> = None;
 
-        #[cfg(target_os = "windows")]
+        #[cfg(all(target_os = "windows", not(test)))]
         {
             let provider: Arc<dyn OcrProvider> =
                 Arc::new(TesseractJsOcrProvider::new(tesseract_js_bridge.clone()));
@@ -105,7 +105,7 @@ impl ProviderRegistry {
             default_translate_provider_id,
             ocr_providers,
             default_ocr_provider_id,
-            #[cfg(target_os = "windows")]
+            #[cfg(all(target_os = "windows", not(test)))]
             tesseract_js_bridge,
         }
     }
@@ -143,12 +143,12 @@ impl ProviderRegistry {
         self.ocr_providers.get(provider_id).cloned()
     }
 
-    #[cfg(target_os = "windows")]
+    #[cfg(all(target_os = "windows", not(test)))]
     pub fn attach_app_handle(&self, app: tauri::AppHandle) {
         self.tesseract_js_bridge.attach_app(app);
     }
 
-    #[cfg(target_os = "windows")]
+    #[cfg(all(target_os = "windows", not(test)))]
     pub fn tesseract_js_bridge(&self) -> Arc<TesseractJsBridge> {
         self.tesseract_js_bridge.clone()
     }

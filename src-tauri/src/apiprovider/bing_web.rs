@@ -3,6 +3,10 @@ use std::process::Command;
 
 use async_trait::async_trait;
 
+#[path = "bing_web_debug.rs"]
+mod debug;
+
+use self::debug::{log_bing_web, normalize_timeout, preview, preview_debug};
 use crate::apiprovider::bing_web_support::{
     extract_page_context, source_lang_to_bing, target_lang_to_bing, BingPageContext,
     BingTranslateErrorPayload, BingTranslatePayload,
@@ -207,7 +211,7 @@ impl BingWebProvider {
 #[async_trait]
 impl TranslateProvider for BingWebProvider {
     async fn translate(&self, req: TranslateRequest) -> Result<TranslateResult, AppError> {
-        let timeout_ms = normalize_timeout(req.timeout_ms);
+        let timeout_ms = normalize_timeout(req.timeout_ms, DEFAULT_TIMEOUT_MS);
         let source_lang = source_lang_to_bing(&req.source_lang);
         let target_lang = target_lang_to_bing(&req.target_lang)?;
         let context = self.fetch_page_context(timeout_ms).await?;
@@ -219,40 +223,6 @@ impl TranslateProvider for BingWebProvider {
 
     fn provider_id(&self) -> &'static str {
         PROVIDER_ID
-    }
-}
-
-fn normalize_timeout(timeout_ms: u64) -> u64 {
-    if timeout_ms == 0 {
-        DEFAULT_TIMEOUT_MS
-    } else {
-        timeout_ms
-    }
-}
-
-fn log_bing_web(message: String) {
-    if cfg!(debug_assertions) || env::var("BING_WEB_DEBUG").ok().as_deref() == Some("1") {
-        eprintln!("[bing_web] {message}");
-    }
-}
-
-fn preview(value: &str) -> String {
-    let trimmed = value.replace(['\r', '\n'], " ");
-    let preview: String = trimmed.chars().take(160).collect();
-    if trimmed.chars().count() > 160 {
-        format!("{preview}...")
-    } else {
-        preview
-    }
-}
-
-fn preview_debug(value: &str) -> String {
-    let escaped = format!("{value:?}");
-    let preview: String = escaped.chars().take(160).collect();
-    if escaped.chars().count() > 160 {
-        format!("{preview}...")
-    } else {
-        preview
     }
 }
 

@@ -5,6 +5,9 @@ import { DEFAULT_SETTINGS } from '../../features/settings/settingsTypes';
 const {
   mockShowOcrResultWindow,
   mockShowCachedOcrResultWindow,
+  mockPrimeOcrResultWindowService,
+  mockShowScreenshotOverlay,
+  mockPrimeScreenshotOverlayService,
   mockReadSelectionText,
   mockTriggerOcrRecognize,
   mockMainWindowShow,
@@ -18,6 +21,9 @@ const {
 } = vi.hoisted(() => ({
   mockShowOcrResultWindow: vi.fn().mockResolvedValue(undefined),
   mockShowCachedOcrResultWindow: vi.fn().mockResolvedValue(undefined),
+  mockPrimeOcrResultWindowService: vi.fn().mockResolvedValue(undefined),
+  mockShowScreenshotOverlay: vi.fn().mockResolvedValue(undefined),
+  mockPrimeScreenshotOverlayService: vi.fn().mockResolvedValue(undefined),
   mockReadSelectionText: vi.fn(),
   mockTriggerOcrRecognize: vi.fn(),
   mockMainWindowShow: vi.fn().mockResolvedValue(undefined),
@@ -36,6 +42,12 @@ const {
 vi.mock('../../features/ocr/ocrResultWindowService', () => ({
   showOcrResultWindow: mockShowOcrResultWindow,
   showCachedOcrResultWindow: mockShowCachedOcrResultWindow,
+  primeOcrResultWindowService: mockPrimeOcrResultWindowService,
+}));
+
+vi.mock('../../features/screenshot/screenshotOverlayService', () => ({
+  showScreenshotOverlay: mockShowScreenshotOverlay,
+  primeScreenshotOverlayService: mockPrimeScreenshotOverlayService,
 }));
 
 vi.mock('../../infra/tauri/commands', () => ({
@@ -80,6 +92,9 @@ describe('App', () => {
     window.localStorage.clear();
     mockShowOcrResultWindow.mockClear();
     mockShowCachedOcrResultWindow.mockClear();
+    mockPrimeOcrResultWindowService.mockClear();
+    mockShowScreenshotOverlay.mockClear();
+    mockPrimeScreenshotOverlayService.mockClear();
     mockReadSelectionText.mockReset();
     mockReadSelectionText.mockResolvedValue({ selectedText: 'selected text' });
     mockTriggerOcrRecognize.mockReset();
@@ -155,6 +170,29 @@ describe('App', () => {
         initialText: 'hello',
       }),
     );
+  });
+
+  it('uses auto source language hint for OCR recognize when detection mode is auto', async () => {
+    window.localStorage.setItem(
+      'lingoflow.settings.v1',
+      JSON.stringify({
+        ...DEFAULT_SETTINGS,
+        primaryLanguage: 'en',
+        detectionMode: 'auto',
+      }),
+    );
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: 'S', code: 'KeyS', altKey: true, shiftKey: true });
+    fireEvent.keyUp(window, { key: 'S', code: 'KeyS', altKey: true, shiftKey: true });
+    fireEvent.keyUp(window, { key: 'Shift', code: 'ShiftLeft', altKey: true, shiftKey: false });
+    fireEvent.keyUp(window, { key: 'Alt', code: 'AltLeft', altKey: false, shiftKey: false });
+
+    await waitFor(() => {
+      expect(mockTriggerOcrRecognize).toHaveBeenCalledTimes(1);
+    });
+    expect(mockTriggerOcrRecognize).toHaveBeenCalledWith(expect.anything(), 'auto');
   });
 
   it('opens selection text in the compact workspace and auto translates when enabled', async () => {
@@ -297,6 +335,58 @@ describe('App', () => {
       expect(mockMainWindowShow).not.toHaveBeenCalled();
       expect(mockMainWindowUnminimize).not.toHaveBeenCalled();
       expect(mockMainWindowSetFocus).not.toHaveBeenCalled();
+    });
+  });
+
+  it('uses latest target language for windows screenshot translate tray action', async () => {
+    const originalUserAgent = navigator.userAgent;
+    window.localStorage.setItem(
+      'lingoflow.settings.v1',
+      JSON.stringify({
+        ...DEFAULT_SETTINGS,
+        primaryLanguage: 'en',
+        detectionMode: 'auto',
+      }),
+    );
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      configurable: true,
+      value: {},
+    });
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: '通用' }));
+    fireEvent.change(screen.getByLabelText('第二语言'), {
+      target: { value: 'ja' },
+    });
+
+    await waitFor(() => {
+      expect(mockListen.mock.calls.length).toBeGreaterThan(0);
+      expect(mockTrayListeners.at(-1)).toBeTypeOf('function');
+    });
+
+    const trayListener = mockTrayListeners.at(-1);
+    trayListener?.({ payload: { action: 'ocr_translate' } });
+
+    await waitFor(() => {
+      expect(mockShowScreenshotOverlay).toHaveBeenCalledTimes(1);
+    });
+    expect(mockShowScreenshotOverlay).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceLangHint: 'auto',
+        targetLang: 'ja',
+        targetLanguageCode: 'ja',
+        targetLanguageLabel: '日语',
+      }),
+    );
+
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: originalUserAgent,
     });
   });
 });
