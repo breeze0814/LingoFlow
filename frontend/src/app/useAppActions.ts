@@ -262,7 +262,7 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
         await runOcrRecognize();
         return;
       }
-      if (action === 'show_main_window' || action === 'check_update') {
+      if (action === 'show_main_window') {
         return;
       }
       if (action === 'open_settings') {

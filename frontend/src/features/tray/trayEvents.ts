@@ -7,7 +7,6 @@ export const SUPPORTED_TRAY_ACTIONS = [
   'ocr_recognize',
   'open_settings',
   'show_main_window',
-  'check_update',
 ] as const;
 
 export type TrayAction = (typeof SUPPORTED_TRAY_ACTIONS)[number];

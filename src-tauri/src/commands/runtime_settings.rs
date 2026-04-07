@@ -7,6 +7,8 @@ use crate::errors::app_error::AppError;
 #[derive(Debug, Deserialize)]
 pub struct RuntimeSettingsPayload {
     pub http_api_enabled: bool,
+    pub source_lang: String,
+    pub target_lang: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -20,6 +22,9 @@ pub async fn sync_runtime_settings(
     state: State<'_, AppState>,
     payload: RuntimeSettingsPayload,
 ) -> Result<RuntimeSettingsResponse, AppError> {
+    state
+        .config_store
+        .set_app_languages(payload.source_lang, payload.target_lang);
     if payload.http_api_enabled {
         let opts = state.config_store.http_server_options();
         state

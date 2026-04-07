@@ -2,11 +2,19 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const RUST_TEST_TIMEOUT_MS = 60_000;
+const RUST_TEST_TARGET_DIR = 'src-tauri/target/verify';
 
 export function createCargoTestSpec() {
   return {
     command: 'cargo',
     args: ['test', '--manifest-path', 'src-tauri/Cargo.toml'],
+  };
+}
+
+export function createCargoTestEnv(env = process.env) {
+  return {
+    ...env,
+    CARGO_TARGET_DIR: env.CARGO_TARGET_DIR ?? RUST_TEST_TARGET_DIR,
   };
 }
 
@@ -51,7 +59,7 @@ export async function runRustTests({
   const spec = createCargoTestSpec();
   const child = spawnImpl(spec.command, spec.args, {
     stdio: 'inherit',
-    env: processApi.env,
+    env: createCargoTestEnv(processApi.env),
   });
 
   try {

@@ -15,6 +15,16 @@ import {
 const SETTINGS_STORAGE_KEY = 'lingoflow.settings.v1';
 
 type SettingsRecord = Record<string, unknown>;
+const SECRET_PROVIDER_FIELDS: Record<ToolProviderId, Array<keyof ToolProviderConfig>> = {
+  localOcr: [],
+  youdao_web: [],
+  bing_web: [],
+  deepl_free: ['apiKey'],
+  azure_translator: ['apiKey'],
+  google_translate: ['apiKey'],
+  tencent_tmt: ['secretId', 'secretKey'],
+  baidu_fanyi: ['appId', 'appSecret'],
+};
 
 function isSettingsRecord(value: unknown): value is SettingsRecord {
   return typeof value === 'object' && value !== null;
@@ -224,6 +234,51 @@ function parseSettings(record: SettingsRecord): SettingsState {
   };
 }
 
+export function parseStoredSettings(value: unknown): SettingsState {
+  if (!isSettingsRecord(value)) {
+    throw new Error('settings storage payload is not object');
+  }
+  return parseSettings(value);
+}
+
+export function redactSensitiveSettings(settings: SettingsState): SettingsState {
+  const providers = Object.entries(settings.providers).reduce<ToolProviderConfigMap>(
+    (result, [providerId, provider]) => {
+      const typedProviderId = providerId as ToolProviderId;
+      const nextProvider = { ...provider };
+      for (const secretField of SECRET_PROVIDER_FIELDS[typedProviderId]) {
+        switch (secretField) {
+          case 'apiKey':
+            nextProvider.apiKey = '';
+            break;
+          case 'secretId':
+            nextProvider.secretId = '';
+            break;
+          case 'secretKey':
+            nextProvider.secretKey = '';
+            break;
+          case 'appId':
+            nextProvider.appId = '';
+            break;
+          case 'appSecret':
+            nextProvider.appSecret = '';
+            break;
+          default:
+            break;
+        }
+      }
+      result[typedProviderId] = nextProvider;
+      return result;
+    },
+    {} as ToolProviderConfigMap,
+  );
+
+  return {
+    ...settings,
+    providers,
+  };
+}
+
 export function loadSettingsFromStorage(): SettingsState {
   if (typeof window === 'undefined') {
     return DEFAULT_SETTINGS;
@@ -236,10 +291,7 @@ export function loadSettingsFromStorage(): SettingsState {
 
   try {
     const parsed = JSON.parse(raw);
-    if (!isSettingsRecord(parsed)) {
-      throw new Error('settings storage payload is not object');
-    }
-    return parseSettings(parsed);
+    return parseStoredSettings(parsed);
   } catch (error) {
     console.error('failed to load settings from storage', error);
     return DEFAULT_SETTINGS;

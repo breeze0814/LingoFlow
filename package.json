@@ -18,7 +18,7 @@
     "format": "npm --prefix frontend run format && cargo fmt --manifest-path src-tauri/Cargo.toml",
     "format:check": "npm --prefix frontend run format:check && cargo fmt --manifest-path src-tauri/Cargo.toml -- --check",
     "test": "npm run test:scripts && npm run test:frontend && npm run test:rust",
-    "test:scripts": "node --test scripts/tauri-dev-runner.test.mjs scripts/run-rust-tests.test.mjs",
+    "test:scripts": "node --test scripts/tauri-dev-runner.test.mjs scripts/run-rust-tests.test.mjs scripts/tauri-config.test.mjs",
     "test:frontend": "npm --prefix frontend run test",
     "test:rust": "node ./scripts/run-rust-tests.mjs",
     "check": "npm run typecheck && npm run lint && npm run test"

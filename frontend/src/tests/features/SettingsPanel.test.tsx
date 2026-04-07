@@ -74,6 +74,7 @@ describe('SettingsPanel', () => {
     expect(screen.getAllByText('Youdao翻译').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Bing 翻译').length).toBeGreaterThan(0);
     expect(screen.getAllByText('DeepL').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Azure 翻译').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Google 翻译').length).toBeGreaterThan(0);
     expect(screen.getAllByText('腾讯云翻译').length).toBeGreaterThan(0);
     expect(screen.getAllByText('百度翻译').length).toBeGreaterThan(0);
@@ -90,6 +91,9 @@ describe('SettingsPanel', () => {
     expect(screen.getByRole('link', { name: '前往腾讯云机器翻译获取密钥' })).toHaveAttribute(
       'href',
     );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Azure 翻译' }));
+    expect(screen.getByLabelText('API Key')).toBeInTheDocument();
   });
 
   it('renders top navigation beside the window title', () => {

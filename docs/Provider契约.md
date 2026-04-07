@@ -99,8 +99,8 @@ async fn recognize(request: OcrRequest) -> Result<OcrResult, ProviderError>;
 
 ## 9. 调用规则
 - 业务层必须显式指定 Provider。
-- 如果默认 Provider 不可用，直接失败，不自动切换。
-- V1 不做并行 Provider 聚合。
+- 如果调用方未显式指定翻译 Provider，编排层可以基于当前启用列表执行多 Provider 聚合。
+- 聚合结果保留每个 Provider 的成功或失败状态，并按既定顺序返回。
 - V1 不做自动重试。
 - 超时由 orchestrator 传入，不由 Provider 自行决定。
 
@@ -113,7 +113,8 @@ async fn recognize(request: OcrRequest) -> Result<OcrResult, ProviderError>;
 ## 11. Provider 配置边界
 - 非敏感配置存 Store。
 - 密钥放 Keychain。
-- Provider 只能接收已经解析好的配置，不自己读取配置源。
+- UI 发起的翻译请求优先携带已经解析好的运行时配置。
+- 启动期或未显式携带配置的路径，允许使用环境变量构建默认 Provider。
 
 ## 12. V1 推荐 Provider
 - 翻译：`youdao_web`、`bing_web`、`deepl_free`、`azure_translator`、`google_translate`、`tencent_tmt`、`baidu_fanyi`

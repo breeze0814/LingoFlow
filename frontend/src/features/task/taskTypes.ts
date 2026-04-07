@@ -1,6 +1,5 @@
 export type TaskStatus =
   | 'idle'
-  | 'collecting_input'
   | 'pending'
   | 'success'
   | 'failure'

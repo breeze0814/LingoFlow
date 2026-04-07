@@ -89,19 +89,23 @@
 成功响应 `200`，失败或取消按通用结构返回。
 
 ### 4.3 `GET /input_translate`
-打开输入面板。
+返回一个 `accepted` 任务响应，供调用方打开输入工作区。
 
 可选查询参数：
 - `text`
 - `target_lang`
+- `text`
 
-响应 `202`：
+成功响应 `200`：
 ```json
 {
   "ok": true,
+  "task_id": "open_input_panel",
   "status": "accepted",
   "data": {
-    "command": "open_input_panel"
+    "provider_id": "ui",
+    "source_text": "hello world",
+    "translation_results": []
   }
 }
 ```
@@ -120,14 +124,13 @@
 
 可选查询参数：
 - `target_lang`
-- `translate_provider_id`
+- `provider_id`
 - `ocr_provider_id`
 
 用户完成截图后返回最终结果。
 
 ## 5. HTTP 状态码
-- `200`：任务成功完成。
-- `202`：命令已接收，但不等待终态。
+- `200`：成功返回任务响应，包含终态结果或 `accepted` 状态。
 - `400`：参数错误。
 - `409`：当前状态不允许执行该请求。
 - `500`：内部错误。
@@ -138,7 +141,7 @@
 - `text` 不能为空字符串。
 - `source_lang` 默认 `auto`。
 - `target_lang` 缺失时使用配置默认值。
-- `provider_id` 缺失时使用当前默认 Provider。
+- `provider_id` 缺失时，翻译请求会按当前可用 Provider 列表执行；如果调用方显式指定，则只使用该 Provider。
 
 ## 7. 非目标
 - V1 不支持上传二进制图片做 OCR。
@@ -148,4 +151,5 @@
 
 ## 8. 兼容要求
 - HTTP API 调用和桌面 UI 必须复用同一个 orchestrator。
+- `TaskResponse` 结构与桌面命令返回保持一致。
 - 返回字段一旦对外发布，不在 V1 内随意重命名。

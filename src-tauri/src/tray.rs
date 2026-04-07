@@ -5,7 +5,6 @@ const MENU_SHOW_MAIN_WINDOW: &str = "show_main_window";
 const MENU_HIDE_INTERFACE: &str = "hide_interface";
 const MENU_OCR_RECOGNIZE: &str = "ocr_recognize";
 const MENU_OPEN_SETTINGS: &str = "open_settings";
-const MENU_CHECK_UPDATE: &str = "check_update";
 const MENU_QUIT: &str = "quit";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -63,9 +62,9 @@ mod runtime {
     use tauri::{AppHandle, Emitter, Manager, Runtime};
 
     use super::{
-        shortcut_menu_specs, MenuEntrySpec, MENU_CHECK_UPDATE, MENU_HIDE_INTERFACE,
-        MENU_INPUT_TRANSLATE, MENU_OCR_RECOGNIZE, MENU_OCR_TRANSLATE, MENU_OPEN_SETTINGS,
-        MENU_QUIT, MENU_SELECTION_TRANSLATE, MENU_SHOW_MAIN_WINDOW,
+        shortcut_menu_specs, MenuEntrySpec, MENU_HIDE_INTERFACE, MENU_INPUT_TRANSLATE,
+        MENU_OCR_RECOGNIZE, MENU_OCR_TRANSLATE, MENU_OPEN_SETTINGS, MENU_QUIT,
+        MENU_SELECTION_TRANSLATE, MENU_SHOW_MAIN_WINDOW,
     };
 
     const TRAY_TEMPLATE_ICON: tauri::image::Image<'_> =
@@ -124,10 +123,6 @@ mod runtime {
                 show_main_window(app);
                 emit_action(app, MENU_OPEN_SETTINGS);
             }
-            MENU_CHECK_UPDATE => {
-                show_main_window(app);
-                emit_action(app, MENU_CHECK_UPDATE);
-            }
             MENU_QUIT => app.exit(0),
             _ => {}
         }
@@ -163,8 +158,6 @@ mod runtime {
         let hide_interface = build_shortcut_item(app, specs[4])?;
         let ocr_recognize = build_shortcut_item(app, specs[5])?;
         let settings = build_shortcut_item(app, specs[6])?;
-        let check_update =
-            MenuItem::with_id(app, MENU_CHECK_UPDATE, "检查更新", true, None::<&str>)?;
         let help_center = MenuItem::with_id(app, "help_center", "帮助文档", false, None::<&str>)?;
         let issue_feedback =
             MenuItem::with_id(app, "help_feedback", "问题反馈", false, None::<&str>)?;
@@ -187,7 +180,6 @@ mod runtime {
                 &ocr_recognize,
                 &divider_mid,
                 &settings,
-                &check_update,
                 &help_menu,
                 &divider_bottom,
                 &quit,
@@ -248,6 +240,7 @@ mod tests {
         let ids = specs.iter().map(|spec| spec.id).collect::<Vec<_>>();
 
         assert!(!ids.contains(&"clipboard_translate"));
+        assert!(!ids.contains(&"check_update"));
         assert!(!ids.contains(&"polish_replace"));
         assert!(!ids.contains(&"translate_replace"));
     }

@@ -3,9 +3,10 @@ import { listen } from '@tauri-apps/api/event';
 import { MainLayout } from './layout/MainLayout';
 import { SettingsPanel } from '../features/settings/SettingsPanel';
 import { initialTaskState } from '../features/task/taskReducer';
-import { SettingsState } from '../features/settings/settingsTypes';
+import { DEFAULT_SETTINGS, SettingsState } from '../features/settings/settingsTypes';
 import {
   loadSettingsFromStorage,
+  redactSensitiveSettings,
   saveSettingsToStorage,
 } from '../features/settings/settingsStorage';
 import { isTrayActionPayload, TRAY_ACTION_EVENT } from '../features/tray/trayEvents';
@@ -14,6 +15,10 @@ import { primeOcrResultWindowService } from '../features/ocr/ocrResultWindowServ
 import { syncNativeShortcuts } from '../features/settings/nativeShortcutSyncService';
 import { syncRuntimeSettings } from '../features/settings/runtimeSettingsSyncService';
 import { primeScreenshotOverlayService } from '../features/screenshot/screenshotOverlayService';
+import {
+  loadSettingsFromNativeStorage,
+  saveSettingsToNativeStorage,
+} from '../features/settings/nativeSettingsStorage';
 import {
   hasActiveModifiers,
   isShortcutRecording,
@@ -25,8 +30,12 @@ import {
 import { useAppActions } from './useAppActions';
 
 export function App() {
+  const tauriRuntime = isTauriRuntime();
   const [taskState, updateTaskState] = useState(initialTaskState);
-  const [settings, setSettings] = useState<SettingsState>(() => loadSettingsFromStorage());
+  const [settings, setSettings] = useState<SettingsState>(() =>
+    tauriRuntime ? DEFAULT_SETTINGS : loadSettingsFromStorage(),
+  );
+  const [settingsHydrated, setSettingsHydrated] = useState(() => !tauriRuntime);
   const pendingShortcutActionRef = useRef<ShortcutAction | null>(null);
   const { executeShortcutAction, handleTrayAction } = useAppActions({
     settings,
@@ -85,26 +94,62 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!isTauriRuntime()) {
+    if (!tauriRuntime) {
+      return;
+    }
+
+    let disposed = false;
+
+    async function hydrateNativeSettings() {
+      try {
+        const loadedSettings = await loadSettingsFromNativeStorage();
+        if (!disposed && loadedSettings) {
+          setSettings(loadedSettings);
+        }
+      } catch (error) {
+        console.error('native settings load failed', error);
+      } finally {
+        if (!disposed) {
+          setSettingsHydrated(true);
+        }
+      }
+    }
+
+    void hydrateNativeSettings();
+    return () => {
+      disposed = true;
+    };
+  }, [tauriRuntime]);
+
+  useEffect(() => {
+    if (!tauriRuntime || !settingsHydrated) {
       return;
     }
 
     void syncNativeShortcuts(settings.shortcuts).catch((error) => {
       console.error('native shortcut sync failed', error);
     });
-  }, [settings.shortcuts]);
+  }, [settings.shortcuts, settingsHydrated, tauriRuntime]);
 
   useEffect(() => {
-    if (!isTauriRuntime()) {
+    if (!tauriRuntime || !settingsHydrated) {
       return;
     }
 
     void syncRuntimeSettings({
       httpApiEnabled: settings.httpApiEnabled,
+      sourceLang: settings.primaryLanguage,
+      targetLang: settings.secondaryLanguage,
     }).catch((error) => {
       console.error('runtime settings sync failed', error);
     });
-  }, [settings.httpApiEnabled]);
+  }, [
+    settings.httpApiEnabled,
+    settings.primaryLanguage,
+    settings.secondaryLanguage,
+    settingsHydrated,
+    tauriRuntime,
+  ]);
 
   useEffect(() => {
     if (!isWindowsTauriRuntime()) {
@@ -120,8 +165,18 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    saveSettingsToStorage(settings);
-  }, [settings]);
+    if (!settingsHydrated) {
+      return;
+    }
+    const cachedSettings = tauriRuntime ? redactSensitiveSettings(settings) : settings;
+    saveSettingsToStorage(cachedSettings);
+    if (!tauriRuntime) {
+      return;
+    }
+    void saveSettingsToNativeStorage(settings).catch((error) => {
+      console.error('native settings save failed', error);
+    });
+  }, [settings, settingsHydrated, tauriRuntime]);
 
   useEffect(() => {
     if (isTauriRuntime()) {

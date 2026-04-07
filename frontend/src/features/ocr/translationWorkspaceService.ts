@@ -2,7 +2,7 @@ import { initialTaskState } from '../task/taskReducer';
 import { triggerInputTranslate } from '../task/taskService';
 import { TaskResult } from '../task/taskTypes';
 import { buildEnabledTranslateProviderConfigs } from '../settings/translateProviderRequest';
-import { loadSettingsFromStorage } from '../settings/settingsStorage';
+import { loadSettingsForTranslation } from '../settings/nativeSettingsStorage';
 import { resolveConfiguredSourceLanguage } from '../settings/settingsRuntime';
 import { OcrResultWindowPayload } from './ocrResultWindowBridge';
 
@@ -59,7 +59,7 @@ export async function submitTranslationWorkspaceText(
     };
   }
 
-  const settings = loadSettingsFromStorage();
+  const settings = await loadSettingsForTranslation();
   const sourceLanguageCode = direction?.sourceLanguageCode ?? payload.sourceLanguageCode;
 
   const response = await triggerInputTranslate(initialTaskState, {

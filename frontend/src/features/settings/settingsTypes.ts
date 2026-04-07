@@ -193,7 +193,28 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
     ],
     links: [{ label: '前往 DeepL 获取密钥', url: 'https://www.deepl.com/pro-api' }],
   },
-
+  {
+    id: 'azure_translator',
+    name: 'Azure 翻译',
+    group: 'requires_api_key',
+    category: '翻译',
+    description: 'Microsoft Translator 官方翻译 API，运行时读取 API Key / Region / Base URL。',
+    fields: [
+      { key: 'apiKey', label: 'API Key', placeholder: 'azure-...', secret: true },
+      { key: 'region', label: 'Region', placeholder: 'eastasia' },
+      {
+        key: 'baseUrl',
+        label: 'Base URL',
+        placeholder: 'https://api.cognitive.microsofttranslator.com',
+      },
+    ],
+    links: [
+      {
+        label: '前往 Azure Translator 获取密钥',
+        url: 'https://learn.microsoft.com/azure/ai-services/translator/text-translation/quickstart/client-library-sdk',
+      },
+    ],
+  },
   {
     id: 'google_translate',
     name: 'Google 翻译',

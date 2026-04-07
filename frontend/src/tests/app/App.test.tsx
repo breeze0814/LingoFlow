@@ -17,6 +17,8 @@ const {
   mockMainWindowSetFocus,
   mockSyncNativeShortcuts,
   mockSyncRuntimeSettings,
+  mockLoadNativeSettings,
+  mockSaveNativeSettings,
   mockTrayListeners,
   mockListen,
 } = vi.hoisted(() => ({
@@ -33,6 +35,8 @@ const {
   mockMainWindowSetFocus: vi.fn().mockResolvedValue(undefined),
   mockSyncNativeShortcuts: vi.fn().mockResolvedValue(undefined),
   mockSyncRuntimeSettings: vi.fn().mockResolvedValue(undefined),
+  mockLoadNativeSettings: vi.fn().mockResolvedValue(null),
+  mockSaveNativeSettings: vi.fn().mockResolvedValue(undefined),
   mockTrayListeners: [] as Array<(event: { payload: unknown }) => void>,
   mockListen: vi.fn().mockImplementation(async (_eventName, handler) => {
     mockTrayListeners.push(handler as (event: { payload: unknown }) => void);
@@ -88,6 +92,11 @@ vi.mock('../../features/settings/runtimeSettingsSyncService', () => ({
   syncRuntimeSettings: mockSyncRuntimeSettings,
 }));
 
+vi.mock('../../features/settings/nativeSettingsStorage', () => ({
+  loadSettingsFromNativeStorage: mockLoadNativeSettings,
+  saveSettingsToNativeStorage: mockSaveNativeSettings,
+}));
+
 describe('App', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -118,6 +127,9 @@ describe('App', () => {
     mockMainWindowSetFocus.mockClear();
     mockSyncNativeShortcuts.mockClear();
     mockSyncRuntimeSettings.mockClear();
+    mockLoadNativeSettings.mockClear();
+    mockLoadNativeSettings.mockResolvedValue(null);
+    mockSaveNativeSettings.mockClear();
     mockListen.mockClear();
     mockTrayListeners.length = 0;
     delete (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__;
@@ -277,27 +289,33 @@ describe('App', () => {
     fireEvent.keyUp(window, { key: 's', code: 'KeyS', altKey: true });
     fireEvent.keyUp(window, { key: 'Alt', code: 'AltLeft', altKey: false });
 
-    expect(mockShowOcrResultWindow).not.toHaveBeenCalled();
-    expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
-    expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+    return waitFor(() => {
+      expect(mockShowOcrResultWindow).not.toHaveBeenCalled();
+      expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
+      expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it('syncs shortcuts to rust instead of registering them in the window runtime', () => {
+  it('syncs shortcuts to rust instead of registering them in the window runtime', async () => {
     (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ = {};
 
     render(<App />);
 
-    expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
-    expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
+      expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it('never installs js global shortcut registration in tauri runtime', () => {
+  it('never installs js global shortcut registration in tauri runtime', async () => {
     (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ = {};
 
     render(<App />);
 
-    expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
-    expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
+      expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('does not focus settings window for show-main-window tray action in tauri runtime', async () => {

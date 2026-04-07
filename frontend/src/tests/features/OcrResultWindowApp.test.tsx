@@ -7,10 +7,11 @@ import {
 } from '../../features/ocr/ocrResultWindowBridge';
 import { DEFAULT_SETTINGS } from '../../features/settings/settingsTypes';
 
-const { mockHide, mockListen, mockInputTranslate } = vi.hoisted(() => ({
+const { mockHide, mockListen, mockInputTranslate, mockLoadSettings } = vi.hoisted(() => ({
   mockHide: vi.fn().mockResolvedValue(undefined),
   mockListen: vi.fn().mockResolvedValue(() => undefined),
   mockInputTranslate: vi.fn(),
+  mockLoadSettings: vi.fn(),
 }));
 
 const clipboardWriteText = vi.fn().mockResolvedValue(undefined);
@@ -28,6 +29,7 @@ vi.mock('@tauri-apps/api/window', () => ({
 vi.mock('../../infra/tauri/commands', () => ({
   commandsClient: {
     inputTranslate: mockInputTranslate,
+    loadSettings: mockLoadSettings,
   },
 }));
 
@@ -38,6 +40,7 @@ describe('OcrResultWindowApp', () => {
     mockHide.mockClear();
     mockListen.mockClear();
     mockInputTranslate.mockReset();
+    mockLoadSettings.mockReset();
     mockInputTranslate.mockResolvedValue({
       ok: true,
       task_id: 'task_window_1',
@@ -53,6 +56,10 @@ describe('OcrResultWindowApp', () => {
           },
         ],
       },
+    });
+    mockLoadSettings.mockImplementation(async () => {
+      const raw = window.localStorage.getItem('lingoflow.settings.v1');
+      return raw ? JSON.parse(raw) : null;
     });
     clipboardWriteText.mockClear();
     speechCancel.mockClear();

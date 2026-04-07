@@ -59,6 +59,12 @@ impl ConfigStore {
             .enabled
     }
 
+    pub fn set_app_languages(&self, source_lang: String, target_lang: String) {
+        let mut config = self.config.write().expect("config lock poisoned");
+        config.app.source_lang = source_lang;
+        config.app.target_lang = target_lang;
+    }
+
     pub fn set_http_api_enabled(&self, enabled: bool) {
         self.config
             .write()
@@ -82,5 +88,31 @@ impl Default for Config {
                 port: 61928,
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ConfigStore;
+
+    #[test]
+    fn updates_app_languages() {
+        let store = ConfigStore::new_default();
+
+        store.set_app_languages("en".to_string(), "ja".to_string());
+
+        let config = store.get();
+        assert_eq!(config.app.source_lang, "en");
+        assert_eq!(config.app.target_lang, "ja");
+    }
+
+    #[test]
+    fn updates_http_api_enabled() {
+        let store = ConfigStore::new_default();
+
+        store.set_http_api_enabled(false);
+
+        let config = store.get();
+        assert!(!config.http_api.enabled);
     }
 }

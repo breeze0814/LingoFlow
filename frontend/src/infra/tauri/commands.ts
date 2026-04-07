@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { SettingsState } from '../../features/settings/settingsTypes';
 
 type TranslateInput = {
   text: string;
@@ -58,6 +59,8 @@ type DebugPrintInput = {
 
 type RuntimeSettingsInput = {
   httpApiEnabled: boolean;
+  sourceLang: string;
+  targetLang: string;
 };
 
 type CommandError = {
@@ -198,7 +201,17 @@ export const commandsClient = {
     return invoke('sync_runtime_settings', {
       payload: {
         http_api_enabled: input.httpApiEnabled,
+        source_lang: input.sourceLang,
+        target_lang: input.targetLang,
       },
+    });
+  },
+  loadSettings(): Promise<SettingsState | null> {
+    return invoke('load_settings');
+  },
+  saveSettings(settings: SettingsState): Promise<void> {
+    return invoke('save_settings', {
+      payload: settings,
     });
   },
 };

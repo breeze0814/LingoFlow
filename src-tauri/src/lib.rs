@@ -43,7 +43,7 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            let state = AppState::new()?;
+            let state = AppState::new(app.handle())?;
             #[cfg(target_os = "windows")]
             state.providers.attach_app_handle(app.handle().clone());
             if state.config_store.get().http_api.enabled {
@@ -67,6 +67,8 @@ pub fn run() {
     #[cfg(all(not(test), target_os = "windows"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::debug::debug_print,
+        commands::settings::load_settings,
+        commands::settings::save_settings,
         commands::shortcuts::sync_global_shortcuts,
         commands::runtime_settings::sync_runtime_settings,
         commands::translation::selection_translate,
@@ -83,6 +85,8 @@ pub fn run() {
     #[cfg(all(not(test), not(target_os = "windows")))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::debug::debug_print,
+        commands::settings::load_settings,
+        commands::settings::save_settings,
         commands::shortcuts::sync_global_shortcuts,
         commands::runtime_settings::sync_runtime_settings,
         commands::translation::selection_translate,
