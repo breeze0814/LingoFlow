@@ -53,11 +53,11 @@ function getShortcutValue(event: KeyboardEvent): string | null {
   return parts.join(' + ');
 }
 
-function getPanelHint(recordingShortcutId: ShortcutId | null): string {
-  if (recordingShortcutId) {
-    return '正在监听按键，请直接按下组合键，按 Esc 取消。';
-  }
-  return '点击“修改”后按下快捷键组合，修改后会立即生效并自动保存。';
+function getShortcutTokens(shortcut: string): string[] {
+  return shortcut
+    .split('+')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
 }
 
 export function ShortcutPanel({ shortcuts, onChangeShortcut }: ShortcutPanelProps) {
@@ -94,39 +94,43 @@ export function ShortcutPanel({ shortcuts, onChangeShortcut }: ShortcutPanelProp
       className="settingsShortcutPanel"
       data-shortcut-recording={recordingShortcutId ? 'true' : 'false'}
     >
-      <h3>系统快捷键</h3>
-      <p className="settingsShortcutNote">{getPanelHint(recordingShortcutId)}</p>
-      <div className="settingsShortcutForm">
+      <div className="settingsShortcutList">
         {SHORTCUT_FIELDS.map((item) => {
           const isRecording = recordingShortcutId === item.id;
+          const bindingLabel = isRecording
+            ? `${item.action} 快捷键录制中，按下新的组合键，Esc 取消`
+            : `${item.action} 当前快捷键：${shortcuts[item.id]}`;
           return (
-            <div key={item.id} className="settingsShortcutField">
-              <span className="settingsShortcutLabel">{item.action}</span>
-              <div className="settingsShortcutBindingRow">
-                <span
-                  className={
-                    isRecording
-                      ? 'settingsShortcutValue settingsShortcutValueRecording'
-                      : 'settingsShortcutValue'
-                  }
-                >
-                  {isRecording ? '请按下快捷键...' : shortcuts[item.id]}
-                </span>
-                <button
-                  type="button"
-                  className={
-                    isRecording
-                      ? 'settingsShortcutEditButton settingsShortcutEditButtonActive'
-                      : 'settingsShortcutEditButton'
-                  }
-                  aria-label={`修改${item.action}快捷键`}
-                  onClick={() => setRecordingShortcutId(item.id)}
-                >
-                  {isRecording ? '监听中' : '修改'}
-                </button>
+            <article
+              key={item.id}
+              className={isRecording ? 'settingsShortcutRow settingsShortcutRowRecording' : 'settingsShortcutRow'}
+            >
+              <div className="settingsShortcutTextBlock">
+                <span className="settingsShortcutLabel">{item.action}</span>
+                <span className="settingsShortcutMeta">{item.description}</span>
               </div>
-              <span className="settingsShortcutDescription">{item.description}</span>
-            </div>
+              <div className="settingsShortcutBinding" aria-label={bindingLabel}>
+                {isRecording ? (
+                  <span className="settingsShortcutListening">按下新的组合键，Esc 取消</span>
+                ) : (
+                  getShortcutTokens(shortcuts[item.id]).map((token) => (
+                    <span key={`${item.id}-${token}`} className="settingsShortcutKeycap">
+                      {token}
+                    </span>
+                  ))
+                )}
+              </div>
+              <button
+                type="button"
+                className={
+                  isRecording ? 'settingsShortcutButton settingsShortcutButtonActive' : 'settingsShortcutButton'
+                }
+                aria-label={`修改${item.action}快捷键`}
+                onClick={() => setRecordingShortcutId(item.id)}
+              >
+                {isRecording ? '监听中' : '修改'}
+              </button>
+            </article>
           );
         })}
       </div>

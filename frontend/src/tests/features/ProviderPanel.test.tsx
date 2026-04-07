@@ -8,7 +8,7 @@ describe('ProviderPanel', () => {
 
     expect(screen.queryByRole('button', { name: '本地 OCR' })).not.toBeInTheDocument();
 
-    const deepLRow = screen.getByRole('button', { name: 'DeepL API Free' });
+    const deepLRow = screen.getByRole('button', { name: 'DeepL' });
     expect(within(deepLRow).queryByText('翻译 · 未启用')).not.toBeInTheDocument();
     expect(deepLRow.querySelector('.providerRowIcon svg')).not.toBeNull();
   });
