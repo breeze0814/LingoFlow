@@ -6,10 +6,13 @@ use axum::Router;
 use serde::Deserialize;
 
 use crate::errors::app_error::AppError;
+use crate::errors::error_code::ErrorCode;
 use crate::orchestrator::models::{
     OcrTranslateTaskOptions, TaskCommandPayload, TaskRequest, TaskResponse, TranslateTaskOptions,
 };
 use crate::orchestrator::service::Orchestrator;
+
+const MAX_TRANSLATE_TEXT_CHARS: usize = 20_000;
 
 #[derive(Debug, Deserialize)]
 pub struct TranslateBody {
@@ -43,6 +46,7 @@ async fn post_translate(
     State(orchestrator): State<Arc<Orchestrator>>,
     Json(body): Json<TranslateBody>,
 ) -> Result<Json<TaskResponse>, AppError> {
+    validate_translate_text(&body.text)?;
     let payload = TaskCommandPayload {
         text: Some(body.text),
         source_lang: body.source_lang,
@@ -78,6 +82,9 @@ async fn get_input_translate(
     State(_orchestrator): State<Arc<Orchestrator>>,
     Query(query): Query<CommonQuery>,
 ) -> Result<Json<TaskResponse>, AppError> {
+    if let Some(text) = query.text.as_deref() {
+        validate_translate_text(text)?;
+    }
     let task = TaskResponse {
         ok: true,
         task_id: "open_input_panel".to_string(),
@@ -104,6 +111,27 @@ async fn get_ocr_recognize(
     let request = TaskRequest::ocr_recognize(query.source_lang_hint, query.provider_id);
     let response = orchestrator.execute(request).await?;
     Ok(Json(response))
+}
+
+fn validate_translate_text(text: &str) -> Result<(), AppError> {
+    if text.trim().is_empty() {
+        return Err(AppError::new(
+            ErrorCode::EmptyInput,
+            "Input text is empty",
+            false,
+        ));
+    }
+    if text.chars().count() > MAX_TRANSLATE_TEXT_CHARS {
+        return Err(AppError::new(
+            ErrorCode::HttpInvalidRequest,
+            format!(
+                "Input text exceeds the {} character limit",
+                MAX_TRANSLATE_TEXT_CHARS
+            ),
+            false,
+        ));
+    }
+    Ok(())
 }
 
 async fn get_ocr_translate(

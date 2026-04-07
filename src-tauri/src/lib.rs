@@ -1,5 +1,7 @@
 mod apiprovider;
+#[cfg(not(test))]
 mod app_state;
+#[cfg(not(test))]
 mod commands;
 mod errors;
 mod http_api;
@@ -11,13 +13,17 @@ mod storage;
 mod tray;
 mod window_lifecycle;
 
+#[cfg(not(test))]
 use app_state::AppState;
+#[cfg(not(test))]
 use tauri::Manager;
+#[cfg(not(test))]
 use window_lifecycle::{close_request_action, CloseRequestAction};
 
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(test)))]
 pub use platform::windows_capture::{build_clipboard_wait_script, build_region_capture_script};
 
+#[cfg(not(test))]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -51,29 +57,13 @@ pub fn run() {
                 });
             }
             app.manage(state);
-            shortcuts::setup(&app.handle())?;
-            tray::setup(&app.handle())?;
+            shortcuts::setup(app.handle())?;
+            tray::setup(app.handle())?;
             if let Some(main_window) = app.get_webview_window("main") {
                 main_window.hide()?;
             }
             Ok(())
         });
-
-    #[cfg(test)]
-    let builder = builder.invoke_handler(tauri::generate_handler![
-        commands::debug::debug_print,
-        commands::shortcuts::sync_global_shortcuts,
-        commands::runtime_settings::sync_runtime_settings,
-        commands::translation::selection_translate,
-        commands::translation::read_selection_text,
-        commands::translation::input_translate,
-        commands::ocr::ocr_recognize,
-        commands::ocr::ocr_translate,
-        commands::ocr::ocr_recognize_region,
-        commands::ocr::ocr_translate_region,
-        commands::window_display::set_capture_excluded
-    ]);
-
     #[cfg(all(not(test), target_os = "windows"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::debug::debug_print,
@@ -109,3 +99,6 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+pub fn run() {}

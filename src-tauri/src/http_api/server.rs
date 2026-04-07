@@ -10,7 +10,8 @@ use crate::orchestrator::service::Orchestrator;
 use crate::storage::config_store::HttpServerOptions;
 
 pub async fn bind_http_listener(opts: &HttpServerOptions) -> Result<TcpListener, AppError> {
-    let bind = format!("{}:{}", opts.host, opts.port);
+    ensure_loopback_host(&opts.host)?;
+    let bind = format_bind_address(&opts.host, opts.port);
     TcpListener::bind(bind).await.map_err(|err| {
         AppError::new(
             ErrorCode::HttpPortInUse,
@@ -18,6 +19,24 @@ pub async fn bind_http_listener(opts: &HttpServerOptions) -> Result<TcpListener,
             false,
         )
     })
+}
+
+fn ensure_loopback_host(host: &str) -> Result<(), AppError> {
+    if matches!(host, "127.0.0.1" | "localhost" | "::1") {
+        return Ok(());
+    }
+    Err(AppError::new(
+        ErrorCode::HttpInvalidRequest,
+        format!("HTTP API host must stay on loopback, got `{host}`"),
+        false,
+    ))
+}
+
+fn format_bind_address(host: &str, port: u16) -> String {
+    if host.contains(':') {
+        return format!("[{host}]:{port}");
+    }
+    format!("{host}:{port}")
 }
 
 pub async fn serve_http_listener(

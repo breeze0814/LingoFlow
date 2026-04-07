@@ -97,6 +97,9 @@ mod tests {
     use std::net::TcpListener;
     use std::sync::Arc;
 
+    use reqwest::StatusCode;
+    use serde_json::json;
+
     use crate::orchestrator::service::Orchestrator;
     use crate::providers::registry::ProviderRegistry;
     use crate::storage::config_store::{ConfigStore, HttpServerOptions};
@@ -115,6 +118,17 @@ mod tests {
         let config_store = Arc::new(ConfigStore::new_default());
         let providers = Arc::new(ProviderRegistry::new());
         Arc::new(Orchestrator::new(config_store, providers))
+    }
+
+    async fn start_server() -> (HttpServerController, String) {
+        let controller = HttpServerController::new();
+        let opts = free_server_options();
+        let base_url = format!("http://{}:{}", opts.host, opts.port);
+        controller
+            .start(opts, make_orchestrator())
+            .await
+            .expect("start http server");
+        (controller, base_url)
     }
 
     #[tokio::test]
@@ -150,6 +164,59 @@ mod tests {
             .expect("second start");
 
         assert!(controller.is_running().await.expect("read running state"));
+        controller.stop().await.expect("stop http server");
+    }
+
+    #[tokio::test]
+    async fn rejects_non_loopback_host() {
+        let controller = HttpServerController::new();
+        let opts = HttpServerOptions {
+            host: "0.0.0.0".to_string(),
+            port: free_server_options().port,
+        };
+
+        let error = controller
+            .start(opts, make_orchestrator())
+            .await
+            .expect_err("non-loopback host should be rejected");
+
+        assert!(matches!(error.code, crate::errors::error_code::ErrorCode::HttpInvalidRequest));
+    }
+
+    #[tokio::test]
+    async fn translate_endpoint_rejects_blank_input() {
+        let (controller, base_url) = start_server().await;
+        let client = reqwest::Client::new();
+
+        let response = client
+            .post(format!("{base_url}/translate"))
+            .json(&json!({
+                "text": "   ",
+            }))
+            .send()
+            .await
+            .expect("send blank translate request");
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        controller.stop().await.expect("stop http server");
+    }
+
+    #[tokio::test]
+    async fn translate_endpoint_rejects_oversized_input() {
+        let (controller, base_url) = start_server().await;
+        let client = reqwest::Client::new();
+
+        let response = client
+            .post(format!("{base_url}/translate"))
+            .json(&json!({
+                "text": "x".repeat(20_001),
+                "provider_id": "unsupported_provider",
+            }))
+            .send()
+            .await
+            .expect("send oversized translate request");
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         controller.stop().await.expect("stop http server");
     }
 }

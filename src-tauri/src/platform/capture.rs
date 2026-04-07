@@ -5,7 +5,7 @@ use crate::errors::error_code::ErrorCode;
 use crate::orchestrator::models::CaptureRect;
 #[cfg(target_os = "macos")]
 use crate::platform::macos_helper::{run_helper, HelperError, HelperPayload};
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(test)))]
 use crate::platform::windows_capture::{
     capture_region_image, launch_screenclip, wait_for_clipboard_image,
 };
@@ -89,17 +89,17 @@ fn run_capture_command(output_path: &PathBuf) -> Result<(), AppError> {
     ))
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(test)))]
 fn run_region_capture_command(
-    output_path: &PathBuf,
+    output_path: &std::path::Path,
     capture_rect: &CaptureRect,
 ) -> Result<(), AppError> {
     capture_region_image(output_path, capture_rect)
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(any(test, not(target_os = "windows")))]
 fn run_region_capture_command(
-    _output_path: &PathBuf,
+    _output_path: &std::path::Path,
     _capture_rect: &CaptureRect,
 ) -> Result<(), AppError> {
     Err(AppError::new(
@@ -109,8 +109,8 @@ fn run_region_capture_command(
     ))
 }
 
-#[cfg(target_os = "windows")]
-fn run_capture_command(output_path: &PathBuf) -> Result<(), AppError> {
+#[cfg(all(target_os = "windows", not(test)))]
+fn run_capture_command(output_path: &std::path::Path) -> Result<(), AppError> {
     launch_screenclip().map_err(map_capture_spawn_error)?;
     let output = wait_for_clipboard_image(output_path).map_err(map_capture_spawn_error)?;
     if output.status.success() {
@@ -120,8 +120,8 @@ fn run_capture_command(output_path: &PathBuf) -> Result<(), AppError> {
     Err(map_windows_capture_failure(stderr.trim()))
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn run_capture_command(_output_path: &PathBuf) -> Result<(), AppError> {
+#[cfg(any(test, not(any(target_os = "macos", target_os = "windows"))))]
+fn run_capture_command(_output_path: &std::path::Path) -> Result<(), AppError> {
     Err(AppError::new(
         ErrorCode::InternalError,
         "Interactive screenshot capture is not implemented on this platform",
