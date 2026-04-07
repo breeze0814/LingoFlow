@@ -4,10 +4,10 @@ use std::process::Command;
 use async_trait::async_trait;
 
 use crate::apiprovider::bing_web_support::{
-    extract_page_context, map_bing_to_app_lang, source_lang_to_bing, target_lang_to_bing,
-    BingPageContext, BingTranslateErrorPayload, BingTranslatePayload,
+    extract_page_context, source_lang_to_bing, target_lang_to_bing, BingPageContext,
+    BingTranslateErrorPayload, BingTranslatePayload,
 };
-use crate::apiprovider::http_error::{invalid_response_error, map_http_error};
+use crate::apiprovider::http_error::invalid_response_error;
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
 use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateResult};
@@ -17,8 +17,7 @@ const PROVIDER_LABEL: &str = "Bing Web";
 const DEFAULT_BASE_URL: &str = "https://www.bing.com";
 const DEFAULT_TRANSLATOR_URL: &str = "https://www.bing.com/translator";
 const DEFAULT_CURL_PATH: &str = "curl.exe";
-const DEFAULT_USER_AGENT: &str =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
+const DEFAULT_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
      (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 const DEFAULT_IID: &str = "translator.5028";
@@ -85,7 +84,7 @@ impl BingWebProvider {
         req: &TranslateRequest,
         source_lang: &str,
         target_lang: &str,
-        timeout_ms: u64,
+        _timeout_ms: u64,
         context: &BingPageContext,
     ) -> Result<String, AppError> {
         let endpoint = format!(
@@ -151,7 +150,7 @@ impl BingWebProvider {
     }
 
     fn parse_translation_result(
-        req: TranslateRequest,
+        _req: TranslateRequest,
         payload_text: &str,
     ) -> Result<TranslateResult, AppError> {
         log_bing_web(format!(
@@ -182,7 +181,11 @@ impl BingWebProvider {
             .map_err(|error| invalid_response_error(PROVIDER_LABEL, error.to_string()))?;
         let first = payload
             .iter()
-            .find(|item| item.translations.as_ref().is_some_and(|items| !items.is_empty()))
+            .find(|item| {
+                item.translations
+                    .as_ref()
+                    .is_some_and(|items| !items.is_empty())
+            })
             .ok_or_else(|| invalid_response_error(PROVIDER_LABEL, "missing translation item"))?;
         let translation = first
             .translations
@@ -197,17 +200,7 @@ impl BingWebProvider {
             ));
         }
 
-        let detected_source_lang = first
-            .detected_language
-            .as_ref()
-            .map(|value| map_bing_to_app_lang(&value.language))
-            .unwrap_or_else(|| req.source_lang.clone());
-        Ok(TranslateResult {
-            provider_id: PROVIDER_ID.to_string(),
-            source_text: req.text,
-            translated_text,
-            detected_source_lang,
-        })
+        Ok(TranslateResult { translated_text })
     }
 }
 
@@ -265,7 +258,12 @@ fn preview_debug(value: &str) -> String {
 
 impl BingWebProvider {
     fn run_curl_and_collect(&self, args: &[&str]) -> Result<(String, String), AppError> {
-        self.run_curl_and_collect_owned(&args.iter().map(|value| value.to_string()).collect::<Vec<String>>())
+        self.run_curl_and_collect_owned(
+            &args
+                .iter()
+                .map(|value| value.to_string())
+                .collect::<Vec<String>>(),
+        )
     }
 
     fn run_curl_and_collect_owned(&self, args: &[String]) -> Result<(String, String), AppError> {
@@ -335,6 +333,5 @@ mod tests {
         .expect("bing payload should parse");
 
         assert_eq!(result.translated_text, "hello");
-        assert_eq!(result.detected_source_lang, "en");
     }
 }

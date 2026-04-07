@@ -12,7 +12,6 @@ mod tray;
 mod window_lifecycle;
 
 use app_state::AppState;
-use http_api::server::start_http_server;
 use tauri::Manager;
 use window_lifecycle::{close_request_action, CloseRequestAction};
 
@@ -44,8 +43,9 @@ pub fn run() {
             if state.config_store.get().http_api.enabled {
                 let opts = state.config_store.http_server_options();
                 let orchestrator = state.orchestrator.clone();
+                let controller = state.http_server_controller.clone();
                 tauri::async_runtime::spawn(async move {
-                    if let Err(err) = start_http_server(opts, orchestrator).await {
+                    if let Err(err) = controller.start(opts, orchestrator).await {
                         eprintln!("http server exited with error: {}", err.message);
                     }
                 });
@@ -63,7 +63,9 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::debug::debug_print,
         commands::shortcuts::sync_global_shortcuts,
+        commands::runtime_settings::sync_runtime_settings,
         commands::translation::selection_translate,
+        commands::translation::read_selection_text,
         commands::translation::input_translate,
         commands::ocr::ocr_recognize,
         commands::ocr::ocr_translate,
@@ -72,17 +74,34 @@ pub fn run() {
         commands::window_display::set_capture_excluded
     ]);
 
-    #[cfg(not(test))]
+    #[cfg(all(not(test), target_os = "windows"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::debug::debug_print,
         commands::shortcuts::sync_global_shortcuts,
+        commands::runtime_settings::sync_runtime_settings,
         commands::translation::selection_translate,
+        commands::translation::read_selection_text,
         commands::translation::input_translate,
         commands::ocr::ocr_recognize,
         commands::ocr::ocr_translate,
         commands::ocr::ocr_recognize_region,
         commands::ocr::ocr_translate_region,
         commands::tesseract_ocr::resolve_tesseract_ocr,
+        commands::window_display::set_capture_excluded
+    ]);
+
+    #[cfg(all(not(test), not(target_os = "windows")))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        commands::debug::debug_print,
+        commands::shortcuts::sync_global_shortcuts,
+        commands::runtime_settings::sync_runtime_settings,
+        commands::translation::selection_translate,
+        commands::translation::read_selection_text,
+        commands::translation::input_translate,
+        commands::ocr::ocr_recognize,
+        commands::ocr::ocr_translate,
+        commands::ocr::ocr_recognize_region,
+        commands::ocr::ocr_translate_region,
         commands::window_display::set_capture_excluded
     ]);
 

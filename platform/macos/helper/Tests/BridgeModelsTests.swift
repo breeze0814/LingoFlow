@@ -1,10 +1,9 @@
-import XCTest
+import Testing
 @testable import App
 
-final class BridgeModelsTests: XCTestCase {
-    func testSuccessResponseHasNoError() {
-        let response = BridgeResponse.success(data: ["status": "ok"])
-        XCTAssertTrue(response.ok)
-        XCTAssertNil(response.error)
-    }
+@Test
+func successResponseHasNoError() {
+    let response = BridgeResponse.success(data: ["status": "ok"])
+    #expect(response.ok)
+    #expect(response.error == nil)
 }

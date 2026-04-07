@@ -11,7 +11,8 @@ use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateRes
 
 const PROVIDER_ID: &str = "google_translate";
 const PROVIDER_LABEL: &str = "Google Translate";
-pub(crate) const DEFAULT_BASE_URL: &str = "https://translation.googleapis.com/language/translate/v2";
+pub(crate) const DEFAULT_BASE_URL: &str =
+    "https://translation.googleapis.com/language/translate/v2";
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 
 pub struct GoogleTranslateProvider {
@@ -39,8 +40,6 @@ struct GoogleTranslateData {
 struct GoogleTranslationItem {
     #[serde(rename = "translatedText")]
     translated_text: String,
-    #[serde(rename = "detectedSourceLanguage")]
-    detected_source_language: Option<String>,
 }
 
 impl GoogleTranslateProvider {
@@ -110,7 +109,7 @@ impl GoogleTranslateProvider {
     }
 
     fn parse_result(
-        req: TranslateRequest,
+        _req: TranslateRequest,
         payload: GoogleTranslateResponse,
     ) -> Result<TranslateResult, AppError> {
         let first_translation = payload
@@ -126,17 +125,7 @@ impl GoogleTranslateProvider {
             ));
         }
 
-        let detected_source_lang = first_translation
-            .detected_source_language
-            .clone()
-            .unwrap_or_else(|| req.source_lang.clone());
-
-        Ok(TranslateResult {
-            provider_id: PROVIDER_ID.to_string(),
-            source_text: req.text,
-            translated_text,
-            detected_source_lang,
-        })
+        Ok(TranslateResult { translated_text })
     }
 }
 

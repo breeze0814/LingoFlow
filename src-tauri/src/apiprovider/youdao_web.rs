@@ -7,8 +7,8 @@ use reqwest::header::{HeaderMap, HeaderValue, COOKIE, REFERER, USER_AGENT};
 use crate::apiprovider::http_error::{invalid_response_error, map_http_error};
 use crate::apiprovider::youdao_web_support::{
     current_millis_string, decrypt_payload, flatten_translated_text, generate_sign,
-    parse_source_lang, source_lang_to_youdao, target_lang_to_youdao, YoudaoWebKeyData,
-    YoudaoWebKeyResponse, YoudaoWebTranslateResponse,
+    source_lang_to_youdao, target_lang_to_youdao, YoudaoWebKeyData, YoudaoWebKeyResponse,
+    YoudaoWebTranslateResponse,
 };
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
@@ -169,7 +169,7 @@ impl YoudaoWebProvider {
     }
 
     fn parse_translation_result(
-        req: TranslateRequest,
+        _req: TranslateRequest,
         decrypted_payload: &str,
     ) -> Result<TranslateResult, AppError> {
         let payload = serde_json::from_str::<YoudaoWebTranslateResponse>(decrypted_payload)
@@ -181,14 +181,7 @@ impl YoudaoWebProvider {
             ));
         }
         let translated_text = flatten_translated_text(payload.translate_result)?;
-        let detected_source_lang =
-            parse_source_lang(payload.response_type).unwrap_or_else(|| req.source_lang.clone());
-        Ok(TranslateResult {
-            provider_id: PROVIDER_ID.to_string(),
-            source_text: req.text,
-            translated_text,
-            detected_source_lang,
-        })
+        Ok(TranslateResult { translated_text })
     }
 }
 

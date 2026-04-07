@@ -50,6 +50,22 @@ impl ConfigStore {
             port: config.http_api.port,
         }
     }
+
+    pub fn http_api_enabled(&self) -> bool {
+        self.config
+            .read()
+            .expect("config lock poisoned")
+            .http_api
+            .enabled
+    }
+
+    pub fn set_http_api_enabled(&self, enabled: bool) {
+        self.config
+            .write()
+            .expect("config lock poisoned")
+            .http_api
+            .enabled = enabled;
+    }
 }
 
 impl Default for Config {

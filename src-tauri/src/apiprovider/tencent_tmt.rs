@@ -54,8 +54,6 @@ struct TencentTranslateApiResponse {
 
 #[derive(Deserialize)]
 struct TencentResponseData {
-    #[serde(rename = "Source")]
-    source: Option<String>,
     #[serde(rename = "TargetText")]
     target_text: Option<String>,
     #[serde(rename = "Error")]
@@ -198,7 +196,7 @@ impl TencentTmtProvider {
     }
 
     fn parse_result(
-        req: TranslateRequest,
+        _req: TranslateRequest,
         payload: TencentTranslateApiResponse,
     ) -> Result<TranslateResult, AppError> {
         if let Some(error) = payload.response.error {
@@ -217,16 +215,7 @@ impl TencentTmtProvider {
             ));
         }
 
-        let detected_source_lang = payload
-            .response
-            .source
-            .unwrap_or_else(|| req.source_lang.clone());
-        Ok(TranslateResult {
-            provider_id: PROVIDER_ID.to_string(),
-            source_text: req.text,
-            translated_text,
-            detected_source_lang,
-        })
+        Ok(TranslateResult { translated_text })
     }
 }
 

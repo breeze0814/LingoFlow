@@ -7,6 +7,7 @@ use crate::errors::error_code::ErrorCode;
 use crate::orchestrator::models::{
     ProviderTranslationData, TaskData, TaskRequest, TaskResponse, TaskStatus, TaskType,
 };
+use crate::orchestrator::ocr_text::normalize_ocr_text;
 use crate::platform::capture::capture_interactive_image;
 use crate::providers::registry::ProviderRegistry;
 use crate::providers::runtime_translate_factory::{
@@ -81,7 +82,28 @@ impl Orchestrator {
 
     async fn handle_input_translate(&self, request: TaskRequest) -> Result<TaskResponse, AppError> {
         let task_id = request.task_id.clone();
-        let text = request.text.unwrap_or_default();
+        let text = request.text.clone().unwrap_or_default();
+        self.translate_text(request, task_id, text).await
+    }
+
+    async fn handle_selection_translate(
+        &self,
+        request: TaskRequest,
+    ) -> Result<TaskResponse, AppError> {
+        let task_id = request.task_id.clone();
+        let text = match crate::platform::selection::read_selected_text() {
+            Ok(text) => text,
+            Err(error) => return Ok(Self::failed(task_id, error)),
+        };
+        self.translate_text(request, task_id, text).await
+    }
+
+    async fn translate_text(
+        &self,
+        request: TaskRequest,
+        task_id: String,
+        text: String,
+    ) -> Result<TaskResponse, AppError> {
         if text.trim().is_empty() {
             return Ok(Self::failed(
                 task_id,
@@ -126,20 +148,6 @@ impl Orchestrator {
                 translation_results,
                 capture_rect: None,
             },
-        ))
-    }
-
-    async fn handle_selection_translate(
-        &self,
-        request: TaskRequest,
-    ) -> Result<TaskResponse, AppError> {
-        Ok(Self::failed(
-            request.task_id,
-            AppError::new(
-                ErrorCode::NoSelection,
-                "Selection translate requires macOS helper integration",
-                true,
-            ),
         ))
     }
 
@@ -492,7 +500,7 @@ impl Orchestrator {
             timeout_ms: DEFAULT_OCR_TIMEOUT_MS,
         };
         let ocr_result = ocr_provider.recognize(ocr_request).await?;
-        let recognized_text = ocr_result.recognized_text.trim().to_string();
+        let recognized_text = normalize_ocr_text(&ocr_result.recognized_text);
         if recognized_text.is_empty() {
             return Err(AppError::new(
                 ErrorCode::OcrEmptyResult,

@@ -1,3 +1,4 @@
+use serde::Serialize;
 use tauri::State;
 
 use crate::app_state::AppState;
@@ -5,6 +6,11 @@ use crate::errors::app_error::AppError;
 use crate::orchestrator::models::{
     TaskCommandPayload, TaskRequest, TaskResponse, TranslateTaskOptions,
 };
+
+#[derive(Debug, Serialize)]
+pub struct SelectionTextResponse {
+    pub selected_text: String,
+}
 
 #[tauri::command]
 pub async fn selection_translate(
@@ -31,4 +37,11 @@ pub async fn input_translate(
         },
     );
     state.orchestrator.execute(request).await
+}
+
+#[tauri::command]
+pub fn read_selection_text() -> Result<SelectionTextResponse, AppError> {
+    Ok(SelectionTextResponse {
+        selected_text: crate::platform::selection::read_selected_text()?,
+    })
 }

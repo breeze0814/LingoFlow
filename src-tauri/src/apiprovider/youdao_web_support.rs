@@ -35,8 +35,6 @@ pub(crate) struct YoudaoWebKeyData {
 pub(crate) struct YoudaoWebTranslateResponse {
     pub code: i32,
     pub msg: Option<String>,
-    #[serde(rename = "type")]
-    pub response_type: Option<String>,
     #[serde(rename = "translateResult")]
     pub translate_result: Option<Vec<Vec<YoudaoWebTranslationItem>>>,
 }
@@ -110,15 +108,6 @@ pub(crate) fn flatten_translated_text(
     Ok(lines.join("\n"))
 }
 
-pub(crate) fn parse_source_lang(response_type: Option<String>) -> Option<String> {
-    let value = response_type?;
-    let source_code = value.split('2').next()?.trim();
-    if source_code.is_empty() {
-        return None;
-    }
-    Some(map_youdao_to_app_lang(source_code))
-}
-
 pub(crate) fn source_lang_to_youdao(source_lang: &str) -> String {
     let normalized = source_lang.trim().to_ascii_lowercase();
     if normalized.is_empty() || normalized == "auto" {
@@ -167,28 +156,5 @@ fn map_app_to_youdao_lang(lang: &str) -> String {
         "id" => "id".to_string(),
         "vi" => "vi".to_string(),
         other => other.to_string(),
-    }
-}
-
-fn map_youdao_to_app_lang(lang: &str) -> String {
-    let normalized = lang.trim().to_ascii_lowercase();
-    match normalized.as_str() {
-        "zh-chs" | "zh" => "zh-CN".to_string(),
-        "zh-cht" => "zh-TW".to_string(),
-        "en" => "en".to_string(),
-        "ja" => "ja".to_string(),
-        "ko" => "ko".to_string(),
-        "fr" => "fr".to_string(),
-        "es" => "es".to_string(),
-        "pt" => "pt".to_string(),
-        "it" => "it".to_string(),
-        "de" => "de".to_string(),
-        "ru" => "ru".to_string(),
-        "ar" => "ar".to_string(),
-        "th" => "th".to_string(),
-        "nl" => "nl".to_string(),
-        "id" => "id".to_string(),
-        "vi" => "vi".to_string(),
-        _ => lang.to_string(),
     }
 }

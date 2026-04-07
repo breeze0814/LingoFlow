@@ -172,12 +172,7 @@ impl TranslateProvider for OpenAiCompatibleProvider {
                 )
             })?;
 
-        Ok(TranslateResult {
-            provider_id: PROVIDER_ID.to_string(),
-            source_text: req.text,
-            translated_text,
-            detected_source_lang: req.source_lang,
-        })
+        Ok(TranslateResult { translated_text })
     }
 
     fn provider_id(&self) -> &'static str {

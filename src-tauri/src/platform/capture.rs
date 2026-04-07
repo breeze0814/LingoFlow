@@ -1,14 +1,20 @@
 use std::path::PathBuf;
-#[cfg(target_os = "macos")]
-use std::process::Command;
 
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
 use crate::orchestrator::models::CaptureRect;
+#[cfg(target_os = "macos")]
+use crate::platform::macos_helper::{run_helper, HelperError, HelperPayload};
 #[cfg(target_os = "windows")]
 use crate::platform::windows_capture::{
     capture_region_image, launch_screenclip, wait_for_clipboard_image,
 };
+
+#[cfg(target_os = "macos")]
+const HELPER_COMMAND: &str = "capture.start_interactive";
+
+#[cfg(target_os = "macos")]
+const IMAGE_PATH_KEY: &str = "imagePath";
 
 pub fn capture_interactive_image() -> Result<(PathBuf, Option<CaptureRect>), AppError> {
     let output_path = build_capture_output_path();
@@ -44,19 +50,42 @@ fn ensure_capture_file_exists(output_path: PathBuf) -> Result<PathBuf, AppError>
 
 #[cfg(target_os = "macos")]
 fn run_capture_command(output_path: &PathBuf) -> Result<(), AppError> {
-    let output = Command::new("screencapture")
-        .arg("-i")
-        .arg("-x")
-        .arg(output_path)
-        .output()
-        .map_err(map_capture_spawn_error)?;
-    if output.status.success() {
+    let response = run_helper(
+        HELPER_COMMAND,
+        Some(HelperPayload {
+            image_path: Some(output_path.to_string_lossy().into_owned()),
+            source_lang_hint: None,
+        }),
+    )?;
+    if !response.ok {
+        return Err(map_macos_capture_error(response.error));
+    }
+    let data = response.data.ok_or_else(|| {
+        AppError::new(
+            ErrorCode::ProviderInvalidResponse,
+            "Capture helper response missing data",
+            false,
+        )
+    })?;
+    let image_path = data
+        .get(IMAGE_PATH_KEY)
+        .map(String::as_str)
+        .unwrap_or_default()
+        .trim();
+    if image_path.is_empty() {
+        return Err(AppError::new(
+            ErrorCode::ProviderInvalidResponse,
+            "Capture helper response missing image path",
+            false,
+        ));
+    }
+    if image_path == output_path.to_string_lossy() {
         return Ok(());
     }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    Err(map_macos_capture_failure(
-        output.status.code(),
-        stderr.trim(),
+    Err(AppError::new(
+        ErrorCode::ProviderInvalidResponse,
+        format!("Capture helper returned unexpected image path: {image_path}"),
+        false,
     ))
 }
 
@@ -100,6 +129,7 @@ fn run_capture_command(_output_path: &PathBuf) -> Result<(), AppError> {
     ))
 }
 
+#[cfg(target_os = "windows")]
 fn map_capture_spawn_error(error: std::io::Error) -> AppError {
     AppError::new(
         ErrorCode::InternalError,
@@ -109,31 +139,31 @@ fn map_capture_spawn_error(error: std::io::Error) -> AppError {
 }
 
 #[cfg(target_os = "macos")]
-fn map_macos_capture_failure(code: Option<i32>, stderr: &str) -> AppError {
-    if code == Some(1) {
-        return AppError::new(
-            ErrorCode::UserCancelled,
-            "User cancelled screenshot capture",
-            true,
-        );
-    }
+fn map_macos_capture_error(error: Option<HelperError>) -> AppError {
+    let code = error
+        .as_ref()
+        .and_then(|item| item.code.as_deref())
+        .unwrap_or("capture_failed");
+    let message = error
+        .as_ref()
+        .and_then(|item| item.message.as_deref())
+        .unwrap_or("Screenshot capture failed")
+        .to_string();
+    let retryable = error
+        .as_ref()
+        .and_then(|item| item.retryable)
+        .unwrap_or(true);
 
-    if stderr.contains("Operation not permitted")
-        || stderr.contains("not authorized")
-        || stderr.contains("permission")
-    {
-        return AppError::new(
-            ErrorCode::PermissionDenied,
-            format!("Screenshot permission denied: {stderr}"),
-            false,
-        );
+    if code == "user_cancelled" {
+        return AppError::new(ErrorCode::UserCancelled, message, false);
     }
-
-    AppError::new(
-        ErrorCode::InternalError,
-        format!("Screenshot capture failed (code={code:?}): {stderr}"),
-        true,
-    )
+    if code == "permission_denied" {
+        return AppError::new(ErrorCode::PermissionDenied, message, false);
+    }
+    if code == "invalid_request" {
+        return AppError::new(ErrorCode::ProviderInvalidResponse, message, false);
+    }
+    AppError::new(ErrorCode::InternalError, message, retryable)
 }
 
 #[cfg(target_os = "windows")]

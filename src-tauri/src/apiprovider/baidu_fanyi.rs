@@ -37,7 +37,6 @@ struct BaiduTranslateResponse {
 #[derive(Deserialize)]
 struct BaiduTranslationItem {
     dst: String,
-    src: String,
 }
 
 impl BaiduFanyiProvider {
@@ -123,7 +122,7 @@ impl BaiduFanyiProvider {
     }
 
     fn parse_result(
-        req: TranslateRequest,
+        _req: TranslateRequest,
         payload: BaiduTranslateResponse,
     ) -> Result<TranslateResult, AppError> {
         if let Some(error_code) = payload.error_code {
@@ -144,12 +143,7 @@ impl BaiduFanyiProvider {
             ));
         }
 
-        Ok(TranslateResult {
-            provider_id: PROVIDER_ID.to_string(),
-            source_text: req.text,
-            translated_text,
-            detected_source_lang: first.src,
-        })
+        Ok(TranslateResult { translated_text })
     }
 }
 

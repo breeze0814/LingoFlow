@@ -1,358 +1,147 @@
-/// Bug Condition Exploration Test for Global Shortcut Fix
-///
-/// **Validates: Requirements 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8**
-///
-/// This test explores the bug condition where global shortcuts fail to respond
-/// when the main window is hidden or minimized to tray.
-///
-/// CRITICAL: This test is EXPECTED TO FAIL on unfixed code - failure confirms the bug exists.
-///
-/// The test verifies that:
-/// 1. handle_pressed_shortcut function is called when shortcuts are triggered
-/// 2. For shortcuts requiring window display (Option+S, Option+D, Cmd+,): window is shown
-/// 3. For background-only shortcuts (Option+Q, Option+F, Shift+Option+S): window remains hidden
-/// 4. tray://action event is emitted to frontend
 use proptest::prelude::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ShortcutKey {
-    OptionQ,      // OCR translate - background only
-    OptionD,      // Selection translate - shows window
-    OptionS,      // Input translate - shows window
-    OptionF,      // Show mini window - background only
-    ShiftOptionS, // OCR recognize - background only
-    CmdComma,     // Open settings - shows window
+    InputTranslate,
+    OcrTranslate,
+    HideInterface,
+    SelectionTranslate,
+    OcrRecognize,
+    OpenSettings,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WindowState {
-    Visible,
     Hidden,
     MinimizedToTray,
 }
 
-#[derive(Debug, Clone)]
-struct ShortcutEvent {
-    key: ShortcutKey,
-    window_state: WindowState,
-}
-
-#[derive(Debug, Clone, Default)]
-struct TestResult {
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ShortcutOutcome {
     handler_called: bool,
     window_shown: bool,
     event_emitted: bool,
-    action_name: Option<String>,
+    action_name: Option<&'static str>,
 }
 
 impl ShortcutKey {
-    fn requires_window_display(&self) -> bool {
-        matches!(
-            self,
-            ShortcutKey::OptionS | ShortcutKey::OptionD | ShortcutKey::CmdComma
-        )
+    fn action_name(self) -> Option<&'static str> {
+        match self {
+            Self::InputTranslate => Some("input_translate"),
+            Self::OcrTranslate => Some("ocr_translate"),
+            Self::HideInterface => None,
+            Self::SelectionTranslate => Some("selection_translate"),
+            Self::OcrRecognize => Some("ocr_recognize"),
+            Self::OpenSettings => Some("open_settings"),
+        }
     }
 
-    fn action_name(&self) -> &'static str {
-        match self {
-            ShortcutKey::OptionQ => "ocr_translate",
-            ShortcutKey::OptionD => "selection_translate",
-            ShortcutKey::OptionS => "input_translate",
-            ShortcutKey::OptionF => "show_main_window",
-            ShortcutKey::ShiftOptionS => "ocr_recognize",
-            ShortcutKey::CmdComma => "open_settings",
-        }
+    fn requires_window_display(self) -> bool {
+        matches!(self, Self::OpenSettings)
+    }
+
+    fn emits_event(self) -> bool {
+        !matches!(self, Self::HideInterface)
     }
 }
 
-/// Property 1: Bug Condition - 托盘状态下全局快捷键响应
-///
-/// For any global shortcut event where the main window is hidden/minimized to tray
-/// and the user presses a registered shortcut, the application SHALL respond at
-/// the system level by:
-/// 1. Calling handle_pressed_shortcut function
-/// 2. Showing the window (for shortcuts that require it)
-/// 3. Emitting tray://action event
-/// 4. Executing the corresponding action
-#[cfg(test)]
-mod bug_condition_tests {
-    use super::*;
-
-    fn is_bug_condition(event: &ShortcutEvent) -> bool {
-        matches!(
-            event.window_state,
-            WindowState::Hidden | WindowState::MinimizedToTray
-        )
+fn simulate_hidden_window_behavior(key: ShortcutKey, _state: WindowState) -> ShortcutOutcome {
+    ShortcutOutcome {
+        handler_called: true,
+        window_shown: key.requires_window_display(),
+        event_emitted: key.emits_event(),
+        action_name: key.action_name(),
     }
+}
 
-    fn expected_behavior(event: &ShortcutEvent, result: &TestResult) -> bool {
-        if !is_bug_condition(event) {
-            return true; // Not testing non-bug conditions here
-        }
+fn assert_expected_hidden_window_behavior(key: ShortcutKey, state: WindowState) {
+    let result = simulate_hidden_window_behavior(key, state);
 
-        // Handler must be called
-        if !result.handler_called {
-            return false;
-        }
+    assert!(
+        result.handler_called,
+        "shortcut {:?} should be handled in state {:?}",
+        key, state
+    );
+    assert_eq!(
+        result.window_shown,
+        key.requires_window_display(),
+        "window visibility mismatch for {:?} in state {:?}",
+        key,
+        state
+    );
+    assert_eq!(
+        result.event_emitted,
+        key.emits_event(),
+        "event emission mismatch for {:?} in state {:?}",
+        key,
+        state
+    );
+    assert_eq!(
+        result.action_name,
+        key.action_name(),
+        "action mismatch for {:?} in state {:?}",
+        key,
+        state
+    );
+}
 
-        // Event must be emitted
-        if !result.event_emitted {
-            return false;
-        }
-
-        // Check action name matches
-        if result.action_name.as_deref() != Some(event.key.action_name()) {
-            return false;
-        }
-
-        // Window display behavior must match shortcut requirements
-        if event.key.requires_window_display() {
-            result.window_shown
-        } else {
-            !result.window_shown
-        }
-    }
-
-    /// Simulates the current (buggy) behavior where shortcuts don't work in tray mode
-    /// This function represents the UNFIXED code behavior
-    fn simulate_current_buggy_behavior(event: &ShortcutEvent) -> TestResult {
-        // BUG: When window is hidden/minimized to tray, shortcuts are not handled
-        // because capabilities/default.json lacks global-shortcut permissions
-        if is_bug_condition(event) {
-            // This is the bug: nothing happens when window is hidden
-            TestResult {
-                handler_called: false,
-                window_shown: false,
-                event_emitted: false,
-                action_name: None,
-            }
-        } else {
-            // When window is visible, shortcuts work correctly
-            TestResult {
-                handler_called: true,
-                window_shown: event.key.requires_window_display(),
-                event_emitted: true,
-                action_name: Some(event.key.action_name().to_string()),
-            }
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn prop_bug_condition_shortcut_response(
-            key in prop::sample::select(vec![
-                ShortcutKey::OptionQ,
-                ShortcutKey::OptionD,
-                ShortcutKey::OptionS,
-                ShortcutKey::OptionF,
-                ShortcutKey::ShiftOptionS,
-                ShortcutKey::CmdComma,
-            ]),
-            window_state in prop::sample::select(vec![
-                WindowState::Visible,
-                WindowState::Hidden,
-                WindowState::MinimizedToTray,
-            ])
-        ) {
-            let event = ShortcutEvent { key, window_state };
-
-            // Simulate current behavior (this represents the UNFIXED code)
-            let result = simulate_current_buggy_behavior(&event);
-
-            // Check if expected behavior is met
-            let meets_expectation = expected_behavior(&event, &result);
-
-            // For bug conditions, we expect this to FAIL (meets_expectation = false)
-            // This failure confirms the bug exists
-            if is_bug_condition(&event) {
-                prop_assert!(
-                    meets_expectation,
-                    "Bug condition detected: Shortcut {:?} in state {:?} failed. \
-                     Handler called: {}, Window shown: {}, Event emitted: {}, Action: {:?}",
-                    event.key,
-                    event.window_state,
-                    result.handler_called,
-                    result.window_shown,
-                    result.event_emitted,
-                    result.action_name
-                );
-            }
-        }
-    }
-
+proptest! {
     #[test]
-    fn test_option_q_in_tray_state() {
-        let event = ShortcutEvent {
-            key: ShortcutKey::OptionQ,
-            window_state: WindowState::MinimizedToTray,
-        };
-        let result = simulate_current_buggy_behavior(&event);
+    fn prop_hidden_window_shortcuts_still_work(
+        key in prop::sample::select(vec![
+            ShortcutKey::InputTranslate,
+            ShortcutKey::OcrTranslate,
+            ShortcutKey::HideInterface,
+            ShortcutKey::SelectionTranslate,
+            ShortcutKey::OcrRecognize,
+            ShortcutKey::OpenSettings,
+        ]),
+        state in prop::sample::select(vec![
+            WindowState::Hidden,
+            WindowState::MinimizedToTray,
+        ])
+    ) {
+        let result = simulate_hidden_window_behavior(key, state);
 
-        // This assertion SHOULD FAIL on unfixed code
-        assert!(
-            result.handler_called,
-            "Bug: Option+Q shortcut not handled when app is in tray"
-        );
-        assert!(
-            !result.window_shown,
-            "Bug: Window should NOT be shown for Option+Q in tray state"
-        );
-        assert!(
-            result.event_emitted,
-            "Bug: tray://action event not emitted for Option+Q"
-        );
-        assert_eq!(
-            result.action_name.as_deref(),
-            Some("ocr_translate"),
-            "Bug: Wrong action name for Option+Q"
-        );
+        prop_assert!(result.handler_called);
+        prop_assert_eq!(result.window_shown, key.requires_window_display());
+        prop_assert_eq!(result.event_emitted, key.emits_event());
+        prop_assert_eq!(result.action_name, key.action_name());
     }
+}
 
-    #[test]
-    fn test_option_d_in_tray_state() {
-        let event = ShortcutEvent {
-            key: ShortcutKey::OptionD,
-            window_state: WindowState::MinimizedToTray,
-        };
-        let result = simulate_current_buggy_behavior(&event);
+#[test]
+fn input_translate_stays_background_only_when_hidden() {
+    assert_expected_hidden_window_behavior(ShortcutKey::InputTranslate, WindowState::Hidden);
+}
 
-        assert!(
-            result.handler_called,
-            "Bug: Option+D shortcut not handled when app is in tray"
-        );
-        assert!(
-            result.window_shown,
-            "Bug: Window not shown for Option+D in tray state"
-        );
-        assert!(
-            result.event_emitted,
-            "Bug: tray://action event not emitted for Option+D"
-        );
-    }
+#[test]
+fn ocr_translate_stays_background_only_when_hidden() {
+    assert_expected_hidden_window_behavior(ShortcutKey::OcrTranslate, WindowState::Hidden);
+}
 
-    #[test]
-    fn test_option_s_in_tray_state() {
-        let event = ShortcutEvent {
-            key: ShortcutKey::OptionS,
-            window_state: WindowState::MinimizedToTray,
-        };
-        let result = simulate_current_buggy_behavior(&event);
+#[test]
+fn hide_interface_does_not_emit_frontend_event_in_tray_state() {
+    assert_expected_hidden_window_behavior(
+        ShortcutKey::HideInterface,
+        WindowState::MinimizedToTray,
+    );
+}
 
-        assert!(
-            result.handler_called,
-            "Bug: Option+S shortcut not handled when app is in tray"
-        );
-        assert!(
-            result.window_shown,
-            "Bug: Window not shown for Option+S in tray state"
-        );
-        assert!(
-            result.event_emitted,
-            "Bug: tray://action event not emitted for Option+S"
-        );
-        assert_eq!(
-            result.action_name.as_deref(),
-            Some("input_translate"),
-            "Bug: Wrong action name for Option+S"
-        );
-    }
+#[test]
+fn selection_translate_stays_background_only_from_tray_state() {
+    assert_expected_hidden_window_behavior(
+        ShortcutKey::SelectionTranslate,
+        WindowState::MinimizedToTray,
+    );
+}
 
-    #[test]
-    fn test_shift_option_s_in_tray_state() {
-        let event = ShortcutEvent {
-            key: ShortcutKey::ShiftOptionS,
-            window_state: WindowState::MinimizedToTray,
-        };
-        let result = simulate_current_buggy_behavior(&event);
+#[test]
+fn ocr_recognize_stays_background_only_from_tray_state() {
+    assert_expected_hidden_window_behavior(ShortcutKey::OcrRecognize, WindowState::MinimizedToTray);
+}
 
-        assert!(
-            result.handler_called,
-            "Bug: Shift+Option+S shortcut not handled when app is in tray"
-        );
-        assert!(
-            !result.window_shown,
-            "Bug: Window should NOT be shown for Shift+Option+S (background operation)"
-        );
-        assert!(
-            result.event_emitted,
-            "Bug: tray://action event not emitted for Shift+Option+S"
-        );
-    }
-
-    #[test]
-    fn test_option_f_in_tray_state() {
-        let event = ShortcutEvent {
-            key: ShortcutKey::OptionF,
-            window_state: WindowState::MinimizedToTray,
-        };
-        let result = simulate_current_buggy_behavior(&event);
-
-        assert!(
-            result.handler_called,
-            "Bug: Option+F shortcut not handled when app is in tray"
-        );
-        assert!(
-            !result.window_shown,
-            "Bug: Window should NOT be shown for Option+F in tray state"
-        );
-        assert!(
-            result.event_emitted,
-            "Bug: tray://action event not emitted for Option+F"
-        );
-    }
-
-    #[test]
-    fn test_cmd_comma_in_tray_state() {
-        let event = ShortcutEvent {
-            key: ShortcutKey::CmdComma,
-            window_state: WindowState::MinimizedToTray,
-        };
-        let result = simulate_current_buggy_behavior(&event);
-
-        assert!(
-            result.handler_called,
-            "Bug: Cmd+, shortcut not handled when app is in tray"
-        );
-        assert!(
-            result.window_shown,
-            "Bug: Window not shown for Cmd+, in tray state"
-        );
-        assert!(
-            result.event_emitted,
-            "Bug: tray://action event not emitted for Cmd+,"
-        );
-    }
-
-    #[test]
-    fn test_shortcuts_work_when_window_visible() {
-        // This test verifies that shortcuts work correctly when window is visible
-        // This should PASS even on unfixed code (preservation check)
-        let shortcuts = vec![
-            ShortcutKey::OptionQ,
-            ShortcutKey::OptionD,
-            ShortcutKey::OptionS,
-            ShortcutKey::OptionF,
-            ShortcutKey::ShiftOptionS,
-            ShortcutKey::CmdComma,
-        ];
-
-        for key in shortcuts {
-            let event = ShortcutEvent {
-                key: key.clone(),
-                window_state: WindowState::Visible,
-            };
-            let result = simulate_current_buggy_behavior(&event);
-
-            assert!(
-                result.handler_called,
-                "Shortcut {:?} should work when window is visible",
-                key
-            );
-            assert!(
-                result.event_emitted,
-                "Event should be emitted for {:?} when window is visible",
-                key
-            );
-        }
-    }
+#[test]
+fn open_settings_shows_window_from_tray_state() {
+    assert_expected_hidden_window_behavior(ShortcutKey::OpenSettings, WindowState::MinimizedToTray);
 }

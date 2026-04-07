@@ -1,4 +1,3 @@
-use reqwest::header::HeaderValue;
 use serde::Deserialize;
 
 use crate::apiprovider::http_error::invalid_response_error;
@@ -17,18 +16,11 @@ pub(crate) struct BingPageContext {
 #[derive(Deserialize)]
 pub(crate) struct BingTranslatePayload {
     pub translations: Option<Vec<BingTranslationItem>>,
-    #[serde(rename = "detectedLanguage")]
-    pub detected_language: Option<BingDetectedLanguage>,
 }
 
 #[derive(Deserialize)]
 pub(crate) struct BingTranslationItem {
     pub text: String,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct BingDetectedLanguage {
-    pub language: String,
 }
 
 #[derive(Deserialize)]
@@ -65,11 +57,7 @@ pub(crate) fn extract_page_context(html: &str) -> Result<BingPageContext, AppErr
             "invalid abuse prevention params",
         ));
     }
-    Ok(BingPageContext {
-        ig,
-        key,
-        token,
-    })
+    Ok(BingPageContext { ig, key, token })
 }
 
 pub(crate) fn source_lang_to_bing(source_lang: &str) -> String {
@@ -90,24 +78,6 @@ pub(crate) fn target_lang_to_bing(target_lang: &str) -> Result<String, AppError>
         ));
     }
     Ok(map_app_to_bing_lang(&normalized))
-}
-
-pub(crate) fn map_bing_to_app_lang(lang: &str) -> String {
-    match lang.trim().to_ascii_lowercase().as_str() {
-        "zh-hans" | "zh" => "zh-CN".to_string(),
-        "zh-hant" => "zh-TW".to_string(),
-        other => other.to_string(),
-    }
-}
-
-pub(crate) fn header_value(value: &str) -> Result<HeaderValue, AppError> {
-    HeaderValue::from_str(value).map_err(|error| {
-        AppError::new(
-            ErrorCode::InternalError,
-            format!("invalid Bing Web header value: {error}"),
-            false,
-        )
-    })
 }
 
 fn extract_between(input: &str, markers: &[&str], terminator: char) -> Option<String> {

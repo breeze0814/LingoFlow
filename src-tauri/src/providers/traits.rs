@@ -12,10 +12,7 @@ pub struct TranslateRequest {
 
 #[derive(Debug, Clone)]
 pub struct TranslateResult {
-    pub provider_id: String,
-    pub source_text: String,
     pub translated_text: String,
-    pub detected_source_lang: String,
 }
 
 #[derive(Debug, Clone)]

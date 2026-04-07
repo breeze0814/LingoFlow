@@ -33,7 +33,6 @@ struct DeepLResponse {
 #[derive(Deserialize)]
 struct DeepLTranslationItem {
     text: String,
-    detected_source_language: Option<String>,
 }
 
 impl DeepLFreeProvider {
@@ -106,7 +105,7 @@ impl DeepLFreeProvider {
 
     fn parse_result(
         payload: DeepLResponse,
-        req: TranslateRequest,
+        _req: TranslateRequest,
     ) -> Result<TranslateResult, AppError> {
         let first = payload
             .translations
@@ -120,17 +119,7 @@ impl DeepLFreeProvider {
             ));
         }
 
-        let detected_source_lang = first
-            .detected_source_language
-            .clone()
-            .unwrap_or_else(|| req.source_lang.clone());
-
-        Ok(TranslateResult {
-            provider_id: PROVIDER_ID.to_string(),
-            source_text: req.text,
-            translated_text,
-            detected_source_lang,
-        })
+        Ok(TranslateResult { translated_text })
     }
 }
 

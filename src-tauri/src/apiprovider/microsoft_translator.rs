@@ -35,14 +35,7 @@ struct AzureTranslateBodyItem {
 
 #[derive(Deserialize)]
 struct AzureTranslateResponseItem {
-    #[serde(rename = "detectedLanguage")]
-    detected_language: Option<AzureDetectedLanguage>,
     translations: Vec<AzureTranslationItem>,
-}
-
-#[derive(Deserialize)]
-struct AzureDetectedLanguage {
-    language: String,
 }
 
 #[derive(Deserialize)]
@@ -144,7 +137,7 @@ impl MicrosoftTranslatorProvider {
     }
 
     fn parse_result(
-        req: TranslateRequest,
+        _req: TranslateRequest,
         payload: Vec<AzureTranslateResponseItem>,
     ) -> Result<TranslateResult, AppError> {
         let first_item = payload
@@ -162,18 +155,7 @@ impl MicrosoftTranslatorProvider {
             ));
         }
 
-        let detected_source_lang = first_item
-            .detected_language
-            .as_ref()
-            .map(|item| item.language.clone())
-            .unwrap_or_else(|| req.source_lang.clone());
-
-        Ok(TranslateResult {
-            provider_id: PROVIDER_ID.to_string(),
-            source_text: req.text,
-            translated_text,
-            detected_source_lang,
-        })
+        Ok(TranslateResult { translated_text })
     }
 }
 

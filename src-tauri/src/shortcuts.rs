@@ -71,7 +71,7 @@ mod desktop {
         }
 
         fn requires_window_display(self) -> bool {
-            matches!(self, Self::SelectionTranslate | Self::OpenSettings)
+            matches!(self, Self::OpenSettings)
         }
     }
 
@@ -314,12 +314,12 @@ mod desktop {
 
         #[test]
         fn marks_only_window_dependent_actions_for_window_display() {
-            assert!(ShortcutAction::SelectionTranslate.requires_window_display());
             assert!(ShortcutAction::OpenSettings.requires_window_display());
             assert!(!ShortcutAction::InputTranslate.requires_window_display());
             assert!(!ShortcutAction::OcrTranslate.requires_window_display());
             assert!(!ShortcutAction::OcrRecognize.requires_window_display());
             assert!(!ShortcutAction::HideInterface.requires_window_display());
+            assert!(!ShortcutAction::SelectionTranslate.requires_window_display());
         }
     }
 }

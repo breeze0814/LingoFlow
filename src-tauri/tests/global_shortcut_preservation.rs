@@ -19,7 +19,7 @@ use proptest::prelude::*;
 #[derive(Debug, Clone, PartialEq)]
 enum ShortcutKey {
     OptionQ,      // OCR translate - background only
-    OptionD,      // Selection translate - shows window
+    OptionD,      // Selection translate - background only
     OptionS,      // Input translate - shows window
     OptionF,      // Show mini window - background only
     ShiftOptionS, // OCR recognize - background only
@@ -65,17 +65,7 @@ struct PreservationResult {
 
 impl ShortcutKey {
     fn requires_window_display(&self) -> bool {
-        matches!(
-            self,
-            ShortcutKey::OptionS | ShortcutKey::OptionD | ShortcutKey::CmdComma
-        )
-    }
-
-    fn is_background_only(&self) -> bool {
-        matches!(
-            self,
-            ShortcutKey::OptionQ | ShortcutKey::OptionF | ShortcutKey::ShiftOptionS
-        )
+        matches!(self, ShortcutKey::OptionS | ShortcutKey::CmdComma)
     }
 
     fn action_name(&self) -> &'static str {
@@ -263,9 +253,9 @@ mod preservation_tests {
         );
     }
 
-    /// Test: Option+D (Selection Translate) preserves window display behavior
+    /// Test: Option+D (Selection Translate) preserves background-only behavior
     #[test]
-    fn test_option_d_preserves_window_display() {
+    fn test_option_d_preserves_background_behavior() {
         let event = PreservationEvent {
             key: ShortcutKey::OptionD,
             window_state: WindowState::Visible,
@@ -274,12 +264,12 @@ mod preservation_tests {
         let result = simulate_baseline_behavior(&event);
 
         assert!(result.handler_called);
-        assert!(result.window_shown);
+        assert!(!result.window_shown);
         assert!(result.event_emitted);
         assert_eq!(result.action_name.as_deref(), Some("selection_translate"));
-        assert!(result.window_ops.show_called);
-        assert!(result.window_ops.unminimize_called);
-        assert!(result.window_ops.focus_called);
+        assert!(!result.window_ops.show_called);
+        assert!(!result.window_ops.unminimize_called);
+        assert!(!result.window_ops.focus_called);
     }
 
     /// Test: Option+S (Input Translate) preserves window display behavior
@@ -454,11 +444,7 @@ mod preservation_tests {
         // 2. unminimize() - restore from minimized state
         // 3. set_focus() - bring window to front
 
-        let shortcuts_requiring_window = vec![
-            ShortcutKey::OptionS,
-            ShortcutKey::OptionD,
-            ShortcutKey::CmdComma,
-        ];
+        let shortcuts_requiring_window = vec![ShortcutKey::OptionS, ShortcutKey::CmdComma];
 
         for key in shortcuts_requiring_window {
             let event = PreservationEvent {
@@ -491,6 +477,7 @@ mod preservation_tests {
     fn test_background_operations_never_show_window() {
         let background_shortcuts = vec![
             ShortcutKey::OptionQ,
+            ShortcutKey::OptionD,
             ShortcutKey::OptionF,
             ShortcutKey::ShiftOptionS,
         ];

@@ -15,7 +15,7 @@ case "permission.get_status":
 case "selection.read":
     response = selectionService.readSelection()
 case "capture.start_interactive":
-    response = captureService.startInteractiveCapture()
+    response = captureService.startInteractiveCapture(to: request.payload?.imagePath)
 case "ocr.recognize":
     response = ocrService.recognize(
         from: request.payload?.imagePath,

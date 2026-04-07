@@ -73,7 +73,6 @@ mod desktop {
                 emit_action(app, MENU_OCR_TRANSLATE);
             }
             MENU_SELECTION_TRANSLATE => {
-                show_main_window(app);
                 emit_action(app, MENU_SELECTION_TRANSLATE);
             }
             MENU_SHOW_MAIN_WINDOW => {
@@ -224,7 +223,8 @@ mod desktop {
     #[cfg(test)]
     mod tests {
         use super::{
-            shortcut_menu_specs, MENU_HIDE_INTERFACE, MENU_INPUT_TRANSLATE, MENU_OCR_TRANSLATE,
+            shortcut_menu_specs, MENU_HIDE_INTERFACE, MENU_INPUT_TRANSLATE, MENU_OCR_RECOGNIZE,
+            MENU_OCR_TRANSLATE,
         };
 
         #[test]
@@ -235,9 +235,11 @@ mod desktop {
             assert_eq!(specs[0].accelerator, Some("Option+F"));
             assert_eq!(specs[1].id, MENU_OCR_TRANSLATE);
             assert_eq!(specs[1].accelerator, Some("Option+S"));
-            assert_eq!(specs[5].id, MENU_HIDE_INTERFACE);
-            assert_eq!(specs[5].text, "关闭界面");
-            assert_eq!(specs[5].accelerator, Some("Option+Q"));
+            assert_eq!(specs[4].id, MENU_HIDE_INTERFACE);
+            assert_eq!(specs[4].text, "关闭界面");
+            assert_eq!(specs[4].accelerator, Some("Option+Q"));
+            assert_eq!(specs[5].id, MENU_OCR_RECOGNIZE);
+            assert_eq!(specs[5].accelerator, Some("Shift+Option+S"));
         }
 
         #[test]
