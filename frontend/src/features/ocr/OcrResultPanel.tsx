@@ -4,6 +4,8 @@ import { OcrResultWorkbench } from './OcrResultWorkbench';
 import { TranslationWorkspaceStatus } from './translationWorkspaceService';
 
 type OcrResultPanelProps = {
+  autoQueryOnPaste: boolean;
+  autoSelectTextOnOpen: boolean;
   enabledProviderIds: string[];
   errorMessage: string;
   isPinned: boolean;
@@ -11,7 +13,7 @@ type OcrResultPanelProps = {
   onClose: () => void;
   onPromoteProvider: (providerId: string) => void;
   onSourceLanguageChange: (code: string) => void;
-  onSubmit: () => void;
+  onSubmit: (text?: string) => void;
   onSwapLanguages: () => void;
   onTargetLanguageChange: (code: string) => void;
   onTextChange: (text: string) => void;
@@ -22,6 +24,7 @@ type OcrResultPanelProps = {
   sourceLanguageLabel: string;
   status: TranslationWorkspaceStatus;
   text: string;
+  textSelectionToken: string;
   targetLanguageCode: string;
   targetLanguageLabel: string;
 };
@@ -31,6 +34,8 @@ async function copyToClipboard(text: string) {
 }
 
 export function OcrResultPanel({
+  autoQueryOnPaste,
+  autoSelectTextOnOpen,
   enabledProviderIds,
   errorMessage,
   isPinned,
@@ -49,6 +54,7 @@ export function OcrResultPanel({
   sourceLanguageLabel,
   status,
   text,
+  textSelectionToken,
   targetLanguageCode,
   targetLanguageLabel,
 }: OcrResultPanelProps) {
@@ -81,6 +87,8 @@ export function OcrResultPanel({
   return (
     <aside className="ocrResultPanel" role="dialog" aria-label="OCR 结果面板">
       <OcrResultWorkbench
+        autoQueryOnPaste={autoQueryOnPaste}
+        autoSelectTextOnOpen={autoSelectTextOnOpen}
         copyMessage={copyMessage}
         enabledProviderIds={enabledProviderIds}
         errorMessage={errorMessage}
@@ -103,6 +111,7 @@ export function OcrResultPanel({
         targetLanguageCode={targetLanguageCode}
         targetLanguageLabel={targetLanguageLabel}
         text={text}
+        textSelectionToken={textSelectionToken}
       />
     </aside>
   );

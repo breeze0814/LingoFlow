@@ -1,24 +1,31 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../app/App';
+import { DEFAULT_SETTINGS } from '../../features/settings/settingsTypes';
 
 const {
   mockShowOcrResultWindow,
   mockShowCachedOcrResultWindow,
+  mockReadSelectionText,
+  mockTriggerOcrRecognize,
   mockMainWindowShow,
   mockMainWindowHide,
   mockMainWindowUnminimize,
   mockMainWindowSetFocus,
   mockSyncNativeShortcuts,
+  mockSyncRuntimeSettings,
   mockTrayListeners,
   mockListen,
 } = vi.hoisted(() => ({
   mockShowOcrResultWindow: vi.fn().mockResolvedValue(undefined),
   mockShowCachedOcrResultWindow: vi.fn().mockResolvedValue(undefined),
+  mockReadSelectionText: vi.fn(),
+  mockTriggerOcrRecognize: vi.fn(),
   mockMainWindowShow: vi.fn().mockResolvedValue(undefined),
   mockMainWindowHide: vi.fn().mockResolvedValue(undefined),
   mockMainWindowUnminimize: vi.fn().mockResolvedValue(undefined),
   mockMainWindowSetFocus: vi.fn().mockResolvedValue(undefined),
   mockSyncNativeShortcuts: vi.fn().mockResolvedValue(undefined),
+  mockSyncRuntimeSettings: vi.fn().mockResolvedValue(undefined),
   mockTrayListeners: [] as Array<(event: { payload: unknown }) => void>,
   mockListen: vi.fn().mockImplementation(async (_eventName, handler) => {
     mockTrayListeners.push(handler as (event: { payload: unknown }) => void);
@@ -30,6 +37,22 @@ vi.mock('../../features/ocr/ocrResultWindowService', () => ({
   showOcrResultWindow: mockShowOcrResultWindow,
   showCachedOcrResultWindow: mockShowCachedOcrResultWindow,
 }));
+
+vi.mock('../../infra/tauri/commands', () => ({
+  commandsClient: {
+    readSelectionText: mockReadSelectionText,
+  },
+}));
+
+vi.mock('../../features/task/taskService', async () => {
+  const actual = await vi.importActual<typeof import('../../features/task/taskService')>(
+    '../../features/task/taskService',
+  );
+  return {
+    ...actual,
+    triggerOcrRecognize: mockTriggerOcrRecognize,
+  };
+});
 
 vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
@@ -48,15 +71,37 @@ vi.mock('../../features/settings/nativeShortcutSyncService', () => ({
   syncNativeShortcuts: mockSyncNativeShortcuts,
 }));
 
+vi.mock('../../features/settings/runtimeSettingsSyncService', () => ({
+  syncRuntimeSettings: mockSyncRuntimeSettings,
+}));
+
 describe('App', () => {
   beforeEach(() => {
+    window.localStorage.clear();
     mockShowOcrResultWindow.mockClear();
     mockShowCachedOcrResultWindow.mockClear();
+    mockReadSelectionText.mockReset();
+    mockReadSelectionText.mockResolvedValue({ selectedText: 'selected text' });
+    mockTriggerOcrRecognize.mockReset();
+    mockTriggerOcrRecognize.mockResolvedValue({
+      action: 'succeeded',
+      payload: {
+        taskType: 'ocr_recognize',
+        taskId: 'task_ocr_recognize_1',
+        result: {
+          taskId: 'task_ocr_recognize_1',
+          providerId: 'apple_vision',
+          sourceText: 'hello',
+          recognizedText: 'hello',
+        },
+      },
+    });
     mockMainWindowShow.mockClear();
     mockMainWindowHide.mockClear();
     mockMainWindowUnminimize.mockClear();
     mockMainWindowSetFocus.mockClear();
     mockSyncNativeShortcuts.mockClear();
+    mockSyncRuntimeSettings.mockClear();
     mockListen.mockClear();
     mockTrayListeners.length = 0;
     delete (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__;
@@ -90,6 +135,86 @@ describe('App', () => {
 
     fireEvent.keyUp(window, { key: 'Alt', code: 'AltLeft', altKey: false });
     expect(mockShowOcrResultWindow).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens OCR result window immediately after screenshot OCR for translate workflow', async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: 's', code: 'KeyS', altKey: true });
+    fireEvent.keyUp(window, { key: 's', code: 'KeyS', altKey: true });
+    fireEvent.keyUp(window, { key: 'Alt', code: 'AltLeft', altKey: false });
+
+    await waitFor(() => {
+      expect(mockTriggerOcrRecognize).toHaveBeenCalledTimes(1);
+      expect(mockShowOcrResultWindow).toHaveBeenCalledTimes(1);
+    });
+    expect(mockShowOcrResultWindow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        autoTranslate: true,
+        mode: 'ocr_translate',
+        initialText: 'hello',
+      }),
+    );
+  });
+
+  it('opens selection text in the compact workspace and auto translates when enabled', async () => {
+    window.localStorage.setItem(
+      'lingoflow.settings.v1',
+      JSON.stringify({
+        ...DEFAULT_SETTINGS,
+        primaryLanguage: 'en',
+        detectionMode: 'auto',
+        autoQueryOnSelection: true,
+      }),
+    );
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: 'd', code: 'KeyD', altKey: true });
+    fireEvent.keyUp(window, { key: 'd', code: 'KeyD', altKey: true });
+    fireEvent.keyUp(window, { key: 'Alt', code: 'AltLeft', altKey: false });
+
+    await waitFor(() => {
+      expect(mockReadSelectionText).toHaveBeenCalledTimes(1);
+      expect(mockShowOcrResultWindow).toHaveBeenCalledTimes(1);
+    });
+    expect(mockShowOcrResultWindow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initialText: 'selected text',
+        autoTranslate: true,
+      }),
+    );
+  });
+
+  it('shows cached result when selection is missing and keep-result is enabled', async () => {
+    mockReadSelectionText.mockRejectedValue({
+      code: 'no_selection',
+      message: '未检测到选中文本',
+      retryable: false,
+    });
+    window.localStorage.setItem(
+      'lingoflow.ocr_result.workspace.v2',
+      JSON.stringify({
+        autoTranslate: false,
+        initialText: 'cached text',
+        mode: 'input_translate',
+        sourceLanguageCode: 'en',
+        sourceLanguageLabel: '英语',
+        targetLanguageCode: 'zh-CN',
+        targetLanguageLabel: '简体中文',
+      }),
+    );
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: 'd', code: 'KeyD', altKey: true });
+    fireEvent.keyUp(window, { key: 'd', code: 'KeyD', altKey: true });
+    fireEvent.keyUp(window, { key: 'Alt', code: 'AltLeft', altKey: false });
+
+    await waitFor(() => {
+      expect(mockShowCachedOcrResultWindow).toHaveBeenCalledTimes(1);
+    });
+    expect(mockShowOcrResultWindow).not.toHaveBeenCalled();
   });
 
   it('hides the window for the hide-interface shortcut in web fallback', async () => {
@@ -134,6 +259,7 @@ describe('App', () => {
 
     expect(mockShowOcrResultWindow).not.toHaveBeenCalled();
     expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
+    expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
   });
 
   it('syncs shortcuts to rust instead of registering them in the window runtime', () => {
@@ -142,6 +268,7 @@ describe('App', () => {
     render(<App />);
 
     expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
+    expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
   });
 
   it('never installs js global shortcut registration in tauri runtime', () => {
@@ -150,6 +277,7 @@ describe('App', () => {
     render(<App />);
 
     expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
+    expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
   });
 
   it('does not focus settings window for show-main-window tray action in tauri runtime', async () => {

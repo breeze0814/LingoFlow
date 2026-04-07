@@ -34,15 +34,17 @@ export function createInputTranslatePayload(labels: WorkspaceLabels): OcrResultW
 export function createOcrRecognizePayload(
   result: TaskResult,
   labels: WorkspaceLabels,
+  autoTranslate = false,
 ): OcrResultWindowPayload {
-  return createPayload('ocr_recognize', result.sourceText, labels, false, result);
+  return createPayload('ocr_recognize', result.sourceText, labels, autoTranslate, result);
 }
 
 export function createOcrTranslatePayload(
   result: TaskResult,
   labels: WorkspaceLabels,
+  autoTranslate = false,
 ): OcrResultWindowPayload {
-  return createPayload('ocr_translate', result.sourceText, labels, false, result);
+  return createPayload('ocr_translate', result.sourceText, labels, autoTranslate, result);
 }
 
 export function createErrorPayload(

@@ -10,17 +10,12 @@ import {
   ToolProviderId,
   VOICE_OPTIONS,
 } from './settingsTypes';
-import {
-  getSettingImplementationStatus,
-  SettingImplementationStatus,
-} from './settingsImplementationStatus';
 import { SettingsTabId } from './settingsTabs';
 import { ShortcutPanel } from './ShortcutPanel';
 import { ProviderPanel } from './ProviderPanel';
 
 type SelectRowProps = {
   label: string;
-  status?: SettingImplementationStatus | null;
   value: string;
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
@@ -28,35 +23,26 @@ type SelectRowProps = {
 
 type ToggleRowProps = {
   label: string;
-  status?: SettingImplementationStatus | null;
   checked: boolean;
   onChange: (value: boolean) => void;
 };
 
 type SettingsUpdater = (next: SettingsState) => void;
 
-function SettingLabelBlock(props: {
-  label: string;
-  status?: SettingImplementationStatus | null;
-}) {
+function SettingLabelBlock(props: { label: string }) {
   return (
     <span className="settingTextBlock">
       <span className="settingLabelRow">
         <span className="settingLabel">{props.label}</span>
-        {props.status ? (
-          <span className="settingStatusBadge" title={props.status.hint} aria-hidden="true">
-            {props.status.badge}
-          </span>
-        ) : null}
       </span>
     </span>
   );
 }
 
-function SelectRow({ label, status, value, options, onChange }: SelectRowProps) {
+function SelectRow({ label, value, options, onChange }: SelectRowProps) {
   return (
-    <label className={status ? 'settingRow settingRowNotImplemented' : 'settingRow'}>
-      <SettingLabelBlock label={label} status={status} />
+    <label className="settingRow">
+      <SettingLabelBlock label={label} />
       <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -68,13 +54,10 @@ function SelectRow({ label, status, value, options, onChange }: SelectRowProps) 
   );
 }
 
-function ToggleRow({ label, status, checked, onChange }: ToggleRowProps) {
-  const className = status
-    ? 'settingRow settingSwitchRow settingRowNotImplemented'
-    : 'settingRow settingSwitchRow';
+function ToggleRow({ label, checked, onChange }: ToggleRowProps) {
   return (
-    <label className={className}>
-      <SettingLabelBlock label={label} status={status} />
+    <label className="settingRow settingSwitchRow">
+      <SettingLabelBlock label={label} />
       <button
         type="button"
         aria-label={label}
@@ -157,21 +140,18 @@ function renderGeneralTab(current: SettingsState, onChange: SettingsUpdater) {
       >
         <SelectRow
           label="第一语言"
-          status={getSettingImplementationStatus('primaryLanguage')}
           value={current.primaryLanguage}
           options={LANGUAGE_OPTIONS}
           onChange={(next) => updateSettings(current, onChange, 'primaryLanguage', next)}
         />
         <SelectRow
           label="第二语言"
-          status={getSettingImplementationStatus('secondaryLanguage')}
           value={current.secondaryLanguage}
           options={LANGUAGE_OPTIONS}
           onChange={(next) => updateSettings(current, onChange, 'secondaryLanguage', next)}
         />
         <SelectRow
           label="语种识别"
-          status={getSettingImplementationStatus('detectionMode')}
           value={current.detectionMode}
           options={DETECTION_OPTIONS}
           onChange={(next) => updateSettings(current, onChange, 'detectionMode', next)}
@@ -181,19 +161,16 @@ function renderGeneralTab(current: SettingsState, onChange: SettingsUpdater) {
       <Section title="输入框" description="微调主窗口打开、提交和保留结果时的交互细节。">
         <ToggleRow
           label="输入翻译时，清空查询内容"
-          status={getSettingImplementationStatus('clearInputOnTranslate')}
           checked={current.clearInputOnTranslate}
           onChange={(next) => updateSettings(current, onChange, 'clearInputOnTranslate', next)}
         />
         <ToggleRow
           label="打开窗口时自动选中查询文本"
-          status={getSettingImplementationStatus('autoSelectQueryTextOnOpen')}
           checked={current.autoSelectQueryTextOnOpen}
           onChange={(next) => updateSettings(current, onChange, 'autoSelectQueryTextOnOpen', next)}
         />
         <ToggleRow
           label="划词翻译未选中文本时，保留上次结果"
-          status={getSettingImplementationStatus('keepResultForSelection')}
           checked={current.keepResultForSelection}
           onChange={(next) => updateSettings(current, onChange, 'keepResultForSelection', next)}
         />
@@ -208,38 +185,32 @@ function renderServiceTab(current: SettingsState, onChange: SettingsUpdater) {
       <Section title="自动查询" description="控制划词、截图和粘贴后的自动化动作，减少重复点击。">
         <ToggleRow
           label="划词后自动查询"
-          status={getSettingImplementationStatus('autoQueryOnSelection')}
           checked={current.autoQueryOnSelection}
           onChange={(next) => updateSettings(current, onChange, 'autoQueryOnSelection', next)}
         />
         <ToggleRow
           label="图片 OCR 后自动查询"
-          status={getSettingImplementationStatus('autoQueryOnOcr')}
           checked={current.autoQueryOnOcr}
           onChange={(next) => updateSettings(current, onChange, 'autoQueryOnOcr', next)}
         />
         <SelectRow
           label="OCR 结果面板位置"
-          status={getSettingImplementationStatus('ocrPanelPosition')}
           value={current.ocrPanelPosition}
           options={OCR_PANEL_POSITION_OPTIONS}
           onChange={(next) => updateSettings(current, onChange, 'ocrPanelPosition', next)}
         />
         <ToggleRow
           label="粘贴后自动查询"
-          status={getSettingImplementationStatus('autoQueryOnPaste')}
           checked={current.autoQueryOnPaste}
           onChange={(next) => updateSettings(current, onChange, 'autoQueryOnPaste', next)}
         />
         <ToggleRow
           label="查询英语单词后自动播放发音"
-          status={getSettingImplementationStatus('autoSpeakEnglishWord')}
           checked={current.autoSpeakEnglishWord}
           onChange={(next) => updateSettings(current, onChange, 'autoSpeakEnglishWord', next)}
         />
         <SelectRow
           label="英语发音"
-          status={getSettingImplementationStatus('englishVoice')}
           value={current.englishVoice}
           options={VOICE_OPTIONS}
           onChange={(next) => updateSettings(current, onChange, 'englishVoice', next)}
@@ -249,13 +220,11 @@ function renderServiceTab(current: SettingsState, onChange: SettingsUpdater) {
       <Section title="服务能力" description="定义结果输出和本地接口暴露方式，决定外部集成行为。">
         <ToggleRow
           label="翻译成功后自动复制结果"
-          status={getSettingImplementationStatus('autoCopyResult')}
           checked={current.autoCopyResult}
           onChange={(next) => updateSettings(current, onChange, 'autoCopyResult', next)}
         />
         <ToggleRow
           label="启用本地 HTTP API"
-          status={getSettingImplementationStatus('httpApiEnabled')}
           checked={current.httpApiEnabled}
           onChange={(next) => updateSettings(current, onChange, 'httpApiEnabled', next)}
         />

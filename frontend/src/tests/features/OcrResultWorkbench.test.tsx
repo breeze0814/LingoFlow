@@ -1,5 +1,5 @@
 import { act, render, waitFor } from '@testing-library/react';
-import { OcrResultWorkbench } from '../../features/ocr/OcrResultWorkbench';
+import { applyPastedText, OcrResultWorkbench } from '../../features/ocr/OcrResultWorkbench';
 
 const ORIGINAL_INNER_WIDTH = window.innerWidth;
 
@@ -17,6 +17,8 @@ function setViewportWidth(width: number) {
 function renderWorkbench() {
   return render(
     <OcrResultWorkbench
+      autoQueryOnPaste={false}
+      autoSelectTextOnOpen={false}
       copyMessage=""
       enabledProviderIds={['deepl_free', 'google_translate', 'bing_web']}
       errorMessage=""
@@ -42,6 +44,7 @@ function renderWorkbench() {
       targetLanguageCode="zh-CN"
       targetLanguageLabel="简体中文"
       text="with macOS sonoma"
+      textSelectionToken="test"
     />,
   );
 }
@@ -49,6 +52,11 @@ function renderWorkbench() {
 describe('OcrResultWorkbench', () => {
   afterEach(() => {
     setViewportWidth(ORIGINAL_INNER_WIDTH);
+  });
+
+  it('builds the next text content for paste-based auto submit', () => {
+    expect(applyPastedText('hello world', 'dear ', 6, 6)).toBe('hello dear world');
+    expect(applyPastedText('hello world', 'translator', 0, 11)).toBe('translator');
   });
 
   it('switches to condensed layout when the window narrows', async () => {

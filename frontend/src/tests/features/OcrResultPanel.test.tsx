@@ -8,6 +8,8 @@ describe('OcrResultPanel', () => {
 
     render(
       <OcrResultPanel
+        autoQueryOnPaste={false}
+        autoSelectTextOnOpen={false}
         errorMessage=""
         isPinned
         onClear={vi.fn()}
@@ -29,6 +31,7 @@ describe('OcrResultPanel', () => {
         sourceLanguageLabel="英语"
         status="success"
         text="with macOS sonoma"
+        textSelectionToken="initial"
         targetLanguageCode="zh-CN"
         targetLanguageLabel="简体中文"
       />,
@@ -48,6 +51,8 @@ describe('OcrResultPanel', () => {
   it('renders comparison workspace sections for translation results', () => {
     const { container } = render(
       <OcrResultPanel
+        autoQueryOnPaste={false}
+        autoSelectTextOnOpen={false}
         errorMessage=""
         onClose={vi.fn()}
         onSubmit={vi.fn()}
@@ -74,6 +79,7 @@ describe('OcrResultPanel', () => {
         sourceLanguageLabel="英语"
         status="success"
         text="with macOS sonoma"
+        textSelectionToken="initial"
         targetLanguageCode="zh-CN"
         targetLanguageLabel="简体中文"
       />,
@@ -100,6 +106,8 @@ describe('OcrResultPanel', () => {
   it('renders enabled providers even when there are no results yet', () => {
     const { container } = render(
       <OcrResultPanel
+        autoQueryOnPaste={false}
+        autoSelectTextOnOpen={false}
         errorMessage=""
         onClose={vi.fn()}
         onSubmit={vi.fn()}
@@ -118,6 +126,7 @@ describe('OcrResultPanel', () => {
         sourceLanguageLabel="英语"
         status="idle"
         text=""
+        textSelectionToken="empty"
         targetLanguageCode="zh-CN"
         targetLanguageLabel="简体中文"
       />,

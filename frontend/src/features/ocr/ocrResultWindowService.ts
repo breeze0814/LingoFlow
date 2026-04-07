@@ -9,6 +9,8 @@ import {
   type Monitor,
 } from '@tauri-apps/api/window';
 import { CaptureRect } from '../task/taskTypes';
+import { loadSettingsFromStorage } from '../settings/settingsStorage';
+import { OcrPanelPosition } from '../settings/settingsTypes';
 import {
   OCR_RESULT_UPDATE_EVENT,
   OCR_RESULT_WINDOW_LABEL,
@@ -109,64 +111,47 @@ async function resolveActiveMonitor(): Promise<Monitor> {
 
 async function positionOcrResultWindow(
   target: WebviewWindow,
-  captureRect: CaptureRect | null | undefined,
+  _captureRect: CaptureRect | null | undefined,
 ) {
   await target.setSize(new LogicalSize(OCR_WINDOW_WIDTH, OCR_WINDOW_HEIGHT));
 
   const [monitor, windowSize] = await Promise.all([resolveActiveMonitor(), target.outerSize()]);
-
-  let point: PositionPoint;
-  if (captureRect) {
-    point = calculateSmartPosition(captureRect, monitor, windowSize.width, windowSize.height);
-  } else {
-    const cursor = await cursorPosition();
-    const fallbackRect: CaptureRect = {
-      x: cursor.x,
-      y: cursor.y,
-      width: 0,
-      height: 0,
-    };
-    point = calculateSmartPosition(fallbackRect, monitor, windowSize.width, windowSize.height);
-  }
-
+  const point = calculatePinnedPosition(
+    loadSettingsFromStorage().ocrPanelPosition,
+    monitor,
+    windowSize.width,
+    windowSize.height,
+  );
   await target.setPosition(new PhysicalPosition(Math.round(point.x), Math.round(point.y)));
 }
 
-function calculateSmartPosition(
-  captureRect: CaptureRect,
+function calculatePinnedPosition(
+  panelPosition: OcrPanelPosition,
   monitor: Monitor,
   windowWidth: number,
   windowHeight: number,
 ): PositionPoint {
   const workArea = monitor.workArea;
   const minX = workArea.position.x + SCREEN_MARGIN;
-  const maxX = workArea.position.x + workArea.size.width - windowWidth - SCREEN_MARGIN;
   const minY = workArea.position.y + SCREEN_MARGIN;
-  const maxY = workArea.position.y + workArea.size.height - windowHeight - SCREEN_MARGIN;
-
-  const captureRight = captureRect.x + captureRect.width;
-  const captureBottom = captureRect.y + captureRect.height;
-
-  let x = captureRight + SCREEN_MARGIN;
-  let y = captureRect.y;
-
-  if (x + windowWidth > workArea.position.x + workArea.size.width) {
-    x = captureRect.x - windowWidth - SCREEN_MARGIN;
+  const maxX = Math.max(
+    minX,
+    workArea.position.x + workArea.size.width - windowWidth - SCREEN_MARGIN,
+  );
+  const maxY = Math.max(
+    minY,
+    workArea.position.y + workArea.size.height - windowHeight - SCREEN_MARGIN,
+  );
+  if (panelPosition === 'top_left') {
+    return { x: clamp(minX, minX, maxX), y: clamp(minY, minY, maxY) };
   }
-
-  if (x < workArea.position.x) {
-    x = captureRect.x;
-    y = captureBottom + SCREEN_MARGIN;
+  if (panelPosition === 'center') {
+    return {
+      x: clamp(workArea.position.x + (workArea.size.width - windowWidth) / 2, minX, maxX),
+      y: clamp(workArea.position.y + (workArea.size.height - windowHeight) / 2, minY, maxY),
+    };
   }
-
-  if (y + windowHeight > workArea.position.y + workArea.size.height) {
-    y = captureRect.y - windowHeight - SCREEN_MARGIN;
-  }
-
-  x = clamp(x, minX, maxX);
-  y = clamp(y, minY, maxY);
-
-  return { x, y };
+  return { x: clamp(maxX, minX, maxX), y: clamp(minY, minY, maxY) };
 }
 
 async function emitResultPayload(payload: OcrResultWindowPayload) {

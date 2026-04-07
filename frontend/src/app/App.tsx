@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { MainLayout } from './layout/MainLayout';
 import { SettingsPanel } from '../features/settings/SettingsPanel';
 import { initialTaskState, taskReducer } from '../features/task/taskReducer';
-import {
-  triggerOcrRecognize,
-  triggerOcrTranslate,
-  triggerSelectionTranslate,
-} from '../features/task/taskService';
+import { triggerOcrRecognize, triggerOcrTranslate } from '../features/task/taskService';
 import { LANGUAGE_OPTIONS, SettingsState } from '../features/settings/settingsTypes';
 import {
   loadSettingsFromStorage,
@@ -19,10 +17,14 @@ import { reportTask } from '../features/task/taskReporter';
 import { buildEnabledTranslateProviderConfigs } from '../features/settings/translateProviderRequest';
 import {
   showOcrResultWindow,
+  showCachedOcrResultWindow,
   primeOcrResultWindowService,
 } from '../features/ocr/ocrResultWindowService';
 import { OcrResultWindowPayload } from '../features/ocr/ocrResultWindowBridge';
 import { syncNativeShortcuts } from '../features/settings/nativeShortcutSyncService';
+import { syncRuntimeSettings } from '../features/settings/runtimeSettingsSyncService';
+import { resolveConfiguredSourceLanguage } from '../features/settings/settingsRuntime';
+import { resolveSelectionWorkflowOutcome } from '../features/selection/selectionWorkflow';
 import {
   createInputTranslatePayload,
   createOcrRecognizePayload,
@@ -112,13 +114,10 @@ export function App() {
     [settings.providers],
   );
 
-  const applyTaskState = useCallback(
-    (next: Awaited<ReturnType<typeof triggerSelectionTranslate>>) => {
-      setTaskState(taskReducer(next.action, next.payload));
-      reportTask(next);
-    },
-    [],
-  );
+  const applyTaskState = useCallback((next: Awaited<ReturnType<typeof triggerOcrTranslate>>) => {
+    setTaskState(taskReducer(next.action, next.payload));
+    reportTask(next);
+  }, []);
 
   const presentOcrResultWindow = useCallback(
     async (payload: OcrResultWindowPayload, taskType: TaskType) => {
@@ -148,11 +147,11 @@ export function App() {
       }
 
       await presentOcrResultWindow(
-        createOcrRecognizePayload(result, translationWorkspaceLabels()),
+        createOcrRecognizePayload(result, translationWorkspaceLabels(), settings.autoQueryOnOcr),
         taskType,
       );
     },
-    [presentOcrResultWindow, translationWorkspaceLabels],
+    [presentOcrResultWindow, settings.autoQueryOnOcr, translationWorkspaceLabels],
   );
 
   const presentTranslatedTextWorkspace = useCallback(
@@ -169,14 +168,39 @@ export function App() {
     [presentOcrResultWindow, translationWorkspaceLabels],
   );
 
+  const presentPendingTranslatedTextWorkspace = useCallback(
+    async (taskType: TaskType, result: TaskResult | undefined) => {
+      if (!result) {
+        return;
+      }
+
+      await presentOcrResultWindow(
+        createOcrTranslatePayload(result, translationWorkspaceLabels(), true),
+        taskType,
+      );
+    },
+    [presentOcrResultWindow, translationWorkspaceLabels],
+  );
+
   const runSelectionTranslate = useCallback(async () => {
-    const next = await triggerSelectionTranslate(
-      taskState,
-      targetLang,
-      enabledTranslateProviderConfigs,
+    const outcome = await resolveSelectionWorkflowOutcome(
+      {
+        autoQueryOnSelection: settings.autoQueryOnSelection,
+        keepResultForSelection: settings.keepResultForSelection,
+      },
+      translationWorkspaceLabels(),
     );
-    applyTaskState(next);
-  }, [applyTaskState, enabledTranslateProviderConfigs, targetLang, taskState]);
+    if (outcome.kind === 'show_cached') {
+      await showCachedOcrResultWindow();
+      return;
+    }
+    await presentOcrResultWindow(outcome.payload, 'selection_translate');
+  }, [
+    presentOcrResultWindow,
+    settings.autoQueryOnSelection,
+    settings.keepResultForSelection,
+    translationWorkspaceLabels,
+  ]);
 
   const runOcrTranslate = useCallback(async () => {
     if (isWindowsTauriRuntime()) {
@@ -190,26 +214,12 @@ export function App() {
       });
       return;
     }
-    const next = await triggerOcrTranslate(
-      taskState,
-      targetLang,
-      'auto',
-      settings.primaryLanguage,
-      enabledTranslateProviderConfigs,
-    );
+    const next = await triggerOcrRecognize(taskState, settings.primaryLanguage);
     applyTaskState(next);
     if (next.action === 'succeeded') {
-      await presentTranslatedTextWorkspace(next.payload.taskType, next.payload.result);
+      await presentPendingTranslatedTextWorkspace('ocr_translate', next.payload.result);
     }
-  }, [
-    applyTaskState,
-    presentTranslatedTextWorkspace,
-    settings.primaryLanguage,
-    settings.secondaryLanguage,
-    enabledTranslateProviderConfigs,
-    targetLang,
-    taskState,
-  ]);
+  }, [applyTaskState, presentPendingTranslatedTextWorkspace, settings.primaryLanguage, taskState]);
 
   const runOcrRecognize = useCallback(async () => {
     if (isWindowsTauriRuntime()) {
@@ -244,7 +254,6 @@ export function App() {
 
   const focusSettingsWindow = useCallback(async () => {
     try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
       const currentWindow = getCurrentWindow();
       await currentWindow.show();
       await currentWindow.unminimize();
@@ -256,7 +265,6 @@ export function App() {
 
   const hideCurrentWindow = useCallback(async () => {
     try {
-      const { getCurrentWindow } = await import('@tauri-apps/api/window');
       await getCurrentWindow().hide();
     } catch (error) {
       console.error('failed to hide current window', error);
@@ -348,7 +356,6 @@ export function App() {
 
     async function bindTrayActionListener() {
       try {
-        const { listen } = await import('@tauri-apps/api/event');
         const unlisten = await listen(TRAY_ACTION_EVENT, (event) => {
           if (!isTrayActionPayload(event.payload)) {
             return;
@@ -383,6 +390,18 @@ export function App() {
       console.error('native shortcut sync failed', error);
     });
   }, [settings.shortcuts]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    void syncRuntimeSettings({
+      httpApiEnabled: settings.httpApiEnabled,
+    }).catch((error) => {
+      console.error('runtime settings sync failed', error);
+    });
+  }, [settings.httpApiEnabled]);
 
   useEffect(() => {
     if (!isWindowsTauriRuntime()) {

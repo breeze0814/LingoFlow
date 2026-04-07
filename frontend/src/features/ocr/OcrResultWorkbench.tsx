@@ -1,4 +1,5 @@
 import {
+  ClipboardEvent as ReactClipboardEvent,
   KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useEffect,
@@ -16,6 +17,8 @@ import { TranslationWorkspaceStatus } from './translationWorkspaceService';
 const OCR_WORKBENCH_CONDENSED_MAX_WIDTH = 440;
 
 type OcrResultWorkbenchProps = {
+  autoQueryOnPaste: boolean;
+  autoSelectTextOnOpen: boolean;
   copyMessage: string;
   enabledProviderIds: string[];
   errorMessage: string;
@@ -25,7 +28,7 @@ type OcrResultWorkbenchProps = {
   onCopy: CopyHandler;
   onPromoteProvider: (providerId: string) => void;
   onSourceLanguageChange: (code: string) => void;
-  onSubmit: () => void;
+  onSubmit: (text?: string) => void;
   onSwapLanguages: () => void;
   onTargetLanguageChange: (code: string) => void;
   onTextChange: (text: string) => void;
@@ -38,6 +41,7 @@ type OcrResultWorkbenchProps = {
   targetLanguageCode: string;
   targetLanguageLabel: string;
   text: string;
+  textSelectionToken: string;
 };
 
 function LanguageMenu(props: {
@@ -76,6 +80,15 @@ function LanguageMenu(props: {
 
 function isCondensedWorkbenchWidth(viewportWidth: number) {
   return viewportWidth <= OCR_WORKBENCH_CONDENSED_MAX_WIDTH;
+}
+
+export function applyPastedText(
+  currentText: string,
+  pastedText: string,
+  selectionStart: number,
+  selectionEnd: number,
+) {
+  return currentText.slice(0, selectionStart) + pastedText + currentText.slice(selectionEnd);
 }
 
 function readCondensedLayoutState() {
@@ -130,6 +143,22 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
     autoResizeTextarea();
   }, [autoResizeTextarea, props.text]);
 
+  useEffect(() => {
+    if (!props.autoSelectTextOnOpen) {
+      return;
+    }
+    const element = textareaRef.current;
+    if (!element) {
+      return;
+    }
+    window.setTimeout(() => {
+      element.focus();
+      if (element.value) {
+        element.select();
+      }
+    }, 0);
+  }, [props.autoSelectTextOnOpen, props.textSelectionToken]);
+
   function handleTextKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
     if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
       return;
@@ -142,6 +171,22 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
 
   function handleCopyInput() {
     props.onCopy(props.text, '已复制输入内容');
+  }
+
+  function handlePaste(event: ReactClipboardEvent<HTMLTextAreaElement>) {
+    if (!props.autoQueryOnPaste || props.status === 'pending') {
+      return;
+    }
+    const pastedText = event.clipboardData.getData('text');
+    const nextText = pastedText
+      ? applyPastedText(
+          props.text,
+          pastedText,
+          event.currentTarget.selectionStart,
+          event.currentTarget.selectionEnd,
+        )
+      : event.currentTarget.value;
+    props.onSubmit(nextText);
   }
 
   return (
@@ -194,6 +239,7 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
             value={props.text}
             onChange={(event) => props.onTextChange(event.target.value)}
             onKeyDown={handleTextKeyDown}
+            onPaste={handlePaste}
             placeholder="输入文本，按 Enter 翻译"
           />
           <div className="ocrInputActions">
@@ -202,7 +248,7 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
               tooltip={props.status === 'pending' ? '翻译中...' : '翻译'}
               isPrimary
               size="small"
-              onClick={props.onSubmit}
+              onClick={() => props.onSubmit()}
             >
               <IconTranslate />
             </TooltipIconButton>

@@ -40,6 +40,8 @@ export function OcrPreviewApp() {
   return (
     <main className="ocrResultWindowRoot">
       <OcrResultPanel
+        autoQueryOnPaste={false}
+        autoSelectTextOnOpen={false}
         errorMessage=""
         isPinned={isPinned}
         onClear={() => setText('')}
@@ -62,6 +64,7 @@ export function OcrPreviewApp() {
         status="success"
         targetLanguageCode={targetLanguageCode}
         text={text}
+        textSelectionToken="preview"
         targetLanguageLabel={languageLabel(targetLanguageCode)}
       />
     </main>

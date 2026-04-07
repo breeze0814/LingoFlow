@@ -56,6 +56,10 @@ type DebugPrintInput = {
   message: string;
 };
 
+type RuntimeSettingsInput = {
+  httpApiEnabled: boolean;
+};
+
 type CommandError = {
   code: string;
   message: string;
@@ -80,6 +84,15 @@ type CommandTaskResponse = {
   status: 'success' | 'failure' | 'cancelled' | 'accepted';
   data?: CommandTaskData | null;
   error?: CommandError | null;
+};
+
+type RuntimeSettingsResponse = {
+  http_api_enabled: boolean;
+  http_api_running: boolean;
+};
+
+type SelectionTextResponse = {
+  selected_text: string;
 };
 
 export const commandsClient = {
@@ -118,6 +131,11 @@ export const commandsClient = {
         })),
       },
     });
+  },
+  readSelectionText(): Promise<{ selectedText: string }> {
+    return invoke<SelectionTextResponse>('read_selection_text').then((response) => ({
+      selectedText: response.selected_text,
+    }));
   },
   ocrRecognize(input: OcrRecognizeInput): Promise<CommandTaskResponse> {
     return invoke('ocr_recognize', {
@@ -175,5 +193,12 @@ export const commandsClient = {
   },
   debugPrint(input: DebugPrintInput): Promise<void> {
     return invoke('debug_print', input);
+  },
+  syncRuntimeSettings(input: RuntimeSettingsInput): Promise<RuntimeSettingsResponse> {
+    return invoke('sync_runtime_settings', {
+      payload: {
+        http_api_enabled: input.httpApiEnabled,
+      },
+    });
   },
 };

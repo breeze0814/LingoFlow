@@ -11,7 +11,7 @@ import {
 } from './screenshotOverlayBridge';
 import { buildPhysicalCaptureRect } from './screenshotOverlayGeometry';
 import { initialTaskState } from '../task/taskReducer';
-import { triggerOcrRecognizeRegion, triggerOcrTranslateRegion } from '../task/taskService';
+import { triggerOcrRecognizeRegion } from '../task/taskService';
 import {
   createOcrRecognizePayload,
   createOcrTranslatePayload,
@@ -20,6 +20,8 @@ import {
 import { showOcrResultWindow } from '../ocr/ocrResultWindowService';
 import { ensureCaptureExcluded } from './screenshotOverlayExclude';
 import { TaskState } from '../task/taskTypes';
+import { loadSettingsFromStorage } from '../settings/settingsStorage';
+import { resolveConfiguredSourceLanguage } from '../settings/settingsRuntime';
 
 type DragState = {
   startX: number;
@@ -58,6 +60,7 @@ export function ScreenshotOverlayApp() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const draggingRef = useRef(false);
+  const selectionRef = useRef<DragState | null>(null);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -146,6 +149,7 @@ export function ScreenshotOverlayApp() {
       setPayload(null);
     }
     setSelection(null);
+    selectionRef.current = null;
     setIsSubmitting(false);
     draggingRef.current = false;
     await getCurrentWindow().hide();
@@ -159,6 +163,7 @@ export function ScreenshotOverlayApp() {
     draggingRef.current = false;
     setErrorMessage('');
     setSelection(null);
+    selectionRef.current = null;
     setIsSubmitting(true);
     await ensureCaptureExcluded();
     await waitForNextPaint();
@@ -170,6 +175,7 @@ export function ScreenshotOverlayApp() {
     if (!payload) {
       return;
     }
+    const settings = loadSettingsFromStorage();
 
     const captureRect = buildPhysicalCaptureRect(nextSelection, payload.monitor, {
       width: window.innerWidth,
@@ -190,17 +196,10 @@ export function ScreenshotOverlayApp() {
         targetLanguageCode: payload.targetLanguageCode,
         targetLanguageLabel: payload.targetLanguageLabel,
       };
-      const targetLang = payload.targetLang ?? payload.targetLanguageCode;
-      const next = await triggerOcrTranslateRegion(
-        baseState,
-        captureRect,
-        targetLang,
-        undefined,
-        payload.sourceLangHint,
-      );
+      const next = await triggerOcrRecognizeRegion(baseState, captureRect, payload.sourceLangHint);
 
       if (next.action === 'succeeded' && next.payload.result) {
-        const resultPayload = createOcrTranslatePayload(next.payload.result, direction);
+        const resultPayload = createOcrTranslatePayload(next.payload.result, direction, true);
         clearCachedScreenshotOverlayPayload();
         setPayload(null);
         setIsSubmitting(false);
@@ -226,12 +225,16 @@ export function ScreenshotOverlayApp() {
     const next = await triggerOcrRecognizeRegion(baseState, captureRect, payload.sourceLangHint);
 
     if (next.action === 'succeeded' && next.payload.result) {
-      const resultPayload = createOcrRecognizePayload(next.payload.result, {
-        sourceLanguageCode: payload.sourceLangHint ?? 'auto',
-        sourceLanguageLabel: payload.sourceLanguageLabel,
-        targetLanguageCode: payload.targetLanguageCode,
-        targetLanguageLabel: payload.targetLanguageLabel,
-      });
+      const resultPayload = createOcrRecognizePayload(
+        next.payload.result,
+        {
+          sourceLanguageCode: payload.sourceLangHint ?? 'auto',
+          sourceLanguageLabel: payload.sourceLanguageLabel,
+          targetLanguageCode: payload.targetLanguageCode,
+          targetLanguageLabel: payload.targetLanguageLabel,
+        },
+        settings.autoQueryOnOcr,
+      );
       clearCachedScreenshotOverlayPayload();
       setPayload(null);
       setIsSubmitting(false);
@@ -276,37 +279,43 @@ export function ScreenshotOverlayApp() {
         }
         draggingRef.current = true;
         setErrorMessage('');
-        setSelection({
+        const nextSelection = {
           startX: event.clientX,
           startY: event.clientY,
           endX: event.clientX,
           endY: event.clientY,
-        });
+        };
+        selectionRef.current = nextSelection;
+        setSelection(nextSelection);
       }}
       onMouseMove={(event) => {
         if (!draggingRef.current || isSubmitting) {
           return;
         }
-        setSelection((current) =>
-          current
-            ? {
-                ...current,
-                endX: event.clientX,
-                endY: event.clientY,
-              }
-            : current,
-        );
+        const current = selectionRef.current;
+        if (!current) {
+          return;
+        }
+        const nextSelection = {
+          ...current,
+          endX: event.clientX,
+          endY: event.clientY,
+        };
+        selectionRef.current = nextSelection;
+        setSelection(nextSelection);
       }}
       onMouseUp={async (event) => {
-        if (!draggingRef.current || !selection || isSubmitting) {
+        const currentSelection = selectionRef.current;
+        if (!draggingRef.current || !currentSelection || isSubmitting) {
           return;
         }
         draggingRef.current = false;
         const nextSelection = {
-          ...selection,
+          ...currentSelection,
           endX: event.clientX,
           endY: event.clientY,
         };
+        selectionRef.current = nextSelection;
         setSelection(nextSelection);
         await submitSelection(nextSelection);
       }}

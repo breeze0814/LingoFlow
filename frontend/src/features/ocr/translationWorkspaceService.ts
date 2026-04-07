@@ -3,6 +3,7 @@ import { triggerInputTranslate } from '../task/taskService';
 import { TaskResult } from '../task/taskTypes';
 import { buildEnabledTranslateProviderConfigs } from '../settings/translateProviderRequest';
 import { loadSettingsFromStorage } from '../settings/settingsStorage';
+import { resolveConfiguredSourceLanguage } from '../settings/settingsRuntime';
 import { OcrResultWindowPayload } from './ocrResultWindowBridge';
 
 export type TranslationWorkspaceStatus = 'idle' | 'pending' | 'success' | 'failure';
@@ -58,13 +59,14 @@ export async function submitTranslationWorkspaceText(
     };
   }
 
+  const settings = loadSettingsFromStorage();
+  const sourceLanguageCode = direction?.sourceLanguageCode ?? payload.sourceLanguageCode;
+
   const response = await triggerInputTranslate(initialTaskState, {
-    sourceLang: direction?.sourceLanguageCode ?? payload.sourceLanguageCode,
+    sourceLang: resolveConfiguredSourceLanguage(sourceLanguageCode, settings),
     text,
     targetLang: direction?.targetLanguageCode ?? payload.targetLanguageCode,
-    translateProviderConfigs: buildEnabledTranslateProviderConfigs(
-      loadSettingsFromStorage().providers,
-    ),
+    translateProviderConfigs: buildEnabledTranslateProviderConfigs(settings.providers),
   });
 
   if (response.action === 'succeeded' && response.payload.result) {

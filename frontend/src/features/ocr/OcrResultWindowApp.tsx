@@ -3,6 +3,11 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LANGUAGE_OPTIONS } from '../settings/settingsTypes';
 import { buildEnabledTranslateProviderIds } from '../settings/translateProviderRequest';
 import { loadSettingsFromStorage } from '../settings/settingsStorage';
+import {
+  englishVoiceLocale,
+  selectPrimaryTranslatedText,
+  selectSpokenEnglishWord,
+} from '../settings/settingsRuntime';
 import { OcrResultPanel } from './OcrResultPanel';
 import { buildDisplayRows } from './ocrResultRows';
 import {
@@ -80,8 +85,38 @@ function clearedWorkspaceState(text: string): TranslationWorkspaceState {
   };
 }
 
+function createTextSelectionToken(payload: OcrResultWindowPayload | null): string {
+  if (!payload) {
+    return '';
+  }
+  return [
+    payload.mode,
+    payload.result?.taskId ?? '',
+    payload.initialText,
+    payload.initialErrorMessage ?? '',
+  ].join(':');
+}
+
+async function copyTranslatedResult(text: string) {
+  await navigator.clipboard.writeText(text);
+}
+
+function speakEnglishWord(word: string, locale: string) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    throw new Error('speechSynthesis is unavailable');
+  }
+  if (typeof SpeechSynthesisUtterance === 'undefined') {
+    throw new Error('SpeechSynthesisUtterance is unavailable');
+  }
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = locale;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
 export function OcrResultWindowApp() {
   const initialPayload = readCachedOcrResultPayload();
+  const runtimeSettings = loadSettingsFromStorage();
   const [payload, setPayload] = useState<OcrResultWindowPayload | null>(initialPayload);
   const [workspaceState, setWorkspaceState] = useState<TranslationWorkspaceState>(() =>
     createTranslationWorkspaceState(initialPayload),
@@ -95,7 +130,9 @@ export function OcrResultWindowApp() {
   const [isPinned, setIsPinned] = useState(true);
   const [listenError, setListenError] = useState('');
   const autoTranslateTokenRef = useRef('');
-  const enabledProviderIds = buildEnabledTranslateProviderIds(loadSettingsFromStorage().providers);
+  const automationTaskIdRef = useRef('');
+  const enabledProviderIds = buildEnabledTranslateProviderIds(runtimeSettings.providers);
+  const textSelectionToken = createTextSelectionToken(payload);
 
   useEffect(() => {
     setWorkspaceState(createTranslationWorkspaceState(payload));
@@ -179,6 +216,7 @@ export function OcrResultWindowApp() {
         return;
       }
       const text = nextText ?? workspaceState.text;
+      const settings = loadSettingsFromStorage();
       setWorkspaceState((current) => ({
         ...current,
         errorMessage: '',
@@ -190,8 +228,14 @@ export function OcrResultWindowApp() {
         sourceLanguageCode: direction.sourceLanguageCode,
         targetLanguageCode: direction.targetLanguageCode,
       });
-      const resolvedState = { ...workspaceState, ...nextState, text };
-      setWorkspaceState((current) => ({ ...current, ...nextState, text }));
+      const resolvedText =
+        payload.mode === 'input_translate' &&
+        settings.clearInputOnTranslate &&
+        nextState.status === 'success'
+          ? ''
+          : text;
+      const resolvedState = { ...workspaceState, ...nextState, text: resolvedText };
+      setWorkspaceState((current) => ({ ...current, ...nextState, text: resolvedText }));
       syncCachedPayload(resolvedState);
     },
     [
@@ -219,6 +263,36 @@ export function OcrResultWindowApp() {
     autoTranslateTokenRef.current = token;
     void handleSubmit(payload.initialText);
   }, [handleSubmit, payload]);
+
+  useEffect(() => {
+    const result = workspaceState.result;
+    if (!result || automationTaskIdRef.current === result.taskId) {
+      return;
+    }
+
+    const settings = loadSettingsFromStorage();
+    const textToCopy = settings.autoCopyResult
+      ? selectPrimaryTranslatedText(result, preferredProviderId)
+      : null;
+    const wordToSpeak = settings.autoSpeakEnglishWord ? selectSpokenEnglishWord(result) : null;
+    if (!textToCopy && !wordToSpeak) {
+      return;
+    }
+
+    automationTaskIdRef.current = result.taskId;
+    if (textToCopy) {
+      void copyTranslatedResult(textToCopy).catch((error) => {
+        console.error('failed to auto copy translation result', error);
+      });
+    }
+    if (wordToSpeak) {
+      try {
+        speakEnglishWord(wordToSpeak, englishVoiceLocale(settings.englishVoice));
+      } catch (error) {
+        console.error('failed to auto speak english word', error);
+      }
+    }
+  }, [preferredProviderId, workspaceState.result]);
 
   function handleRootMouseDown(event: MouseEvent<HTMLElement>) {
     if (event.target !== event.currentTarget) {
@@ -293,6 +367,8 @@ export function OcrResultWindowApp() {
     return (
       <main className="ocrResultWindowRoot" onMouseDown={handleRootMouseDown}>
         <OcrResultPanel
+          autoQueryOnPaste={runtimeSettings.autoQueryOnPaste}
+          autoSelectTextOnOpen={runtimeSettings.autoSelectQueryTextOnOpen}
           enabledProviderIds={enabledProviderIds}
           errorMessage={workspaceState.errorMessage}
           isPinned={isPinned}
@@ -324,6 +400,7 @@ export function OcrResultWindowApp() {
           targetLanguageCode={direction.targetLanguageCode}
           targetLanguageLabel={direction.targetLanguageLabel}
           text={workspaceState.text}
+          textSelectionToken={textSelectionToken}
         />
       </main>
     );
