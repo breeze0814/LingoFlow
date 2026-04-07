@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run sync:tesseract-assets && vite",
+    "dev:tauri": "npm run sync:tesseract-assets && node ./scripts/run-tauri-dev-server.mjs",
     "build": "npm run sync:tesseract-assets && tsc -b && vite build",
     "postinstall": "npm run sync:tesseract-assets",
     "sync:tesseract-assets": "node ./scripts/sync-tesseract-assets.mjs",

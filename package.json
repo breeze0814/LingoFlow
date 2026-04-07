@@ -6,7 +6,7 @@
   "scripts": {
     "bootstrap": "npm ci && npm --prefix frontend ci",
     "dev": "npm run dev:app",
-    "dev:app": "npm run tauri -- dev --config src-tauri/tauri.conf.json",
+    "dev:app": "node ./scripts/run-tauri-dev.mjs",
     "dev:web": "npm run dev:frontend",
     "dev:frontend": "npm --prefix frontend run dev",
     "tauri": "npx tauri",
