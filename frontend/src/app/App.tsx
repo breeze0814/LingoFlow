@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { MainLayout } from './layout/MainLayout';
+import { PermissionStatus } from '../features/settings/permissionStatus';
+import { loadPermissionStatusFromNative } from '../features/settings/permissionStatusStorage';
 import { SettingsPanel } from '../features/settings/SettingsPanel';
 import { initialTaskState } from '../features/task/taskReducer';
 import { DEFAULT_SETTINGS, SettingsState } from '../features/settings/settingsTypes';
@@ -20,6 +22,10 @@ import {
   saveSettingsToNativeStorage,
 } from '../features/settings/nativeSettingsStorage';
 import {
+  OPEN_INPUT_TRANSLATE_EVENT,
+  isOpenInputTranslatePayload,
+} from '../features/translator/inputTranslateEvents';
+import {
   hasActiveModifiers,
   isShortcutRecording,
   isTauriRuntime,
@@ -29,22 +35,30 @@ import {
 } from './appRuntime';
 import { useAppActions } from './useAppActions';
 
+const NATIVE_SETTINGS_SAVE_DEBOUNCE_MS = 300;
+type NativeSettingsHydrationState = 'pending' | 'ready' | 'failed';
+
 export function App() {
   const tauriRuntime = isTauriRuntime();
   const [taskState, updateTaskState] = useState(initialTaskState);
   const [settings, setSettings] = useState<SettingsState>(() =>
     tauriRuntime ? DEFAULT_SETTINGS : loadSettingsFromStorage(),
   );
-  const [settingsHydrated, setSettingsHydrated] = useState(() => !tauriRuntime);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionStatus | null>(null);
+  const [nativeSettingsHydrationState, setNativeSettingsHydrationState] =
+    useState<NativeSettingsHydrationState>(() => (tauriRuntime ? 'pending' : 'ready'));
   const pendingShortcutActionRef = useRef<ShortcutAction | null>(null);
-  const { executeShortcutAction, handleTrayAction } = useAppActions({
+  const { executeShortcutAction, handleTrayAction, openInputTranslateWorkspace } = useAppActions({
     settings,
     taskState,
     setTaskState: updateTaskState,
   });
   const trayActionHandlerRef = useRef(handleTrayAction);
+  const inputTranslateHandlerRef = useRef(openInputTranslateWorkspace);
   const shortcutExecutorRef = useRef(executeShortcutAction);
   const shortcutConfigRef = useRef(settings.shortcuts);
+  const nativeSettingsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nativeSettingsReady = nativeSettingsHydrationState === 'ready';
 
   useEffect(() => {
     trayActionHandlerRef.current = handleTrayAction;
@@ -53,6 +67,10 @@ export function App() {
   useEffect(() => {
     shortcutExecutorRef.current = executeShortcutAction;
   }, [executeShortcutAction]);
+
+  useEffect(() => {
+    inputTranslateHandlerRef.current = openInputTranslateWorkspace;
+  }, [openInputTranslateWorkspace]);
 
   useEffect(() => {
     shortcutConfigRef.current = settings.shortcuts;
@@ -64,6 +82,7 @@ export function App() {
     }
 
     let cleanup: null | (() => void) = null;
+    let inputCleanup: null | (() => void) = null;
     let disposed = false;
 
     async function bindTrayActionListener() {
@@ -84,11 +103,33 @@ export function App() {
       }
     }
 
+    async function bindInputTranslateListener() {
+      try {
+        const unlisten = await listen(OPEN_INPUT_TRANSLATE_EVENT, (event) => {
+          if (!isOpenInputTranslatePayload(event.payload)) {
+            return;
+          }
+          void inputTranslateHandlerRef.current(event.payload);
+        });
+        if (disposed) {
+          unlisten();
+          return;
+        }
+        inputCleanup = unlisten;
+      } catch (error) {
+        console.warn('input translate listener binding failed', error);
+      }
+    }
+
     void bindTrayActionListener();
+    void bindInputTranslateListener();
     return () => {
       disposed = true;
       if (cleanup) {
         cleanup();
+      }
+      if (inputCleanup) {
+        inputCleanup();
       }
     };
   }, []);
@@ -106,11 +147,13 @@ export function App() {
         if (!disposed && loadedSettings) {
           setSettings(loadedSettings);
         }
+        if (!disposed) {
+          setNativeSettingsHydrationState('ready');
+        }
       } catch (error) {
         console.error('native settings load failed', error);
-      } finally {
         if (!disposed) {
-          setSettingsHydrated(true);
+          setNativeSettingsHydrationState('failed');
         }
       }
     }
@@ -122,22 +165,47 @@ export function App() {
   }, [tauriRuntime]);
 
   useEffect(() => {
-    if (!tauriRuntime || !settingsHydrated) {
+    if (!tauriRuntime) {
+      return;
+    }
+
+    let disposed = false;
+
+    async function hydratePermissionStatus() {
+      try {
+        const nextStatus = await loadPermissionStatusFromNative();
+        if (!disposed) {
+          setPermissionStatus(nextStatus);
+        }
+      } catch (error) {
+        console.error('permission status load failed', error);
+      }
+    }
+
+    void hydratePermissionStatus();
+    return () => {
+      disposed = true;
+    };
+  }, [tauriRuntime]);
+
+  useEffect(() => {
+    if (!tauriRuntime || !nativeSettingsReady) {
       return;
     }
 
     void syncNativeShortcuts(settings.shortcuts).catch((error) => {
       console.error('native shortcut sync failed', error);
     });
-  }, [settings.shortcuts, settingsHydrated, tauriRuntime]);
+  }, [settings.shortcuts, nativeSettingsReady, tauriRuntime]);
 
   useEffect(() => {
-    if (!tauriRuntime || !settingsHydrated) {
+    if (!tauriRuntime || !nativeSettingsReady) {
       return;
     }
 
     void syncRuntimeSettings({
       httpApiEnabled: settings.httpApiEnabled,
+      httpApiPort: settings.httpApiPort,
       sourceLang: settings.primaryLanguage,
       targetLang: settings.secondaryLanguage,
     }).catch((error) => {
@@ -145,9 +213,10 @@ export function App() {
     });
   }, [
     settings.httpApiEnabled,
+    settings.httpApiPort,
     settings.primaryLanguage,
     settings.secondaryLanguage,
-    settingsHydrated,
+    nativeSettingsReady,
     tauriRuntime,
   ]);
 
@@ -165,7 +234,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!settingsHydrated) {
+    if (tauriRuntime && !nativeSettingsReady) {
       return;
     }
     const cachedSettings = tauriRuntime ? redactSensitiveSettings(settings) : settings;
@@ -173,10 +242,24 @@ export function App() {
     if (!tauriRuntime) {
       return;
     }
-    void saveSettingsToNativeStorage(settings).catch((error) => {
-      console.error('native settings save failed', error);
-    });
-  }, [settings, settingsHydrated, tauriRuntime]);
+    if (nativeSettingsSaveTimerRef.current) {
+      clearTimeout(nativeSettingsSaveTimerRef.current);
+    }
+    const snapshot = settings;
+    nativeSettingsSaveTimerRef.current = setTimeout(() => {
+      nativeSettingsSaveTimerRef.current = null;
+      void saveSettingsToNativeStorage(snapshot).catch((error) => {
+        console.error('native settings save failed', error);
+      });
+    }, NATIVE_SETTINGS_SAVE_DEBOUNCE_MS);
+    return () => {
+      if (!nativeSettingsSaveTimerRef.current) {
+        return;
+      }
+      clearTimeout(nativeSettingsSaveTimerRef.current);
+      nativeSettingsSaveTimerRef.current = null;
+    };
+  }, [settings, nativeSettingsReady, tauriRuntime]);
 
   useEffect(() => {
     if (isTauriRuntime()) {
@@ -253,7 +336,22 @@ export function App() {
     <MainLayout>
       <section className="workspace">
         <section className="settingsHome">
-          <SettingsPanel value={settings} onChange={setSettings} />
+          <SettingsPanel
+            value={settings}
+            onChange={setSettings}
+            permissionStatus={permissionStatus}
+            onRefreshPermissions={
+              tauriRuntime
+                ? () => {
+                    void loadPermissionStatusFromNative()
+                      .then((nextStatus) => setPermissionStatus(nextStatus))
+                      .catch((error) => {
+                        console.error('permission status refresh failed', error);
+                      });
+                  }
+                : undefined
+            }
+          />
         </section>
       </section>
     </MainLayout>

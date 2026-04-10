@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::apiprovider::runtime_config::TranslateProviderRuntimeConfig;
+use crate::apiprovider::runtime_config::{
+    OcrProviderRuntimeConfig, TranslateProviderRuntimeConfig,
+};
 use crate::errors::app_error::AppError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +22,7 @@ pub struct TaskCommandPayload {
     pub target_lang: Option<String>,
     pub provider_id: Option<String>,
     pub ocr_provider_id: Option<String>,
+    pub ocr_provider_configs: Option<Vec<OcrProviderRuntimeConfig>>,
     pub translate_provider_configs: Option<Vec<TranslateProviderRuntimeConfig>>,
 }
 
@@ -42,6 +45,7 @@ pub struct TaskRequest {
     pub target_lang: Option<String>,
     pub translate_provider_id: Option<String>,
     pub ocr_provider_id: Option<String>,
+    pub ocr_provider_configs: Option<Vec<OcrProviderRuntimeConfig>>,
     pub translate_provider_configs: Option<Vec<TranslateProviderRuntimeConfig>>,
 }
 
@@ -60,6 +64,7 @@ pub struct OcrTranslateTaskOptions {
     pub target_lang: Option<String>,
     pub provider_id: Option<String>,
     pub ocr_provider_id: Option<String>,
+    pub ocr_provider_configs: Option<Vec<OcrProviderRuntimeConfig>>,
     pub provider_configs: Option<Vec<TranslateProviderRuntimeConfig>>,
 }
 
@@ -127,11 +132,20 @@ impl TaskRequest {
     }
 
     pub fn ocr_recognize(source_lang_hint: Option<String>, provider_id: Option<String>) -> Self {
+        Self::ocr_recognize_with_configs(source_lang_hint, provider_id, None)
+    }
+
+    pub fn ocr_recognize_with_configs(
+        source_lang_hint: Option<String>,
+        provider_id: Option<String>,
+        ocr_provider_configs: Option<Vec<OcrProviderRuntimeConfig>>,
+    ) -> Self {
         Self::new(
             TaskType::OcrRecognize,
             TaskRequestOptions {
                 source_lang_hint,
                 ocr_provider_id: provider_id,
+                ocr_provider_configs,
                 ..TaskRequestOptions::default()
             },
         )
@@ -146,6 +160,7 @@ impl TaskRequest {
                 target_lang: options.target_lang,
                 translate_provider_id: options.provider_id,
                 ocr_provider_id: options.ocr_provider_id,
+                ocr_provider_configs: options.ocr_provider_configs,
                 translate_provider_configs: options.provider_configs,
                 ..TaskRequestOptions::default()
             },
@@ -162,6 +177,7 @@ impl TaskRequest {
             target_lang: options.target_lang,
             translate_provider_id: options.translate_provider_id,
             ocr_provider_id: options.ocr_provider_id,
+            ocr_provider_configs: options.ocr_provider_configs,
             translate_provider_configs: options.translate_provider_configs,
         }
     }
@@ -175,5 +191,6 @@ struct TaskRequestOptions {
     target_lang: Option<String>,
     translate_provider_id: Option<String>,
     ocr_provider_id: Option<String>,
+    ocr_provider_configs: Option<Vec<OcrProviderRuntimeConfig>>,
     translate_provider_configs: Option<Vec<TranslateProviderRuntimeConfig>>,
 }

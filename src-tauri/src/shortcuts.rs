@@ -41,6 +41,7 @@ impl ShortcutConfig {
 }
 
 impl ShortcutAction {
+    #[cfg(not(test))]
     fn tray_action(self) -> &'static str {
         match self {
             Self::InputTranslate => "input_translate",
@@ -283,11 +284,13 @@ mod runtime {
 pub use runtime::{setup, sync_shortcuts};
 
 #[cfg(any(test, not(desktop)))]
+#[allow(dead_code)]
 pub fn setup<R: tauri::Runtime>(_app: &tauri::AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }
 
 #[cfg(any(test, not(desktop)))]
+#[allow(dead_code)]
 pub fn sync_shortcuts<R: tauri::Runtime>(
     _app: &tauri::AppHandle<R>,
     _config: ShortcutConfig,

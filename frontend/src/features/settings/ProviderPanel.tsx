@@ -11,13 +11,18 @@ import { ProviderGlyph } from '../ocr/ProviderGlyph';
 
 type ProviderPatch = Partial<ToolProviderConfig>;
 
-const LOCAL_OCR_ID: ToolProviderId = 'localOcr';
-const API_PROVIDER_IDS = TOOL_PROVIDER_DEFINITIONS.filter((item) => item.id !== LOCAL_OCR_ID).map(
+const OCR_PROVIDER_IDS = TOOL_PROVIDER_DEFINITIONS.filter((item) => item.category === 'OCR').map(
   (item) => item.id,
 );
+const TRANSLATE_PROVIDER_IDS = TOOL_PROVIDER_DEFINITIONS.filter(
+  (item) => item.category === '翻译',
+).map((item) => item.id);
+const ALL_PROVIDER_IDS = [...OCR_PROVIDER_IDS, ...TRANSLATE_PROVIDER_IDS];
 
 const PROVIDER_ICON_MAP: Record<ToolProviderId, string> = {
   localOcr: 'ocr',
+  openai_compatible_ocr: 'openai',
+  openai_compatible: 'openai',
   youdao_web: 'youdao',
   bing_web: 'bing',
   deepl_free: 'deepl',
@@ -221,33 +226,42 @@ function ProviderListPanel(props: {
   onSelectProvider: (providerId: ToolProviderId) => void;
   providers: ToolProviderConfigMap;
 }) {
+  function renderProviderSection(title: string, providerIds: ToolProviderId[]) {
+    return (
+      <section>
+        <header className="providerSectionHeader">
+          <h4>{title}</h4>
+        </header>
+        <div className="providerSectionList">
+          {providerIds.map((providerId) => {
+            const definition = providerDefinitionOrThrow(providerId);
+            return (
+              <ProviderRow
+                key={providerId}
+                active={props.activeProviderId === providerId}
+                definition={definition}
+                enabled={props.providers[providerId].enabled}
+                showMeta={false}
+                onSelect={props.onSelectProvider}
+                onToggle={(id, enabled) => props.onChangeProvider(id, { enabled })}
+              />
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <aside className="providerListPanel">
-      <header className="providerSectionHeader">
-        <h4>API Provider</h4>
-      </header>
-      <div className="providerSectionList">
-        {API_PROVIDER_IDS.map((providerId) => {
-          const definition = providerDefinitionOrThrow(providerId);
-          return (
-            <ProviderRow
-              key={providerId}
-              active={props.activeProviderId === providerId}
-              definition={definition}
-              enabled={props.providers[providerId].enabled}
-              showMeta={false}
-              onSelect={props.onSelectProvider}
-              onToggle={(id, enabled) => props.onChangeProvider(id, { enabled })}
-            />
-          );
-        })}
-      </div>
+      {renderProviderSection('OCR Provider', OCR_PROVIDER_IDS)}
+      {renderProviderSection('Translate Provider', TRANSLATE_PROVIDER_IDS)}
     </aside>
   );
 }
 
 export function ProviderPanel({ providers, onChangeProvider }: ProviderPanelProps) {
-  const [activeProviderId, setActiveProviderId] = useState<ToolProviderId>(API_PROVIDER_IDS[0]);
+  const [activeProviderId, setActiveProviderId] = useState<ToolProviderId>(ALL_PROVIDER_IDS[0]);
   const [showSecrets, setShowSecrets] = useState(false);
   const activeProvider = providerDefinitionOrThrow(activeProviderId);
   const activeConfig = providers[activeProviderId];

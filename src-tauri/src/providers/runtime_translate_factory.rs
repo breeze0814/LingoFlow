@@ -24,6 +24,7 @@ use crate::apiprovider::tencent_tmt_signer::TencentTmtSigner;
 use crate::apiprovider::youdao_web::YoudaoWebProvider;
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
+use crate::providers::openai_compatible::OpenAiCompatibleProvider;
 use crate::providers::traits::TranslateProvider;
 
 pub enum TranslateExecutionTarget {
@@ -60,6 +61,7 @@ fn build_target(config: &TranslateProviderRuntimeConfig) -> TranslateExecutionTa
         "bing_web" => Ok(Arc::new(
             BingWebProvider::from_env().expect("bing web provider should be constructible"),
         ) as Arc<dyn TranslateProvider>),
+        "openai_compatible" => build_openai_compatible(config),
         "deepl_free" => build_deepl(config),
         "azure_translator" => build_azure(config),
         "google_translate" => build_google(config),
@@ -91,6 +93,16 @@ fn build_deepl(
         },
         client: reqwest::Client::new(),
     }))
+}
+
+fn build_openai_compatible(
+    config: &TranslateProviderRuntimeConfig,
+) -> Result<Arc<dyn TranslateProvider>, AppError> {
+    Ok(Arc::new(OpenAiCompatibleProvider::from_runtime_config(
+        config.api_key.clone(),
+        config.base_url.clone(),
+        config.model.clone(),
+    )?))
 }
 
 fn build_azure(
@@ -205,6 +217,18 @@ mod tests {
         assert!(matches!(
             targets.first(),
             Some(TranslateExecutionTarget::Ready { provider_id, .. }) if provider_id == "youdao_web"
+        ));
+    }
+
+    #[test]
+    fn builds_ready_target_for_openai_compatible_with_runtime_config() {
+        let mut config = TranslateProviderRuntimeConfig::new("openai_compatible");
+        config.api_key = Some("openai-key".to_string());
+        let targets = build_runtime_translate_targets(&[config]);
+
+        assert!(matches!(
+            targets.first(),
+            Some(TranslateExecutionTarget::Ready { provider_id, .. }) if provider_id == "openai_compatible"
         ));
     }
 

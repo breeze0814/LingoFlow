@@ -8,6 +8,9 @@ mod http_api;
 mod orchestrator;
 mod platform;
 mod providers;
+mod runtime_settings_sync;
+mod settings_persistence;
+mod settings_secret_fields;
 mod shortcuts;
 mod storage;
 mod tray;
@@ -48,10 +51,10 @@ pub fn run() {
             state.providers.attach_app_handle(app.handle().clone());
             if state.config_store.get().http_api.enabled {
                 let opts = state.config_store.http_server_options();
-                let orchestrator = state.orchestrator.clone();
+                let http_api_state = state.http_api_state.clone();
                 let controller = state.http_server_controller.clone();
                 tauri::async_runtime::spawn(async move {
-                    if let Err(err) = controller.start(opts, orchestrator).await {
+                    if let Err(err) = controller.start(opts, http_api_state).await {
                         eprintln!("http server exited with error: {}", err.message);
                     }
                 });
@@ -67,6 +70,7 @@ pub fn run() {
     #[cfg(all(not(test), target_os = "windows"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::debug::debug_print,
+        commands::permissions::get_permission_status,
         commands::settings::load_settings,
         commands::settings::save_settings,
         commands::shortcuts::sync_global_shortcuts,
@@ -85,6 +89,7 @@ pub fn run() {
     #[cfg(all(not(test), not(target_os = "windows")))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         commands::debug::debug_print,
+        commands::permissions::get_permission_status,
         commands::settings::load_settings,
         commands::settings::save_settings,
         commands::shortcuts::sync_global_shortcuts,
@@ -94,8 +99,6 @@ pub fn run() {
         commands::translation::input_translate,
         commands::ocr::ocr_recognize,
         commands::ocr::ocr_translate,
-        commands::ocr::ocr_recognize_region,
-        commands::ocr::ocr_translate_region,
         commands::window_display::set_capture_excluded
     ]);
 

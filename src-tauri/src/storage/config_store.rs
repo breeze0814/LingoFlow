@@ -1,6 +1,5 @@
-use std::sync::RwLock;
-
 use serde::{Deserialize, Serialize};
+use std::sync::RwLock;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -32,6 +31,7 @@ pub struct ConfigStore {
     config: RwLock<Config>,
 }
 
+#[cfg_attr(test, allow(dead_code))]
 impl ConfigStore {
     pub fn new_default() -> Self {
         Self {
@@ -71,6 +71,14 @@ impl ConfigStore {
             .expect("config lock poisoned")
             .http_api
             .enabled = enabled;
+    }
+
+    pub fn set_http_api_port(&self, port: u16) {
+        self.config
+            .write()
+            .expect("config lock poisoned")
+            .http_api
+            .port = port;
     }
 }
 
@@ -114,5 +122,15 @@ mod tests {
 
         let config = store.get();
         assert!(!config.http_api.enabled);
+    }
+
+    #[test]
+    fn updates_http_api_port() {
+        let store = ConfigStore::new_default();
+
+        store.set_http_api_port(62000);
+
+        let config = store.get();
+        assert_eq!(config.http_api.port, 62000);
     }
 }

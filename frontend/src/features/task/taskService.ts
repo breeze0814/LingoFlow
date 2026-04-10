@@ -1,5 +1,6 @@
 import { commandsClient } from '../../infra/tauri/commands';
 import { AppError, ProviderTranslationResult, TaskState, TaskType } from './taskTypes';
+import { OcrProviderRequestConfig } from '../settings/ocrProviderRequest';
 import { TranslateProviderRequestConfig } from '../settings/translateProviderRequest';
 
 type TriggerResponse = {
@@ -45,12 +46,14 @@ type RunnerInput = {
   request: () => Promise<CommandTaskResponse>;
 };
 
+const FALLBACK_TASK_RANDOM_RANGE = 1_000_000;
+
 function makeTaskId(state: TaskState) {
-  if (state.taskId) return state.taskId;
+  const previousTaskIdSeed = state.taskId ? `${state.taskId}_` : '';
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
+    return `${previousTaskIdSeed}${crypto.randomUUID()}`;
   }
-  return `task_${Date.now()}`;
+  return `${previousTaskIdSeed}task_${Date.now()}_${Math.floor(Math.random() * FALLBACK_TASK_RANDOM_RANGE)}`;
 }
 
 function mapResult(data: {
@@ -148,7 +151,16 @@ async function runTask(input: RunnerInput): Promise<TriggerResponse> {
   try {
     const response = await input.request();
     const taskId = response.task_id || fallbackTaskId;
-    if (response.ok && response.data) {
+    if (response.status === 'accepted') {
+      return {
+        action: 'triggered',
+        payload: {
+          taskType: input.taskType,
+          taskId,
+        },
+      };
+    }
+    if (response.ok && response.status === 'success') {
       return success(input.taskType, taskId, response);
     }
     if (response.status === 'cancelled') {
@@ -195,11 +207,17 @@ export function triggerInputTranslate(
   });
 }
 
-export function triggerOcrRecognize(state: TaskState, sourceLangHint?: string) {
+export function triggerOcrRecognize(
+  state: TaskState,
+  sourceLangHint?: string,
+  ocrProviderId?: string,
+  ocrProviderConfigs?: OcrProviderRequestConfig[],
+) {
   return runTask({
     state,
     taskType: 'ocr_recognize',
-    request: () => commandsClient.ocrRecognize({ sourceLangHint }),
+    request: () =>
+      commandsClient.ocrRecognize({ sourceLangHint, ocrProviderId, ocrProviderConfigs }),
   });
 }
 
@@ -212,11 +230,19 @@ export function triggerOcrRecognizeRegion(
     height: number;
   },
   sourceLangHint?: string,
+  ocrProviderId?: string,
+  ocrProviderConfigs?: OcrProviderRequestConfig[],
 ) {
   return runTask({
     state,
     taskType: 'ocr_recognize',
-    request: () => commandsClient.ocrRecognizeRegion({ captureRect, sourceLangHint }),
+    request: () =>
+      commandsClient.ocrRecognizeRegion({
+        captureRect,
+        sourceLangHint,
+        ocrProviderId,
+        ocrProviderConfigs,
+      }),
   });
 }
 
@@ -226,12 +252,16 @@ export function triggerOcrTranslate(
   sourceLang?: string,
   sourceLangHint?: string,
   translateProviderConfigs?: TranslateProviderRequestConfig[],
+  ocrProviderId?: string,
+  ocrProviderConfigs?: OcrProviderRequestConfig[],
 ) {
   return runTask({
     state,
     taskType: 'ocr_translate',
     request: () =>
       commandsClient.ocrTranslate({
+        ocrProviderId,
+        ocrProviderConfigs,
         sourceLang,
         targetLang,
         sourceLangHint,
@@ -252,6 +282,8 @@ export function triggerOcrTranslateRegion(
   sourceLang?: string,
   sourceLangHint?: string,
   translateProviderConfigs?: TranslateProviderRequestConfig[],
+  ocrProviderId?: string,
+  ocrProviderConfigs?: OcrProviderRequestConfig[],
 ) {
   return runTask({
     state,
@@ -259,6 +291,8 @@ export function triggerOcrTranslateRegion(
     request: () =>
       commandsClient.ocrTranslateRegion({
         captureRect,
+        ocrProviderId,
+        ocrProviderConfigs,
         sourceLang,
         targetLang,
         sourceLangHint,

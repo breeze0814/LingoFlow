@@ -15,6 +15,12 @@ const PROVIDER_LABEL: &str = "Azure Translator";
 pub(crate) const DEFAULT_BASE_URL: &str = "https://api.cognitive.microsofttranslator.com";
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 
+struct AzureTranslateArgs<'a> {
+    req: &'a TranslateRequest,
+    query: &'a [(String, String)],
+    timeout_ms: u64,
+}
+
 pub struct MicrosoftTranslatorProvider {
     pub(crate) config: MicrosoftTranslatorConfig,
     pub(crate) client: reqwest::Client,
@@ -108,21 +114,19 @@ impl MicrosoftTranslatorProvider {
 
     async fn request_translate(
         &self,
-        req: &TranslateRequest,
-        query: &[(String, String)],
-        timeout_ms: u64,
+        args: AzureTranslateArgs<'_>,
     ) -> Result<Vec<AzureTranslateResponseItem>, AppError> {
         let endpoint = format!("{}/translate", self.config.base_url.trim_end_matches('/'));
         let headers = self.build_headers()?;
         let body = vec![AzureTranslateBodyItem {
-            text: req.text.clone(),
+            text: args.req.text.clone(),
         }];
         let response = self
             .client
             .post(endpoint)
             .headers(headers)
-            .query(query)
-            .timeout(Duration::from_millis(timeout_ms))
+            .query(args.query)
+            .timeout(Duration::from_millis(args.timeout_ms))
             .json(&body)
             .send()
             .await
@@ -164,7 +168,13 @@ impl TranslateProvider for MicrosoftTranslatorProvider {
     async fn translate(&self, req: TranslateRequest) -> Result<TranslateResult, AppError> {
         let timeout_ms = normalize_timeout(req.timeout_ms);
         let query = self.build_query(&req)?;
-        let payload = self.request_translate(&req, &query, timeout_ms).await?;
+        let payload = self
+            .request_translate(AzureTranslateArgs {
+                req: &req,
+                query: &query,
+                timeout_ms,
+            })
+            .await?;
         Self::parse_result(req, payload)
     }
 

@@ -3,149 +3,105 @@ use tauri::State;
 
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
-use crate::errors::error_code::ErrorCode;
+use crate::runtime_settings_sync::{RuntimeSettingsDeps, RuntimeSettingsInput};
+use crate::settings_secret_fields::SECRET_FIELD_SPECS;
+use crate::storage::keychain_store::KeychainStore;
+use crate::storage::settings_store::{extract_runtime_settings, SettingsFileSnapshot};
 
-const SECRET_FIELD_SPECS: [SecretFieldSpec; 7] = [
-    SecretFieldSpec::new("deepl_free", "apiKey", "lingoflow.provider.deepl_free.api_key"),
-    SecretFieldSpec::new(
-        "azure_translator",
-        "apiKey",
-        "lingoflow.provider.azure_translator.api_key",
-    ),
-    SecretFieldSpec::new(
-        "google_translate",
-        "apiKey",
-        "lingoflow.provider.google_translate.api_key",
-    ),
-    SecretFieldSpec::new(
-        "tencent_tmt",
-        "secretId",
-        "lingoflow.provider.tencent_tmt.secret_id",
-    ),
-    SecretFieldSpec::new(
-        "tencent_tmt",
-        "secretKey",
-        "lingoflow.provider.tencent_tmt.secret_key",
-    ),
-    SecretFieldSpec::new("baidu_fanyi", "appId", "lingoflow.provider.baidu_fanyi.app_id"),
-    SecretFieldSpec::new(
-        "baidu_fanyi",
-        "appSecret",
-        "lingoflow.provider.baidu_fanyi.secret",
-    ),
-];
-
-#[derive(Clone, Copy)]
-struct ProviderFieldPath<'a> {
-    provider_id: &'a str,
-    field_name: &'a str,
-}
-
-#[derive(Clone, Copy)]
-struct SecretFieldSpec<'a> {
-    path: ProviderFieldPath<'a>,
-    secret_key: &'a str,
-}
-
-impl<'a> SecretFieldSpec<'a> {
-    const fn new(provider_id: &'a str, field_name: &'a str, secret_key: &'a str) -> Self {
-        Self {
-            path: ProviderFieldPath {
-                provider_id,
-                field_name,
-            },
-            secret_key,
-        }
-    }
+#[derive(Clone)]
+struct SecretSnapshotEntry {
+    key: &'static str,
+    value: Option<String>,
 }
 
 #[tauri::command]
 pub fn load_settings(state: State<'_, AppState>) -> Result<Option<Value>, AppError> {
-    let Some(mut settings) = state.settings_store.load()? else {
-        return Ok(None);
-    };
-    inject_secret_fields(&state, &mut settings)?;
-    Ok(Some(settings))
+    crate::settings_persistence::load_settings(&state.settings_store, &state.keychain_store)
 }
 
 #[tauri::command]
-pub fn save_settings(state: State<'_, AppState>, payload: Value) -> Result<(), AppError> {
-    ensure_object_payload(&payload)?;
-    let mut redacted = payload.clone();
-    persist_secret_fields(&state, &payload, &mut redacted)?;
-    state.settings_store.save(&redacted)?;
+pub async fn save_settings(state: State<'_, AppState>, payload: Value) -> Result<(), AppError> {
+    let settings_snapshot = state.settings_store.snapshot()?;
+    let secret_snapshot = snapshot_keychain_secrets(&state.keychain_store)?;
+    crate::settings_persistence::save_settings(
+        &state.settings_store,
+        &state.keychain_store,
+        &payload,
+    )?;
+    let runtime_settings = extract_runtime_settings(&payload)?;
+    if let Some(runtime_settings) = runtime_settings {
+        let sync_result = crate::runtime_settings_sync::sync_runtime_settings(
+            RuntimeSettingsDeps {
+                config_store: state.config_store.clone(),
+                http_server_controller: state.http_server_controller.clone(),
+                http_api_state: state.http_api_state.clone(),
+            },
+            RuntimeSettingsInput {
+                http_api_enabled: runtime_settings.http_api_enabled,
+                http_api_port: runtime_settings.http_api_port,
+                source_lang: runtime_settings.primary_language,
+                target_lang: runtime_settings.secondary_language,
+            },
+        )
+        .await;
+        if let Err(sync_error) = sync_result {
+            return Err(rollback_after_runtime_sync_failure(
+                &state,
+                &settings_snapshot,
+                &secret_snapshot,
+                sync_error,
+            ));
+        }
+    }
     Ok(())
 }
 
-fn ensure_object_payload(payload: &Value) -> Result<(), AppError> {
-    if payload.is_object() {
-        return Ok(());
-    }
-    Err(AppError::new(
-        ErrorCode::InternalError,
-        "Settings payload must be a JSON object",
-        false,
-    ))
+fn snapshot_keychain_secrets(
+    keychain_store: &KeychainStore,
+) -> Result<Vec<SecretSnapshotEntry>, AppError> {
+    SECRET_FIELD_SPECS
+        .iter()
+        .map(|spec| {
+            Ok(SecretSnapshotEntry {
+                key: spec.secret_key,
+                value: keychain_store.get(spec.secret_key)?,
+            })
+        })
+        .collect()
 }
 
-fn persist_secret_fields(
-    state: &State<'_, AppState>,
-    full_payload: &Value,
-    redacted_payload: &mut Value,
+fn restore_keychain_snapshot(
+    keychain_store: &KeychainStore,
+    snapshot: &[SecretSnapshotEntry],
 ) -> Result<(), AppError> {
-    for spec in SECRET_FIELD_SPECS {
-        let value = provider_field(full_payload, spec.path).unwrap_or_default();
-        if value.trim().is_empty() {
-            state.keychain_store.delete(spec.secret_key)?;
+    for entry in snapshot {
+        if let Some(value) = entry.value.as_deref() {
+            keychain_store.set(entry.key, value)?;
         } else {
-            state.keychain_store.set(spec.secret_key, value.trim())?;
-        }
-        set_provider_field(redacted_payload, spec.path, String::new())?;
-    }
-    Ok(())
-}
-
-fn inject_secret_fields(state: &State<'_, AppState>, payload: &mut Value) -> Result<(), AppError> {
-    for spec in SECRET_FIELD_SPECS {
-        if let Some(value) = state.keychain_store.get(spec.secret_key)? {
-            set_provider_field(payload, spec.path, value)?;
+            keychain_store.delete(entry.key)?;
         }
     }
     Ok(())
 }
 
-fn provider_field(payload: &Value, path: ProviderFieldPath<'_>) -> Option<String> {
-    payload
-        .get("providers")
-        .and_then(Value::as_object)
-        .and_then(|providers| providers.get(path.provider_id))
-        .and_then(Value::as_object)
-        .and_then(|provider| provider.get(path.field_name))
-        .and_then(Value::as_str)
-        .map(str::to_string)
-}
+fn rollback_after_runtime_sync_failure(
+    state: &AppState,
+    settings_snapshot: &SettingsFileSnapshot,
+    secret_snapshot: &[SecretSnapshotEntry],
+    sync_error: AppError,
+) -> AppError {
+    let settings_restore_error = state.settings_store.restore(settings_snapshot).err();
+    let keychain_restore_error = restore_keychain_snapshot(&state.keychain_store, secret_snapshot).err();
+    if settings_restore_error.is_none() && keychain_restore_error.is_none() {
+        return sync_error;
+    }
 
-fn set_provider_field(payload: &mut Value, path: ProviderFieldPath<'_>, value: String) -> Result<(), AppError> {
-    let providers = payload
-        .get_mut("providers")
-        .and_then(Value::as_object_mut)
-        .ok_or_else(|| {
-            AppError::new(
-                ErrorCode::InternalError,
-                "Settings payload missing `providers` object",
-                false,
-            )
-        })?;
-    let provider = providers
-        .get_mut(path.provider_id)
-        .and_then(Value::as_object_mut)
-        .ok_or_else(|| {
-            AppError::new(
-                ErrorCode::InternalError,
-                format!("Settings payload missing provider `{}`", path.provider_id),
-                false,
-            )
-        })?;
-    provider.insert(path.field_name.to_string(), Value::String(value));
-    Ok(())
+    let mut message = format!("{}; rollback attempted", sync_error.message);
+    if let Some(error) = settings_restore_error {
+        message.push_str(&format!("; settings restore failed: {}", error.message));
+    }
+    if let Some(error) = keychain_restore_error {
+        message.push_str(&format!("; keychain restore failed: {}", error.message));
+    }
+    AppError::new(sync_error.code, message, sync_error.retryable)
 }

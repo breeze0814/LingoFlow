@@ -5,6 +5,7 @@ const MENU_SHOW_MAIN_WINDOW: &str = "show_main_window";
 const MENU_HIDE_INTERFACE: &str = "hide_interface";
 const MENU_OCR_RECOGNIZE: &str = "ocr_recognize";
 const MENU_OPEN_SETTINGS: &str = "open_settings";
+#[cfg(not(test))]
 const MENU_QUIT: &str = "quit";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -208,6 +209,7 @@ mod runtime {
 pub use runtime::setup;
 
 #[cfg(any(test, not(desktop)))]
+#[allow(dead_code)]
 pub fn setup<R: tauri::Runtime>(_app: &tauri::AppHandle<R>) -> tauri::Result<()> {
     Ok(())
 }

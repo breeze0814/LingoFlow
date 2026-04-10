@@ -10,6 +10,13 @@ const REQUEST_SCOPE_SUFFIX: &str = "tc3_request";
 const SIGNED_HEADERS: &str = "content-type;host;x-tc-action";
 const CONTENT_TYPE_VALUE: &str = "application/json; charset=utf-8";
 
+pub struct AuthorizationArgs<'a> {
+    pub action: &'a str,
+    pub timestamp: i64,
+    pub date: &'a str,
+    pub payload: &'a str,
+}
+
 #[derive(Clone)]
 pub struct TencentTmtSigner {
     secret_id: String,
@@ -26,19 +33,16 @@ impl TencentTmtSigner {
         }
     }
 
-    pub fn build_authorization(
-        &self,
-        action: &str,
-        timestamp: i64,
-        date: &str,
-        payload: &str,
-    ) -> Result<String, AppError> {
-        let action_lower = action.to_ascii_lowercase();
-        let credential_scope = format!("{date}/{SERVICE}/{REQUEST_SCOPE_SUFFIX}");
-        let canonical_request = self.build_canonical_request(&action_lower, payload);
-        let string_to_sign =
-            build_string_to_sign(timestamp, &credential_scope, canonical_request.as_bytes());
-        let signing_key = self.build_signing_key(date)?;
+    pub fn build_authorization(&self, args: AuthorizationArgs<'_>) -> Result<String, AppError> {
+        let action_lower = args.action.to_ascii_lowercase();
+        let credential_scope = format!("{}/{SERVICE}/{REQUEST_SCOPE_SUFFIX}", args.date);
+        let canonical_request = self.build_canonical_request(&action_lower, args.payload);
+        let string_to_sign = build_string_to_sign(
+            args.timestamp,
+            &credential_scope,
+            canonical_request.as_bytes(),
+        );
+        let signing_key = self.build_signing_key(args.date)?;
         let signature = hmac_sha256_hex(&signing_key, string_to_sign.as_bytes())?;
         Ok(format!(
             "{ALGORITHM} Credential={}/{credential_scope}, SignedHeaders={SIGNED_HEADERS}, Signature={signature}",

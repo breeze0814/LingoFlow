@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
 use crate::orchestrator::service::Orchestrator;
+use crate::providers::runtime_ocr_factory::build_runtime_ocr_provider;
 use crate::providers::runtime_translate_factory::{
     build_runtime_translate_targets, TranslateExecutionTarget,
 };
@@ -68,7 +69,11 @@ impl Orchestrator {
     pub(super) fn pick_ocr_provider(
         &self,
         requested_provider_id: Option<&str>,
+        runtime_configs: Option<&[crate::apiprovider::runtime_config::OcrProviderRuntimeConfig]>,
     ) -> Result<Arc<dyn crate::providers::traits::OcrProvider>, AppError> {
+        if let (Some(provider_id), Some(configs)) = (requested_provider_id, runtime_configs) {
+            return build_runtime_ocr_provider(provider_id, configs);
+        }
         if let Some(provider_id) = requested_provider_id {
             if let Some(provider) = self.providers.ocr_provider_by_id(provider_id) {
                 return Ok(provider);

@@ -16,8 +16,13 @@ import {
   createOcrTranslatePayload,
 } from '../features/ocr/translationWorkspacePayload';
 import { showScreenshotOverlay } from '../features/screenshot/screenshotOverlayService';
+import {
+  buildEnabledOcrProviderConfigs,
+  resolveOcrProviderRequestId,
+} from '../features/settings/ocrProviderRequest';
 import { TrayAction } from '../features/tray/trayEvents';
 import { TaskResult, TaskState, TaskType } from '../features/task/taskTypes';
+import { OpenInputTranslatePayload } from '../features/translator/inputTranslateEvents';
 import { ShortcutAction, isWindowsTauriRuntime, languageLabel } from './appRuntime';
 
 function makeTaskId() {
@@ -53,6 +58,10 @@ type UseAppActionsOptions = {
   taskState: TaskState;
   setTaskState: (next: TaskState) => void;
 };
+
+function assertNeverAction(action: never): never {
+  throw new Error(`unsupported action: ${action}`);
+}
 
 export function useAppActions({ settings, taskState, setTaskState }: UseAppActionsOptions) {
   const applyTaskState = useCallback(
@@ -91,11 +100,21 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
       }
 
       await presentOcrResultWindow(
-        createOcrRecognizePayload(result, translationWorkspaceLabels(), settings.autoQueryOnOcr),
+        createOcrRecognizePayload(
+          result,
+          translationWorkspaceLabels(),
+          settings.autoQueryOnOcr,
+          settings.defaultTranslateProvider,
+        ),
         taskType,
       );
     },
-    [presentOcrResultWindow, settings.autoQueryOnOcr, translationWorkspaceLabels],
+    [
+      presentOcrResultWindow,
+      settings.autoQueryOnOcr,
+      settings.defaultTranslateProvider,
+      translationWorkspaceLabels,
+    ],
   );
 
   const presentPendingTranslatedTextWorkspace = useCallback(
@@ -105,17 +124,23 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
       }
 
       await presentOcrResultWindow(
-        createOcrTranslatePayload(result, translationWorkspaceLabels(), true),
+        createOcrTranslatePayload(
+          result,
+          translationWorkspaceLabels(),
+          true,
+          settings.defaultTranslateProvider,
+        ),
         taskType,
       );
     },
-    [presentOcrResultWindow, translationWorkspaceLabels],
+    [presentOcrResultWindow, settings.defaultTranslateProvider, translationWorkspaceLabels],
   );
 
   const runSelectionTranslate = useCallback(async () => {
     const outcome = await resolveSelectionWorkflowOutcome(
       {
         autoQueryOnSelection: settings.autoQueryOnSelection,
+        defaultTranslateProvider: settings.defaultTranslateProvider,
         keepResultForSelection: settings.keepResultForSelection,
       },
       translationWorkspaceLabels(),
@@ -128,6 +153,7 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
   }, [
     presentOcrResultWindow,
     settings.autoQueryOnSelection,
+    settings.defaultTranslateProvider,
     settings.keepResultForSelection,
     translationWorkspaceLabels,
   ]);
@@ -144,7 +170,12 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
       });
       return;
     }
-    const next = await triggerOcrRecognize(taskState, settings.primaryLanguage);
+    const next = await triggerOcrRecognize(
+      taskState,
+      settings.primaryLanguage,
+      resolveOcrProviderRequestId(settings.defaultOcrProvider),
+      buildEnabledOcrProviderConfigs(settings.providers),
+    );
     applyTaskState(next);
     if (next.action === 'succeeded') {
       await presentPendingTranslatedTextWorkspace('ocr_translate', next.payload.result);
@@ -152,8 +183,10 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
   }, [
     applyTaskState,
     presentPendingTranslatedTextWorkspace,
+    settings.defaultOcrProvider,
     settings.primaryLanguage,
     settings.secondaryLanguage,
+    settings.providers,
     taskState,
   ]);
 
@@ -168,7 +201,12 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
       });
       return;
     }
-    const next = await triggerOcrRecognize(taskState, settings.primaryLanguage);
+    const next = await triggerOcrRecognize(
+      taskState,
+      settings.primaryLanguage,
+      resolveOcrProviderRequestId(settings.defaultOcrProvider),
+      buildEnabledOcrProviderConfigs(settings.providers),
+    );
     applyTaskState(next);
     if (next.action === 'succeeded') {
       await presentRecognizedTextWorkspace(next.payload.taskType, next.payload.result);
@@ -176,17 +214,38 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
   }, [
     applyTaskState,
     presentRecognizedTextWorkspace,
+    settings.defaultOcrProvider,
     settings.primaryLanguage,
     settings.secondaryLanguage,
+    settings.providers,
     taskState,
   ]);
 
-  const openInputTranslateWorkspace = useCallback(async () => {
-    await presentOcrResultWindow(
-      createInputTranslatePayload(translationWorkspaceLabels()),
-      'input_translate',
-    );
-  }, [presentOcrResultWindow, translationWorkspaceLabels]);
+  const openInputTranslateWorkspace = useCallback(
+    async (request?: OpenInputTranslatePayload) => {
+      const sourceLanguageCode = request?.sourceLang ?? settings.primaryLanguage;
+      const targetLanguageCode = request?.targetLang ?? settings.secondaryLanguage;
+      await presentOcrResultWindow(
+        createInputTranslatePayload(
+          {
+            sourceLanguageCode,
+            sourceLanguageLabel: languageLabel(sourceLanguageCode),
+            targetLanguageCode,
+            targetLanguageLabel: languageLabel(targetLanguageCode),
+          },
+          request?.text ?? '',
+          settings.defaultTranslateProvider,
+        ),
+        'input_translate',
+      );
+    },
+    [
+      presentOcrResultWindow,
+      settings.defaultTranslateProvider,
+      settings.primaryLanguage,
+      settings.secondaryLanguage,
+    ],
+  );
 
   const focusSettingsWindow = useCallback(async () => {
     try {
@@ -209,30 +268,29 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
 
   const executeShortcutAction = useCallback(
     (action: ShortcutAction) => {
-      if (action === 'input_translate') {
-        void openInputTranslateWorkspace();
-        return;
+      switch (action) {
+        case 'input_translate':
+          void openInputTranslateWorkspace();
+          return;
+        case 'selection_translate':
+          void runSelectionTranslate();
+          return;
+        case 'ocr_translate':
+          void runOcrTranslate();
+          return;
+        case 'hide_interface':
+          void hideCurrentWindow();
+          return;
+        case 'show_main_window':
+          return;
+        case 'open_settings':
+          void focusSettingsWindow();
+          return;
+        case 'ocr_recognize':
+          void runOcrRecognize();
+          return;
       }
-      if (action === 'selection_translate') {
-        void runSelectionTranslate();
-        return;
-      }
-      if (action === 'ocr_translate') {
-        void runOcrTranslate();
-        return;
-      }
-      if (action === 'hide_interface') {
-        void hideCurrentWindow();
-        return;
-      }
-      if (action === 'show_main_window') {
-        return;
-      }
-      if (action === 'open_settings') {
-        void focusSettingsWindow();
-        return;
-      }
-      void runOcrRecognize();
+      assertNeverAction(action);
     },
     [
       focusSettingsWindow,
@@ -246,28 +304,26 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
 
   const handleTrayAction = useCallback(
     async (action: TrayAction) => {
-      if (action === 'input_translate') {
-        await openInputTranslateWorkspace();
-        return;
+      switch (action) {
+        case 'input_translate':
+          await openInputTranslateWorkspace();
+          return;
+        case 'selection_translate':
+          await runSelectionTranslate();
+          return;
+        case 'ocr_translate':
+          await runOcrTranslate();
+          return;
+        case 'ocr_recognize':
+          await runOcrRecognize();
+          return;
+        case 'show_main_window':
+          return;
+        case 'open_settings':
+          await focusSettingsWindow();
+          return;
       }
-      if (action === 'selection_translate') {
-        await runSelectionTranslate();
-        return;
-      }
-      if (action === 'ocr_translate') {
-        await runOcrTranslate();
-        return;
-      }
-      if (action === 'ocr_recognize') {
-        await runOcrRecognize();
-        return;
-      }
-      if (action === 'show_main_window') {
-        return;
-      }
-      if (action === 'open_settings') {
-        await focusSettingsWindow();
-      }
+      assertNeverAction(action);
     },
     [
       focusSettingsWindow,
@@ -281,5 +337,6 @@ export function useAppActions({ settings, taskState, setTaskState }: UseAppActio
   return {
     executeShortcutAction,
     handleTrayAction,
+    openInputTranslateWorkspace,
   };
 }

@@ -15,6 +15,8 @@ export type ShortcutConfig = Record<ShortcutId, string>;
 
 export type ToolProviderId =
   | 'localOcr'
+  | 'openai_compatible_ocr'
+  | 'openai_compatible'
   | 'youdao_web'
   | 'bing_web'
   | 'deepl_free'
@@ -22,6 +24,9 @@ export type ToolProviderId =
   | 'google_translate'
   | 'tencent_tmt'
   | 'baidu_fanyi';
+
+export type TranslateProviderId = Exclude<ToolProviderId, 'localOcr' | 'openai_compatible_ocr'>;
+export type OcrProviderId = Extract<ToolProviderId, 'localOcr' | 'openai_compatible_ocr'>;
 
 export type ToolProviderFieldKey =
   | 'apiKey'
@@ -73,6 +78,9 @@ export type ToolProviderDefinition = {
 export type SettingsState = {
   primaryLanguage: string;
   secondaryLanguage: string;
+  defaultTranslateProvider: TranslateProviderId;
+  defaultOcrProvider: OcrProviderId;
+  httpApiPort: number;
   detectionMode: DetectionMode;
   ocrPanelPosition: OcrPanelPosition;
   clearInputOnTranslate: boolean;
@@ -162,6 +170,24 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
     helpText: '当前工具走系统本地能力，不需要配置 API Key。',
   },
   {
+    id: 'openai_compatible_ocr',
+    name: 'OpenAI OCR',
+    group: 'requires_api_key',
+    category: 'OCR',
+    description: '调用 OpenAI 兼容视觉模型做截图 OCR，运行时读取 API Key / Base URL / Model。',
+    fields: [
+      { key: 'apiKey', label: 'API Key', placeholder: 'sk-...', secret: true },
+      { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api.openai.com/v1' },
+      { key: 'model', label: 'Model', placeholder: 'gpt-4o-mini' },
+    ],
+    links: [
+      {
+        label: '查看 OpenAI 兼容 OCR 配置',
+        url: 'https://platform.openai.com/docs/guides/images',
+      },
+    ],
+  },
+  {
     id: 'youdao_web',
     name: 'Youdao翻译',
     group: 'no_api_key',
@@ -180,6 +206,24 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
     fields: [],
     links: [{ label: '打开 Bing Translator', url: 'https://www.bing.com/translator' }],
     helpText: '网页源 provider 依赖网页端动态 token，无需单独配置密钥。',
+  },
+  {
+    id: 'openai_compatible',
+    name: 'OpenAI 翻译',
+    group: 'requires_api_key',
+    category: '翻译',
+    description: '调用 OpenAI 兼容聊天补全接口做文本翻译，运行时读取 API Key / Base URL / Model。',
+    fields: [
+      { key: 'apiKey', label: 'API Key', placeholder: 'sk-...', secret: true },
+      { key: 'baseUrl', label: 'Base URL', placeholder: 'https://api.openai.com/v1' },
+      { key: 'model', label: 'Model', placeholder: 'gpt-4o-mini' },
+    ],
+    links: [
+      {
+        label: '查看 OpenAI 兼容翻译配置',
+        url: 'https://platform.openai.com/docs/guides/text',
+      },
+    ],
   },
   {
     id: 'deepl_free',
@@ -275,6 +319,14 @@ export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
 
 export const DEFAULT_TOOL_PROVIDERS: ToolProviderConfigMap = {
   localOcr: createProviderConfig(true),
+  openai_compatible_ocr: createProviderConfig(false, {
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+  }),
+  openai_compatible: createProviderConfig(false, {
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+  }),
   youdao_web: createProviderConfig(true),
   bing_web: createProviderConfig(true),
   deepl_free: createProviderConfig(false, { baseUrl: 'https://api-free.deepl.com/v2/translate' }),
@@ -296,6 +348,9 @@ export const DEFAULT_TOOL_PROVIDERS: ToolProviderConfigMap = {
 export const DEFAULT_SETTINGS: SettingsState = {
   primaryLanguage: 'zh-CN',
   secondaryLanguage: 'en',
+  defaultTranslateProvider: 'youdao_web',
+  defaultOcrProvider: 'localOcr',
+  httpApiPort: 61928,
   detectionMode: 'system_only',
   ocrPanelPosition: 'top_right',
   clearInputOnTranslate: false,
@@ -311,6 +366,8 @@ export const DEFAULT_SETTINGS: SettingsState = {
   shortcuts: DEFAULT_SHORTCUTS,
   providers: {
     localOcr: { ...DEFAULT_TOOL_PROVIDERS.localOcr },
+    openai_compatible_ocr: { ...DEFAULT_TOOL_PROVIDERS.openai_compatible_ocr },
+    openai_compatible: { ...DEFAULT_TOOL_PROVIDERS.openai_compatible },
     youdao_web: { ...DEFAULT_TOOL_PROVIDERS.youdao_web },
     bing_web: { ...DEFAULT_TOOL_PROVIDERS.bing_web },
     deepl_free: { ...DEFAULT_TOOL_PROVIDERS.deepl_free },

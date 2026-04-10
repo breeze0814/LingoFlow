@@ -1,5 +1,5 @@
 pub mod models;
-mod ocr_execution;
+pub(crate) mod ocr_execution;
 pub mod ocr_text;
 mod provider_selection;
 pub mod service;

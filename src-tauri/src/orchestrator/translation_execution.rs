@@ -15,6 +15,26 @@ struct PendingTranslationTask {
     handle: JoinHandle<ProviderTranslationData>,
 }
 
+struct TranslateTextArgs {
+    request: TaskRequest,
+    task_id: String,
+    text: String,
+}
+
+pub(super) struct TranslateBatchArgs<'a> {
+    pub providers: &'a [TranslateExecutionTarget],
+    pub text: &'a str,
+    pub source_lang: &'a str,
+    pub target_lang: &'a str,
+}
+
+struct TranslateProviderTaskArgs {
+    index: usize,
+    provider_id: String,
+    provider: Arc<dyn crate::providers::traits::TranslateProvider>,
+    request: TranslateRequest,
+}
+
 impl Orchestrator {
     pub(super) async fn handle_input_translate(
         &self,
@@ -22,7 +42,12 @@ impl Orchestrator {
     ) -> Result<TaskResponse, AppError> {
         let task_id = request.task_id.clone();
         let text = request.text.clone().unwrap_or_default();
-        self.translate_text(request, task_id, text).await
+        self.translate_text(TranslateTextArgs {
+            request,
+            task_id,
+            text,
+        })
+        .await
     }
 
     pub(super) async fn handle_selection_translate(
@@ -30,59 +55,61 @@ impl Orchestrator {
         request: TaskRequest,
     ) -> Result<TaskResponse, AppError> {
         let task_id = request.task_id.clone();
-        let text = match crate::platform::selection::read_selected_text() {
+        let text = match read_selected_text_blocking().await {
             Ok(text) => text,
             Err(error) => return Ok(Self::failed(task_id, error)),
         };
-        self.translate_text(request, task_id, text).await
+        self.translate_text(TranslateTextArgs {
+            request,
+            task_id,
+            text,
+        })
+        .await
     }
 
-    async fn translate_text(
-        &self,
-        request: TaskRequest,
-        task_id: String,
-        text: String,
-    ) -> Result<TaskResponse, AppError> {
-        if text.trim().is_empty() {
+    async fn translate_text(&self, args: TranslateTextArgs) -> Result<TaskResponse, AppError> {
+        if args.text.trim().is_empty() {
             return Ok(Self::failed(
-                task_id,
+                args.task_id,
                 AppError::new(ErrorCode::EmptyInput, "Input text is empty", false),
             ));
         }
 
-        let source_lang = request
+        let source_lang = args
+            .request
             .source_lang
             .unwrap_or_else(|| self.config_store.get().app.source_lang);
-        let target_lang = request
+        let target_lang = args
+            .request
             .target_lang
             .unwrap_or_else(|| self.config_store.get().app.target_lang);
         let providers = match self.pick_translate_providers(
-            request.translate_provider_id.as_deref(),
-            request.translate_provider_configs.as_deref(),
+            args.request.translate_provider_id.as_deref(),
+            args.request.translate_provider_configs.as_deref(),
         ) {
             Ok(providers) => providers,
-            Err(error) => return Ok(Self::failed(task_id, error)),
+            Err(error) => return Ok(Self::failed(args.task_id, error)),
         };
         let translation_results = self
-            .translate_with_providers(
-                &providers,
-                &text,
-                source_lang.as_str(),
-                target_lang.as_str(),
-            )
+            .translate_with_providers(TranslateBatchArgs {
+                providers: &providers,
+                text: &args.text,
+                source_lang: source_lang.as_str(),
+                target_lang: target_lang.as_str(),
+            })
             .await;
         let Some(primary_result) = Self::first_successful_translation(&translation_results) else {
             return Ok(Self::failed(
-                task_id,
+                args.task_id,
                 Self::first_translation_error(&translation_results),
             ));
         };
 
         Ok(Self::success(
-            task_id,
+            args.task_id,
             TaskData {
                 provider_id: primary_result.provider_id.clone(),
-                source_text: text,
+                source_text: args.text,
                 translated_text: primary_result.translated_text.clone(),
                 recognized_text: None,
                 translation_results,
@@ -93,28 +120,30 @@ impl Orchestrator {
 
     pub(super) async fn translate_with_providers(
         &self,
-        providers: &[TranslateExecutionTarget],
-        text: &str,
-        source_lang: &str,
-        target_lang: &str,
+        args: TranslateBatchArgs<'_>,
     ) -> Vec<ProviderTranslationData> {
-        let mut results = (0..providers.len())
+        let mut results = (0..args.providers.len())
             .map(|_| None)
             .collect::<Vec<Option<ProviderTranslationData>>>();
         let mut pending = Vec::new();
 
-        for (index, target) in providers.iter().enumerate() {
+        for (index, target) in args.providers.iter().enumerate() {
             match target {
                 TranslateExecutionTarget::Ready {
                     provider_id,
                     provider,
                 } => pending.push(Self::spawn_translate_provider_task(
-                    index,
-                    provider_id,
-                    provider.clone(),
-                    text,
-                    source_lang,
-                    target_lang,
+                    TranslateProviderTaskArgs {
+                        index,
+                        provider_id: provider_id.to_string(),
+                        provider: provider.clone(),
+                        request: TranslateRequest {
+                            text: args.text.to_string(),
+                            source_lang: args.source_lang.to_string(),
+                            target_lang: args.target_lang.to_string(),
+                            timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
+                        },
+                    },
                 )),
                 TranslateExecutionTarget::BuildError { provider_id, error } => {
                     results[index] = Some(Self::build_provider_error_result(provider_id, error));
@@ -138,34 +167,22 @@ impl Orchestrator {
         }
     }
 
-    fn spawn_translate_provider_task(
-        index: usize,
-        provider_id: &str,
-        provider: Arc<dyn crate::providers::traits::TranslateProvider>,
-        text: &str,
-        source_lang: &str,
-        target_lang: &str,
-    ) -> PendingTranslationTask {
-        let provider_id = provider_id.to_string();
-        let request = TranslateRequest {
-            text: text.to_string(),
-            source_lang: source_lang.to_string(),
-            target_lang: target_lang.to_string(),
-            timeout_ms: DEFAULT_TRANSLATE_TIMEOUT_MS,
-        };
+    fn spawn_translate_provider_task(args: TranslateProviderTaskArgs) -> PendingTranslationTask {
         let handle = tokio::spawn(Self::run_translate_provider_task(
-            provider_id.clone(),
-            provider,
-            request,
+            args.provider_id.clone(),
+            args.provider,
+            args.request,
         ));
         PendingTranslationTask {
-            index,
-            provider_id,
+            index: args.index,
+            provider_id: args.provider_id,
             handle,
         }
     }
 
-    async fn await_translate_provider_task(task: PendingTranslationTask) -> ProviderTranslationData {
+    async fn await_translate_provider_task(
+        task: PendingTranslationTask,
+    ) -> ProviderTranslationData {
         match task.handle.await {
             Ok(result) => result,
             Err(error) => ProviderTranslationData {
@@ -200,6 +217,18 @@ impl Orchestrator {
     }
 }
 
+async fn read_selected_text_blocking() -> Result<String, AppError> {
+    tokio::task::spawn_blocking(crate::platform::selection::read_selected_text)
+        .await
+        .map_err(|error| {
+            AppError::new(
+                ErrorCode::InternalError,
+                format!("Selection task failed to join: {error}"),
+                true,
+            )
+        })?
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -207,6 +236,7 @@ mod tests {
 
     use crate::errors::app_error::AppError;
     use crate::orchestrator::service::Orchestrator;
+    use crate::orchestrator::translation_execution::TranslateBatchArgs;
     use crate::providers::registry::ProviderRegistry;
     use crate::providers::runtime_translate_factory::TranslateExecutionTarget;
     use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateResult};
@@ -259,7 +289,12 @@ mod tests {
 
         let started_at = Instant::now();
         let results = orchestrator
-            .translate_with_providers(&providers, "hello", "en", "zh-CN")
+            .translate_with_providers(TranslateBatchArgs {
+                providers: &providers,
+                text: "hello",
+                source_lang: "en",
+                target_lang: "zh-CN",
+            })
             .await;
         let elapsed = started_at.elapsed();
 

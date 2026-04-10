@@ -1,6 +1,6 @@
 # LingoFlow
 
-一个轻量桌面翻译器项目，目标是先做稳 `macOS V1`，功能聚焦在：
+一个轻量桌面翻译器项目，当前以 `macOS` 为正式支持平台、`Windows` 为实验支持平台，功能聚焦在：
 
 - 划词翻译
 - 输入翻译
@@ -21,6 +21,8 @@
 - `npm run typecheck`
 - `npm run lint`
 - `npm run test`
+- `npm run build:frontend`
+- `npm run test:swift`
 - `npm run check`
 
 ## 文档入口

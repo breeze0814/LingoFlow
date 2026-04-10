@@ -1,9 +1,10 @@
+#![cfg_attr(test, allow(dead_code))]
+
 use crate::errors::app_error::AppError;
-#[cfg(not(test))]
 use crate::errors::error_code::ErrorCode;
 
 #[cfg(test)]
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 #[cfg(test)]
 use std::sync::Mutex;
 
@@ -15,6 +16,14 @@ pub struct KeychainStore {
 #[cfg(test)]
 pub struct KeychainStore {
     entries: Mutex<HashMap<String, String>>,
+    failures: Mutex<KeychainFailures>,
+}
+
+#[cfg(test)]
+#[derive(Default)]
+struct KeychainFailures {
+    set: HashSet<String>,
+    delete: HashSet<String>,
 }
 
 impl KeychainStore {
@@ -29,6 +38,7 @@ impl KeychainStore {
     pub fn new(_service_name: impl Into<String>) -> Self {
         Self {
             entries: Mutex::new(HashMap::new()),
+            failures: Mutex::new(KeychainFailures::default()),
         }
     }
 
@@ -52,6 +62,13 @@ impl KeychainStore {
 
     #[cfg(test)]
     pub fn set(&self, key: &str, value: &str) -> Result<(), AppError> {
+        if self.should_fail_set(key) {
+            return Err(AppError::new(
+                ErrorCode::InternalError,
+                format!("Injected keychain set failure for `{key}`"),
+                false,
+            ));
+        }
         let mut entries = self.entries.lock().expect("keychain lock poisoned");
         entries.insert(key.to_string(), value.to_string());
         Ok(())
@@ -104,8 +121,42 @@ impl KeychainStore {
 
     #[cfg(test)]
     pub fn delete(&self, key: &str) -> Result<(), AppError> {
+        if self.should_fail_delete(key) {
+            return Err(AppError::new(
+                ErrorCode::InternalError,
+                format!("Injected keychain delete failure for `{key}`"),
+                false,
+            ));
+        }
         let mut entries = self.entries.lock().expect("keychain lock poisoned");
         entries.remove(key);
         Ok(())
+    }
+
+    #[cfg(test)]
+    pub fn fail_on_set(&self, key: &str) {
+        let mut failures = self
+            .failures
+            .lock()
+            .expect("keychain failure lock poisoned");
+        failures.set.insert(key.to_string());
+    }
+
+    #[cfg(test)]
+    fn should_fail_set(&self, key: &str) -> bool {
+        let failures = self
+            .failures
+            .lock()
+            .expect("keychain failure lock poisoned");
+        failures.set.contains(key)
+    }
+
+    #[cfg(test)]
+    fn should_fail_delete(&self, key: &str) -> bool {
+        let failures = self
+            .failures
+            .lock()
+            .expect("keychain failure lock poisoned");
+        failures.delete.contains(key)
     }
 }

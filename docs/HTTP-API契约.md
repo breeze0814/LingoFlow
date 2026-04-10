@@ -89,12 +89,12 @@
 成功响应 `200`，失败或取消按通用结构返回。
 
 ### 4.3 `GET /input_translate`
-返回一个 `accepted` 任务响应，供调用方打开输入工作区。
+返回一个 `accepted` 任务响应，并实际打开输入工作区。
 
 可选查询参数：
 - `text`
 - `target_lang`
-- `text`
+- `source_lang`
 
 成功响应 `200`：
 ```json
@@ -116,6 +116,7 @@
 可选查询参数：
 - `source_lang_hint`
 - `provider_id`
+- `ocr_provider_id`
 
 用户完成截图后返回最终结果。
 
@@ -141,7 +142,9 @@
 - `text` 不能为空字符串。
 - `source_lang` 默认 `auto`。
 - `target_lang` 缺失时使用配置默认值。
-- `provider_id` 缺失时，翻译请求会按当前可用 Provider 列表执行；如果调用方显式指定，则只使用该 Provider。
+- `provider_id` 缺失时，翻译请求优先使用当前设置中的默认翻译 Provider；若默认项不可用，则按当前可用 Provider 列表执行。调用方显式指定时只使用该 Provider。
+- `ocr_provider_id` 缺失时使用当前默认 OCR Provider。
+- `GET /input_translate` 仅返回 `accepted`，实际翻译是否执行由工作区内用户操作决定。
 
 ## 7. 非目标
 - V1 不支持上传二进制图片做 OCR。

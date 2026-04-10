@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use crate::errors::app_error::AppError;
 use crate::http_api::controller::HttpServerController;
+use crate::http_api::state::HttpApiState;
+use crate::http_api::ui_dispatcher::TauriHttpUiDispatcher;
 use crate::orchestrator::service::Orchestrator;
 use crate::providers::registry::ProviderRegistry;
 use crate::storage::config_store::ConfigStore;
@@ -13,6 +15,7 @@ pub struct AppState {
     pub orchestrator: Arc<Orchestrator>,
     pub config_store: Arc<ConfigStore>,
     pub http_server_controller: Arc<HttpServerController>,
+    pub http_api_state: Arc<HttpApiState>,
     #[cfg(target_os = "windows")]
     pub providers: Arc<ProviderRegistry>,
     pub keychain_store: Arc<KeychainStore>,
@@ -39,14 +42,22 @@ impl AppState {
                     runtime_settings.secondary_language,
                 );
                 config_store.set_http_api_enabled(runtime_settings.http_api_enabled);
+                config_store.set_http_api_port(runtime_settings.http_api_port);
             }
         }
         let providers = Arc::new(ProviderRegistry::new());
         let orchestrator = Arc::new(Orchestrator::new(config_store.clone(), providers.clone()));
+        let http_api_state = Arc::new(HttpApiState::new(
+            orchestrator.clone(),
+            Arc::new(TauriHttpUiDispatcher::new(app.clone())),
+            settings_store.clone(),
+            keychain_store.clone(),
+        ));
         Ok(Self {
             orchestrator,
             config_store,
             http_server_controller,
+            http_api_state,
             #[cfg(target_os = "windows")]
             providers,
             keychain_store,

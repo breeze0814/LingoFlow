@@ -1,11 +1,12 @@
 import { KeyboardEvent, ReactNode, useState } from 'react';
+import { PermissionStatus } from './permissionStatus';
 import { DEFAULT_SETTINGS, SettingsState } from './settingsTypes';
 import { SETTINGS_TAB_ITEMS, SettingsTabId } from './settingsTabs';
 import { renderTabContent } from './settingsPanelSections';
 
-const HIDDEN_TOOL_PROVIDER_IDS = new Set(['localOcr']);
-
 type SettingsPanelProps = {
+  onRefreshPermissions?: () => void;
+  permissionStatus?: PermissionStatus | null;
   value: SettingsState;
   onChange: (next: SettingsState) => void;
 };
@@ -26,9 +27,7 @@ function getActiveItem(tabId: SettingsTabId) {
 
 function getTabStatus(tabId: SettingsTabId, value: SettingsState): string {
   if (tabId === 'tool') {
-    const enabledCount = Object.entries(value.providers).filter(
-      ([providerId, item]) => !HIDDEN_TOOL_PROVIDER_IDS.has(providerId) && item.enabled,
-    ).length;
+    const enabledCount = Object.values(value.providers).filter((item) => item.enabled).length;
     return `${enabledCount} 个工具已启用`;
   }
   if (tabId === 'general') {
@@ -148,7 +147,12 @@ function SettingsContentPane(props: SettingsContentPaneProps) {
   );
 }
 
-export function SettingsPanel({ value, onChange }: SettingsPanelProps) {
+export function SettingsPanel({
+  value,
+  onChange,
+  permissionStatus,
+  onRefreshPermissions,
+}: SettingsPanelProps) {
   const current = value ?? DEFAULT_SETTINGS;
   const [activeTab, setActiveTab] = useState<SettingsTabId>('tool');
 
@@ -175,7 +179,10 @@ export function SettingsPanel({ value, onChange }: SettingsPanelProps) {
       />
       <div className="settingsShell">
         <SettingsContentPane activeTab={activeTab} value={current}>
-          {renderTabContent(activeTab, current, onChange)}
+          {renderTabContent(activeTab, current, onChange, {
+            permissionStatus,
+            onRefreshPermissions,
+          })}
         </SettingsContentPane>
       </div>
     </section>

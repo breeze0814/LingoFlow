@@ -3,10 +3,14 @@ use tauri::State;
 
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
+use crate::runtime_settings_sync::{
+    RuntimeSettingsDeps, RuntimeSettingsInput, RuntimeSettingsOutput,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct RuntimeSettingsPayload {
     pub http_api_enabled: bool,
+    pub http_api_port: u16,
     pub source_lang: String,
     pub target_lang: String,
 }
@@ -22,23 +26,26 @@ pub async fn sync_runtime_settings(
     state: State<'_, AppState>,
     payload: RuntimeSettingsPayload,
 ) -> Result<RuntimeSettingsResponse, AppError> {
-    state
-        .config_store
-        .set_app_languages(payload.source_lang, payload.target_lang);
-    if payload.http_api_enabled {
-        let opts = state.config_store.http_server_options();
-        state
-            .http_server_controller
-            .start(opts, state.orchestrator.clone())
-            .await?;
-        state.config_store.set_http_api_enabled(true);
-    } else {
-        state.http_server_controller.stop().await?;
-        state.config_store.set_http_api_enabled(false);
-    }
+    let result = crate::runtime_settings_sync::sync_runtime_settings(
+        RuntimeSettingsDeps {
+            config_store: state.config_store.clone(),
+            http_server_controller: state.http_server_controller.clone(),
+            http_api_state: state.http_api_state.clone(),
+        },
+        RuntimeSettingsInput {
+            http_api_enabled: payload.http_api_enabled,
+            http_api_port: payload.http_api_port,
+            source_lang: payload.source_lang,
+            target_lang: payload.target_lang,
+        },
+    )
+    .await?;
+    Ok(map_runtime_settings_response(result))
+}
 
-    Ok(RuntimeSettingsResponse {
-        http_api_enabled: state.config_store.http_api_enabled(),
-        http_api_running: state.http_server_controller.is_running().await?,
-    })
+fn map_runtime_settings_response(result: RuntimeSettingsOutput) -> RuntimeSettingsResponse {
+    RuntimeSettingsResponse {
+        http_api_enabled: result.http_api_enabled,
+        http_api_running: result.http_api_running,
+    }
 }

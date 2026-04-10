@@ -1,9 +1,10 @@
-import { ToolProviderConfigMap, ToolProviderId } from './settingsTypes';
+import { ToolProviderConfigMap, TranslateProviderId } from './settingsTypes';
 
 export type TranslateProviderRequestConfig = {
-  id: Exclude<ToolProviderId, 'localOcr'>;
+  id: TranslateProviderId;
   apiKey?: string;
   baseUrl?: string;
+  model?: string;
   region?: string;
   secretId?: string;
   secretKey?: string;
@@ -11,7 +12,8 @@ export type TranslateProviderRequestConfig = {
   appSecret?: string;
 };
 
-const TRANSLATE_PROVIDER_ORDER: Array<Exclude<ToolProviderId, 'localOcr'>> = [
+export const TRANSLATE_PROVIDER_ORDER: TranslateProviderId[] = [
+  'openai_compatible',
   'youdao_web',
   'bing_web',
   'deepl_free',
@@ -21,28 +23,35 @@ const TRANSLATE_PROVIDER_ORDER: Array<Exclude<ToolProviderId, 'localOcr'>> = [
   'baidu_fanyi',
 ];
 
+function withDefinedFields(config: TranslateProviderRequestConfig): TranslateProviderRequestConfig {
+  return Object.fromEntries(
+    Object.entries(config).filter(([, value]) => value !== undefined),
+  ) as TranslateProviderRequestConfig;
+}
+
 export function buildEnabledTranslateProviderConfigs(
   providers: ToolProviderConfigMap,
 ): TranslateProviderRequestConfig[] {
   return TRANSLATE_PROVIDER_ORDER.filter((providerId) => providers[providerId].enabled).map(
     (providerId) => {
       const provider = providers[providerId];
-      return {
+      return withDefinedFields({
         id: providerId,
         apiKey: provider.apiKey || undefined,
         baseUrl: provider.baseUrl || undefined,
+        model: provider.model || undefined,
         region: provider.region || undefined,
         secretId: provider.secretId || undefined,
         secretKey: provider.secretKey || undefined,
         appId: provider.appId || undefined,
         appSecret: provider.appSecret || undefined,
-      };
+      });
     },
   );
 }
 
 export function buildEnabledTranslateProviderIds(
   providers: ToolProviderConfigMap,
-): Array<Exclude<ToolProviderId, 'localOcr'>> {
+): TranslateProviderId[] {
   return TRANSLATE_PROVIDER_ORDER.filter((providerId) => providers[providerId].enabled);
 }
