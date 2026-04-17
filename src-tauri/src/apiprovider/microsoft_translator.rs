@@ -27,6 +27,13 @@ pub(crate) struct MicrosoftTranslatorConfig {
     pub(crate) base_url: String,
 }
 
+/// Request context for Microsoft translation
+struct MicrosoftTranslateContext<'a> {
+    req: &'a TranslateRequest,
+    query: &'a [(String, String)],
+    timeout_ms: u64,
+}
+
 #[derive(Serialize)]
 struct AzureTranslateBodyItem {
     #[serde(rename = "Text")]
@@ -108,21 +115,19 @@ impl MicrosoftTranslatorProvider {
 
     async fn request_translate(
         &self,
-        req: &TranslateRequest,
-        query: &[(String, String)],
-        timeout_ms: u64,
+        ctx: MicrosoftTranslateContext<'_>,
     ) -> Result<Vec<AzureTranslateResponseItem>, AppError> {
         let endpoint = format!("{}/translate", self.config.base_url.trim_end_matches('/'));
         let headers = self.build_headers()?;
         let body = vec![AzureTranslateBodyItem {
-            text: req.text.clone(),
+            text: ctx.req.text.clone(),
         }];
         let response = self
             .client
             .post(endpoint)
             .headers(headers)
-            .query(query)
-            .timeout(Duration::from_millis(timeout_ms))
+            .query(ctx.query)
+            .timeout(Duration::from_millis(ctx.timeout_ms))
             .json(&body)
             .send()
             .await
@@ -164,7 +169,14 @@ impl TranslateProvider for MicrosoftTranslatorProvider {
     async fn translate(&self, req: TranslateRequest) -> Result<TranslateResult, AppError> {
         let timeout_ms = normalize_timeout(req.timeout_ms);
         let query = self.build_query(&req)?;
-        let payload = self.request_translate(&req, &query, timeout_ms).await?;
+
+        let ctx = MicrosoftTranslateContext {
+            req: &req,
+            query: &query,
+            timeout_ms,
+        };
+
+        let payload = self.request_translate(ctx).await?;
         Self::parse_result(req, payload)
     }
 
