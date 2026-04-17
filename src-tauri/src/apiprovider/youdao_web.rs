@@ -54,15 +54,6 @@ struct YoudaoWebConfig {
     translate_endpoint: String,
 }
 
-/// Request context for Youdao translation
-struct YoudaoTranslationContext<'a> {
-    req: &'a TranslateRequest,
-    source_lang: &'a str,
-    target_lang: &'a str,
-    timeout_ms: u64,
-    secret_key: &'a str,
-}
-
 impl YoudaoWebProvider {
     pub fn from_env() -> Option<Self> {
         Some(Self {

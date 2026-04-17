@@ -131,6 +131,7 @@ impl TaskRequest {
         )
     }
 
+    #[allow(dead_code)]
     pub fn ocr_recognize(source_lang_hint: Option<String>, provider_id: Option<String>) -> Self {
         Self::ocr_recognize_with_configs(source_lang_hint, provider_id, None)
     }

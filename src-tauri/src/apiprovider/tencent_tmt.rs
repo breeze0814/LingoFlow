@@ -40,13 +40,6 @@ pub(crate) struct TencentTmtConfig {
     pub(crate) signer: TencentTmtSigner,
 }
 
-/// Request context for Tencent translation
-struct TencentTranslateContext {
-    headers: HeaderMap,
-    body_json: String,
-    timeout_ms: u64,
-}
-
 #[derive(Serialize)]
 struct TencentTranslateBody {
     #[serde(rename = "SourceText")]

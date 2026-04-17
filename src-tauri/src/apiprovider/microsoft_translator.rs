@@ -33,13 +33,6 @@ pub(crate) struct MicrosoftTranslatorConfig {
     pub(crate) base_url: String,
 }
 
-/// Request context for Microsoft translation
-struct MicrosoftTranslateContext<'a> {
-    req: &'a TranslateRequest,
-    query: &'a [(String, String)],
-    timeout_ms: u64,
-}
-
 #[derive(Serialize)]
 struct AzureTranslateBodyItem {
     #[serde(rename = "Text")]

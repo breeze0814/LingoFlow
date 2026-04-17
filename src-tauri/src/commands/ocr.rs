@@ -2,7 +2,6 @@ use tauri::State;
 
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
-use crate::orchestrator::ocr_execution::CapturedOcrInput;
 use crate::orchestrator::models::{
     CaptureRect, OcrTranslateTaskOptions, TaskCommandPayload, TaskRequest, TaskResponse,
 };
@@ -16,8 +15,10 @@ pub struct OcrRegionCommandPayload {
     pub target_lang: Option<String>,
     pub provider_id: Option<String>,
     pub ocr_provider_id: Option<String>,
+    #[allow(dead_code)]
     pub ocr_provider_configs:
         Option<Vec<crate::apiprovider::runtime_config::OcrProviderRuntimeConfig>>,
+    #[allow(dead_code)]
     pub translate_provider_configs:
         Option<Vec<crate::apiprovider::runtime_config::TranslateProviderRuntimeConfig>>,
 }

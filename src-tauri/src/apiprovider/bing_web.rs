@@ -40,15 +40,6 @@ struct BingWebConfig {
     curl_path: String,
 }
 
-/// Request context for Bing translation
-struct BingTranslationContext<'a> {
-    req: &'a TranslateRequest,
-    source_lang: &'a str,
-    target_lang: &'a str,
-    timeout_ms: u64,
-    context: &'a BingPageContext,
-}
-
 impl BingWebProvider {
     pub fn from_env() -> Option<Self> {
         Some(Self {

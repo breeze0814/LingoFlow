@@ -102,14 +102,14 @@ fn ensure_binary_parent_dir(binary_path: &Path) {
     });
 }
 
-fn set_executable_permissions(binary_path: &Path) {
+fn set_executable_permissions(_binary_path: &Path) {
     #[cfg(unix)]
     {
         let permissions = fs::Permissions::from_mode(0o755);
-        fs::set_permissions(binary_path, permissions).unwrap_or_else(|error| {
+        fs::set_permissions(_binary_path, permissions).unwrap_or_else(|error| {
             panic!(
                 "failed to mark helper binary as executable at {}: {error}",
-                binary_path.display()
+                _binary_path.display()
             )
         });
     }

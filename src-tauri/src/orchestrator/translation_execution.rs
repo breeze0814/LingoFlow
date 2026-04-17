@@ -9,31 +9,6 @@ use crate::orchestrator::service::{Orchestrator, DEFAULT_TRANSLATE_TIMEOUT_MS};
 use crate::providers::runtime_translate_factory::TranslateExecutionTarget;
 use crate::providers::traits::TranslateRequest;
 
-/// Context for translation operations
-struct TranslationContext {
-    request: TaskRequest,
-    task_id: String,
-    text: String,
-}
-
-/// Context for provider translation
-pub(super) struct ProviderTranslationContext<'a> {
-    pub providers: &'a [TranslateExecutionTarget],
-    pub text: &'a str,
-    pub source_lang: &'a str,
-    pub target_lang: &'a str,
-}
-
-/// Context for spawning translation task
-struct TranslationTaskContext<'a> {
-    provider: &'a Arc<dyn crate::providers::traits::TranslateProvider>,
-    text: String,
-    source_lang: String,
-    target_lang: String,
-    timeout_ms: u64,
-    index: usize,
-}
-
 struct PendingTranslationTask {
     index: usize,
     provider_id: String,

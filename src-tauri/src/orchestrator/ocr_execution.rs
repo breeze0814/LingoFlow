@@ -4,10 +4,9 @@ use std::path::PathBuf;
 
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
-use crate::orchestrator::models::{CaptureRect, TaskData, TaskRequest, TaskResponse, TaskType};
+use crate::orchestrator::models::{TaskData, TaskRequest, TaskResponse, TaskType};
 use crate::orchestrator::ocr_text::normalize_ocr_text;
 use crate::orchestrator::service::{OcrExecution, Orchestrator, DEFAULT_OCR_TIMEOUT_MS};
-use crate::orchestrator::translation_execution::ProviderTranslationContext;
 use crate::platform::capture::capture_interactive_image;
 use crate::providers::traits::OcrRequest;
 

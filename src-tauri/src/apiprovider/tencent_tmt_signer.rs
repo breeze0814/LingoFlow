@@ -24,14 +24,6 @@ pub struct TencentTmtSigner {
     host: String,
 }
 
-/// Parameters for Tencent authorization building
-pub struct TencentAuthParams<'a> {
-    pub action: &'a str,
-    pub timestamp: i64,
-    pub date: &'a str,
-    pub payload: &'a str,
-}
-
 impl TencentTmtSigner {
     pub fn new(secret_id: String, secret_key: String, host: String) -> Self {
         Self {

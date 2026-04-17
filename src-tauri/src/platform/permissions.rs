@@ -49,6 +49,7 @@ pub fn read_permission_status() -> Result<PermissionStatus, AppError> {
     })
 }
 
+#[allow(dead_code)]
 fn parse_permission_state(value: Option<&str>) -> Result<PermissionState, AppError> {
     match value.unwrap_or("unknown") {
         "granted" => Ok(PermissionState::Granted),
