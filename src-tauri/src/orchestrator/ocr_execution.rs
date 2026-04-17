@@ -3,6 +3,7 @@ use crate::errors::error_code::ErrorCode;
 use crate::orchestrator::models::{CaptureRect, TaskData, TaskRequest, TaskResponse, TaskType};
 use crate::orchestrator::ocr_text::normalize_ocr_text;
 use crate::orchestrator::service::{OcrExecution, Orchestrator, DEFAULT_OCR_TIMEOUT_MS};
+use crate::orchestrator::translation_execution::ProviderTranslationContext;
 use crate::platform::capture::capture_interactive_image;
 use crate::providers::traits::OcrRequest;
 
@@ -142,12 +143,12 @@ impl Orchestrator {
             .target_lang
             .unwrap_or_else(|| self.config_store.get().app.target_lang);
         let translation_results = self
-            .translate_with_providers(
-                &providers,
-                &ocr.recognized_text,
-                source_lang.as_str(),
-                target_lang.as_str(),
-            )
+            .translate_with_providers(ProviderTranslationContext {
+                providers: &providers,
+                text: &ocr.recognized_text,
+                source_lang: &source_lang,
+                target_lang: &target_lang,
+            })
             .await;
         let Some(primary_result) = Self::first_successful_translation(&translation_results) else {
             return Ok(Self::failed(
