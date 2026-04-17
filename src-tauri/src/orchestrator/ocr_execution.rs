@@ -21,6 +21,13 @@ struct OcrImageContext<'a> {
     capture_rect: CaptureRect,
 }
 
+/// Context for finishing OCR translate
+struct FinishOcrTranslateContext {
+    task_id: String,
+    request: TaskRequest,
+    ocr: OcrExecution,
+}
+
 impl Orchestrator {
     pub async fn execute_captured_ocr(
         &self,
@@ -99,7 +106,12 @@ impl Orchestrator {
         };
         println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
 
-        self.finish_ocr_translate(task_id, request, ocr).await
+        self.finish_ocr_translate(FinishOcrTranslateContext {
+            task_id,
+            request,
+            ocr,
+        })
+        .await
     }
 
     async fn handle_ocr_translate_from_image(
@@ -120,52 +132,57 @@ impl Orchestrator {
         };
         println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
 
-        self.finish_ocr_translate(task_id, ctx.request, ocr).await
+        self.finish_ocr_translate(FinishOcrTranslateContext {
+            task_id,
+            request: ctx.request,
+            ocr,
+        })
+        .await
     }
 
     async fn finish_ocr_translate(
         &self,
-        task_id: String,
-        request: TaskRequest,
-        ocr: OcrExecution,
+        ctx: FinishOcrTranslateContext,
     ) -> Result<TaskResponse, AppError> {
         let providers = match self.pick_translate_providers(
-            request.translate_provider_id.as_deref(),
-            request.translate_provider_configs.as_deref(),
+            ctx.request.translate_provider_id.as_deref(),
+            ctx.request.translate_provider_configs.as_deref(),
         ) {
             Ok(providers) => providers,
-            Err(error) => return Ok(Self::failed(task_id, error)),
+            Err(error) => return Ok(Self::failed(ctx.task_id, error)),
         };
-        let source_lang = request
+        let source_lang = ctx
+            .request
             .source_lang
             .unwrap_or_else(|| self.config_store.get().app.source_lang);
-        let target_lang = request
+        let target_lang = ctx
+            .request
             .target_lang
             .unwrap_or_else(|| self.config_store.get().app.target_lang);
         let translation_results = self
             .translate_with_providers(ProviderTranslationContext {
                 providers: &providers,
-                text: &ocr.recognized_text,
+                text: &ctx.ocr.recognized_text,
                 source_lang: &source_lang,
                 target_lang: &target_lang,
             })
             .await;
         let Some(primary_result) = Self::first_successful_translation(&translation_results) else {
             return Ok(Self::failed(
-                task_id,
+                ctx.task_id.clone(),
                 Self::first_translation_error(&translation_results),
             ));
         };
 
         Ok(Self::success(
-            task_id,
+            ctx.task_id,
             TaskData {
                 provider_id: primary_result.provider_id.clone(),
-                source_text: ocr.recognized_text.clone(),
+                source_text: ctx.ocr.recognized_text.clone(),
                 translated_text: primary_result.translated_text.clone(),
-                recognized_text: Some(ocr.recognized_text),
+                recognized_text: Some(ctx.ocr.recognized_text),
                 translation_results,
-                capture_rect: ocr.capture_rect,
+                capture_rect: ctx.ocr.capture_rect,
             },
         ))
     }
