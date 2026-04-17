@@ -8,22 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- Rust Clippy warnings: eliminated all 18 too_many_arguments warnings
+- **Rust Clippy warnings: 100% elimination of too_many_arguments warnings**
   - API providers: Bing Web, Youdao Web, Microsoft Translator, Tencent TMT (6 warnings)
-  - Orchestrator: OCR execution and translation execution (8 warnings)
+  - Orchestrator: OCR execution and translation execution (9 warnings)
+  - Platform: Windows capture (png_encoding, script_builder) (2 warnings)
+  - Providers: Tesseract JS bridge (1 warning)
+  - Total: 18 → 0 warnings eliminated
   - Refactored using context objects for better code organization
-- Code quality: all tests pass (52 tests)
+- Code quality: all tests pass (52 Rust + 81 frontend = 133 tests)
+- TypeScript: already using best practices (unknown + type guards instead of any)
 
 ### Added
 - Windows platform support (core features)
-- Comprehensive test coverage (50+ tests)
+- Comprehensive test coverage (133 tests total)
 - CI/CD: GitHub Actions workflow for automated testing
 - LICENSE: MIT License
 - CHANGELOG: Following Keep a Changelog format
 
 ### Changed
 - Documentation: synced README and CLAUDE.md with current project state
-- Architecture: improved parameter passing with context objects
+- Architecture: improved parameter passing with 15+ context objects
 
 ## [0.1.0] - 2026-04-08
 
