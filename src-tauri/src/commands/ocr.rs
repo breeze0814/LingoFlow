@@ -2,7 +2,7 @@ use tauri::State;
 
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
-use crate::orchestrator::ocr_execution::CapturedOcrContext;
+use crate::orchestrator::ocr_execution::CapturedOcrInput;
 use crate::orchestrator::models::{
     CaptureRect, OcrTranslateTaskOptions, TaskCommandPayload, TaskRequest, TaskResponse,
 };

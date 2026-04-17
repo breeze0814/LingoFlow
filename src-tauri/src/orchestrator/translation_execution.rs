@@ -155,7 +155,7 @@ impl Orchestrator {
         for (index, target) in args.providers.iter().enumerate() {
             match target {
                 TranslateExecutionTarget::Ready {
-                    provider_id: _,
+                    provider_id,
                     provider,
                 } => pending.push(Self::spawn_translate_provider_task(
                     TranslateProviderTaskArgs {
