@@ -20,7 +20,11 @@ import {
 import { showOcrResultWindow } from '../ocr/ocrResultWindowService';
 import { ensureCaptureExcluded } from './screenshotOverlayExclude';
 import { TaskState } from '../task/taskTypes';
-import { loadSettingsFromStorage } from '../settings/settingsStorage';
+import {
+  buildEnabledOcrProviderConfigs,
+  resolveOcrProviderRequestId,
+} from '../settings/ocrProviderRequest';
+import { loadSettingsForTranslation } from '../settings/nativeSettingsStorage';
 
 type DragState = {
   startX: number;
@@ -174,7 +178,7 @@ export function ScreenshotOverlayApp() {
     if (!payload) {
       return;
     }
-    const settings = loadSettingsFromStorage();
+    const settings = await loadSettingsForTranslation();
 
     const captureRect = buildPhysicalCaptureRect(nextSelection, payload.monitor, {
       width: window.innerWidth,
@@ -195,10 +199,21 @@ export function ScreenshotOverlayApp() {
         targetLanguageCode: payload.targetLanguageCode,
         targetLanguageLabel: payload.targetLanguageLabel,
       };
-      const next = await triggerOcrRecognizeRegion(baseState, captureRect, payload.sourceLangHint);
+      const next = await triggerOcrRecognizeRegion(
+        baseState,
+        captureRect,
+        payload.sourceLangHint,
+        resolveOcrProviderRequestId(settings.defaultOcrProvider),
+        buildEnabledOcrProviderConfigs(settings.providers),
+      );
 
       if (next.action === 'succeeded' && next.payload.result) {
-        const resultPayload = createOcrTranslatePayload(next.payload.result, direction, true);
+        const resultPayload = createOcrTranslatePayload(
+          next.payload.result,
+          direction,
+          true,
+          settings.defaultTranslateProvider,
+        );
         clearCachedScreenshotOverlayPayload();
         setPayload(null);
         setIsSubmitting(false);
@@ -207,7 +222,12 @@ export function ScreenshotOverlayApp() {
       }
       if (next.action !== 'cancelled') {
         const message = next.payload.error?.message ?? '截图翻译失败';
-        const errorPayload = createErrorPayload(payload.mode, message, direction);
+        const errorPayload = createErrorPayload(
+          payload.mode,
+          message,
+          direction,
+          settings.defaultTranslateProvider,
+        );
         clearCachedScreenshotOverlayPayload();
         setPayload(null);
         setIsSubmitting(false);
@@ -221,7 +241,13 @@ export function ScreenshotOverlayApp() {
     }
 
     // ocr_recognize mode
-    const next = await triggerOcrRecognizeRegion(baseState, captureRect, payload.sourceLangHint);
+    const next = await triggerOcrRecognizeRegion(
+      baseState,
+      captureRect,
+      payload.sourceLangHint,
+      resolveOcrProviderRequestId(settings.defaultOcrProvider),
+      buildEnabledOcrProviderConfigs(settings.providers),
+    );
 
     if (next.action === 'succeeded' && next.payload.result) {
       const resultPayload = createOcrRecognizePayload(
@@ -233,6 +259,7 @@ export function ScreenshotOverlayApp() {
           targetLanguageLabel: payload.targetLanguageLabel,
         },
         settings.autoQueryOnOcr,
+        settings.defaultTranslateProvider,
       );
       clearCachedScreenshotOverlayPayload();
       setPayload(null);
@@ -243,12 +270,17 @@ export function ScreenshotOverlayApp() {
 
     if (next.action !== 'cancelled') {
       const message = next.payload.error?.message ?? '截图识别失败';
-      const errorPayload = createErrorPayload(payload.mode, message, {
-        sourceLanguageCode: payload.sourceLangHint ?? 'auto',
-        sourceLanguageLabel: payload.sourceLanguageLabel,
-        targetLanguageCode: payload.targetLanguageCode,
-        targetLanguageLabel: payload.targetLanguageLabel,
-      });
+      const errorPayload = createErrorPayload(
+        payload.mode,
+        message,
+        {
+          sourceLanguageCode: payload.sourceLangHint ?? 'auto',
+          sourceLanguageLabel: payload.sourceLanguageLabel,
+          targetLanguageCode: payload.targetLanguageCode,
+          targetLanguageLabel: payload.targetLanguageLabel,
+        },
+        settings.defaultTranslateProvider,
+      );
       clearCachedScreenshotOverlayPayload();
       setPayload(null);
       setIsSubmitting(false);

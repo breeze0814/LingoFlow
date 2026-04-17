@@ -67,6 +67,86 @@ describe('SettingsPanel', () => {
     });
   });
 
+  it('updates local http api port', () => {
+    const onChange = vi.fn();
+    render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('tab', { name: '服务' }));
+    fireEvent.change(screen.getByLabelText('本地 HTTP API 端口'), {
+      target: { value: '62000' },
+    });
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SETTINGS,
+      httpApiPort: 62000,
+    });
+  });
+
+  it('renders permission status and supports manual refresh', () => {
+    const onRefreshPermissions = vi.fn();
+    render(
+      <SettingsPanel
+        value={DEFAULT_SETTINGS}
+        onChange={vi.fn()}
+        permissionStatus={{ accessibility: 'granted', screenRecording: 'denied' }}
+        onRefreshPermissions={onRefreshPermissions}
+      />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: '通用' }));
+    expect(screen.getByText('已授权')).toBeInTheDocument();
+    expect(screen.getByText('未授权')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '重新检测' }));
+    expect(onRefreshPermissions).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates default provider selections', () => {
+    const onChange = vi.fn();
+    const value = {
+      ...DEFAULT_SETTINGS,
+      providers: {
+        ...DEFAULT_SETTINGS.providers,
+        openai_compatible_ocr: {
+          ...DEFAULT_SETTINGS.providers.openai_compatible_ocr,
+          enabled: true,
+        },
+      },
+    };
+    render(<SettingsPanel value={value} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('tab', { name: '通用' }));
+    fireEvent.change(screen.getByLabelText('默认翻译源'), {
+      target: { value: 'youdao_web' },
+    });
+    expect(onChange).toHaveBeenCalledWith({
+      ...value,
+      defaultTranslateProvider: 'youdao_web',
+    });
+
+    fireEvent.change(screen.getByLabelText('默认 OCR 源'), {
+      target: { value: 'openai_compatible_ocr' },
+    });
+    expect(onChange).toHaveBeenCalledWith({
+      ...value,
+      defaultOcrProvider: 'openai_compatible_ocr',
+    });
+  });
+
+  it('falls back to the next enabled translate provider when the default is disabled', () => {
+    const onChange = vi.fn();
+    render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={onChange} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '启用Youdao翻译' }));
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_SETTINGS,
+      defaultTranslateProvider: 'bing_web',
+      providers: {
+        ...DEFAULT_SETTINGS.providers,
+        youdao_web: {
+          ...DEFAULT_SETTINGS.providers.youdao_web,
+          enabled: false,
+        },
+      },
+    });
+  });
+
   it('renders all translate providers in tool settings', () => {
     render(<SettingsPanel value={DEFAULT_SETTINGS} onChange={vi.fn()} />);
     fireEvent.click(screen.getByRole('tab', { name: '工具' }));

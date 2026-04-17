@@ -8,7 +8,6 @@ import {
   monitorFromPoint,
   type Monitor,
 } from '@tauri-apps/api/window';
-import { CaptureRect } from '../task/taskTypes';
 import { loadSettingsFromStorage } from '../settings/settingsStorage';
 import { OcrPanelPosition } from '../settings/settingsTypes';
 import {
@@ -84,16 +83,11 @@ async function createOcrResultWindow() {
 }
 
 async function ensureOcrResultWindow() {
-  console.log('[ensureOcrResultWindow] checking for existing window...');
   const existing = await WebviewWindow.getByLabel(OCR_RESULT_WINDOW_LABEL);
   if (existing) {
-    console.log('[ensureOcrResultWindow] found existing window');
     return existing;
   }
-  console.log('[ensureOcrResultWindow] creating new window...');
-  const newWindow = await createOcrResultWindow();
-  console.log('[ensureOcrResultWindow] window created successfully');
-  return newWindow;
+  return createOcrResultWindow();
 }
 
 async function resolveActiveMonitor(): Promise<Monitor> {
@@ -109,10 +103,7 @@ async function resolveActiveMonitor(): Promise<Monitor> {
   throw new Error('无法获取当前屏幕信息');
 }
 
-async function positionOcrResultWindow(
-  target: WebviewWindow,
-  _captureRect: CaptureRect | null | undefined,
-) {
+async function positionOcrResultWindow(target: WebviewWindow) {
   await target.setSize(new LogicalSize(OCR_WINDOW_WIDTH, OCR_WINDOW_HEIGHT));
 
   const [monitor, windowSize] = await Promise.all([resolveActiveMonitor(), target.outerSize()]);
@@ -158,32 +149,23 @@ async function emitResultPayload(payload: OcrResultWindowPayload) {
   await emitTo(OCR_RESULT_WINDOW_LABEL, OCR_RESULT_UPDATE_EVENT, payload);
 }
 
-async function showAndFocusOcrWindow(
-  ocrWindow: WebviewWindow,
-  captureRect: CaptureRect | null | undefined,
-) {
-  await positionOcrResultWindow(ocrWindow, captureRect);
+async function showAndFocusOcrWindow(ocrWindow: WebviewWindow) {
+  await positionOcrResultWindow(ocrWindow);
   await ocrWindow.show();
   await ocrWindow.setFocus();
 }
 
 export async function showOcrResultWindow(payload: OcrResultWindowPayload) {
   if (!isTauriRuntime()) {
-    console.log('[showOcrResultWindow] not in Tauri runtime, skipping');
     return;
   }
-  console.log('[showOcrResultWindow] starting...');
   cacheOcrResultPayload(payload);
-  console.log('[showOcrResultWindow] payload cached');
 
   const ocrWindow = await ensureOcrResultWindow();
-  console.log('[showOcrResultWindow] window ensured');
 
-  await showAndFocusOcrWindow(ocrWindow, payload.result?.captureRect);
-  console.log('[showOcrResultWindow] window shown and focused');
+  await showAndFocusOcrWindow(ocrWindow);
 
   await emitResultPayload(payload);
-  console.log('[showOcrResultWindow] payload emitted');
 }
 
 export async function showCachedOcrResultWindow() {
@@ -192,7 +174,7 @@ export async function showCachedOcrResultWindow() {
   }
   const payload = readCachedOcrResultPayload();
   const ocrWindow = await ensureOcrResultWindow();
-  await showAndFocusOcrWindow(ocrWindow, payload?.result?.captureRect);
+  await showAndFocusOcrWindow(ocrWindow);
   if (payload) {
     await emitResultPayload(payload);
   }

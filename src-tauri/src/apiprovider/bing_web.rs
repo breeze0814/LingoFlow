@@ -22,6 +22,13 @@ const DEFAULT_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Appl
 const DEFAULT_TIMEOUT_MS: u64 = 15000;
 const DEFAULT_IID: &str = "translator.5028";
 
+struct BingTranslationArgs<'a> {
+    req: &'a TranslateRequest,
+    source_lang: &'a str,
+    target_lang: &'a str,
+    context: &'a BingPageContext,
+}
+
 pub struct BingWebProvider {
     config: BingWebConfig,
 }
@@ -63,15 +70,17 @@ impl BingWebProvider {
             "fetch_page_context start url={} timeout_ms={timeout_ms}",
             self.config.translator_url
         ));
-        let (status_line, html) = self.run_curl_and_collect(&[
-            "-s",
-            "-L",
-            "-A",
-            self.config.user_agent.as_str(),
-            self.config.translator_url.as_str(),
-            "-w",
-            "\n%{http_code}",
-        ])?;
+        let (status_line, html) = self
+            .run_curl_and_collect(&[
+                "-s",
+                "-L",
+                "-A",
+                self.config.user_agent.as_str(),
+                self.config.translator_url.as_str(),
+                "-w",
+                "\n%{http_code}",
+            ])
+            .await?;
         log_bing_web(format!(
             "fetch_page_context ok status={} html_len={} html_preview={}",
             status_line,
@@ -88,10 +97,7 @@ impl BingWebProvider {
         Ok(context)
     }
 
-    async fn request_translation(
-        &self,
-        ctx: BingTranslationContext<'_>,
-    ) -> Result<String, AppError> {
+    async fn request_translation(&self, args: BingTranslationArgs<'_>) -> Result<String, AppError> {
         let endpoint = format!(
             "{}/ttranslatev3",
             self.config.base_url.trim_end_matches('/')
@@ -99,31 +105,31 @@ impl BingWebProvider {
         log_bing_web(format!(
             "request_translation start endpoint={} source_lang={} target_lang={} text_len={} text_preview={} ig={} token_len={} key_len={}",
             endpoint,
-            ctx.source_lang,
-            ctx.target_lang,
-            ctx.req.text.len(),
-            preview_debug(&ctx.req.text),
-            ctx.context.ig,
-            ctx.context.token.len(),
-            ctx.context.key.len()
+            args.source_lang,
+            args.target_lang,
+            args.req.text.len(),
+            preview_debug(&args.req.text),
+            args.context.ig,
+            args.context.token.len(),
+            args.context.key.len()
         ));
         let request_url = format!(
             "{}?isVertical=1&IG={}&IID={}",
-            endpoint, ctx.context.ig, DEFAULT_IID
+            endpoint, args.context.ig, DEFAULT_IID
         );
         let data_args = vec![
             "--data-urlencode".to_string(),
-            format!("fromLang={}", ctx.source_lang),
+            format!("fromLang={}", args.source_lang),
             "--data-urlencode".to_string(),
-            format!("to={}", ctx.target_lang),
+            format!("to={}", args.target_lang),
             "--data-urlencode".to_string(),
-            format!("text={}", ctx.req.text),
+            format!("text={}", args.req.text),
             "--data-urlencode".to_string(),
             "tryFetchingGenderDebiasedTranslations=true".to_string(),
             "--data-urlencode".to_string(),
-            format!("token={}", ctx.context.token),
+            format!("token={}", args.context.token),
             "--data-urlencode".to_string(),
-            format!("key={}", ctx.context.key),
+            format!("key={}", args.context.key),
         ];
         let mut args = vec![
             "-s".to_string(),
@@ -144,7 +150,7 @@ impl BingWebProvider {
         args.extend(data_args);
         args.push("-w".to_string());
         args.push("\n%{http_code}|%header{content-length}|%header{content-type}|%header{content-encoding}|%header{set-cookie}".to_string());
-        let (meta, body) = self.run_curl_and_collect_owned(&args)?;
+        let (meta, body) = self.run_curl_and_collect_owned(&args).await?;
         log_bing_web(format!(
             "request_translation ok status={} body_len={} body_preview={}",
             meta,
@@ -216,16 +222,14 @@ impl TranslateProvider for BingWebProvider {
         let source_lang = source_lang_to_bing(&req.source_lang);
         let target_lang = target_lang_to_bing(&req.target_lang)?;
         let context = self.fetch_page_context(timeout_ms).await?;
-
-        let ctx = BingTranslationContext {
-            req: &req,
-            source_lang: &source_lang,
-            target_lang: &target_lang,
-            timeout_ms,
-            context: &context,
-        };
-
-        let payload = self.request_translation(ctx).await?;
+        let payload = self
+            .request_translation(BingTranslationArgs {
+                req: &req,
+                source_lang: &source_lang,
+                target_lang: &target_lang,
+                context: &context,
+            })
+            .await?;
         Self::parse_translation_result(req, &payload)
     }
 
@@ -269,44 +273,62 @@ fn preview_debug(value: &str) -> String {
 }
 
 impl BingWebProvider {
-    fn run_curl_and_collect(&self, args: &[&str]) -> Result<(String, String), AppError> {
+    async fn run_curl_and_collect(&self, args: &[&str]) -> Result<(String, String), AppError> {
         self.run_curl_and_collect_owned(
             &args
                 .iter()
                 .map(|value| value.to_string())
                 .collect::<Vec<String>>(),
         )
+        .await
     }
 
-    fn run_curl_and_collect_owned(&self, args: &[String]) -> Result<(String, String), AppError> {
-        let output = Command::new(&self.config.curl_path)
-            .args(args)
-            .output()
+    async fn run_curl_and_collect_owned(
+        &self,
+        args: &[String],
+    ) -> Result<(String, String), AppError> {
+        let curl_path = self.config.curl_path.clone();
+        let owned_args = args.to_vec();
+        tokio::task::spawn_blocking(move || run_curl_and_collect_blocking(curl_path, owned_args))
+            .await
             .map_err(|error| {
                 AppError::new(
-                    ErrorCode::ProviderNetworkError,
-                    format!("Bing Web failed to launch curl: {error}"),
+                    ErrorCode::InternalError,
+                    format!("Bing Web curl task failed to join: {error}"),
                     true,
                 )
-            })?;
-        if !output.status.success() {
-            return Err(AppError::new(
-                ErrorCode::ProviderNetworkError,
-                format!(
-                    "Bing Web curl failed with status {:?}: {}",
-                    output.status.code(),
-                    String::from_utf8_lossy(&output.stderr).trim()
-                ),
-                true,
-            ));
-        }
-        let stdout = String::from_utf8(output.stdout)
-            .map_err(|error| invalid_response_error(PROVIDER_LABEL, error.to_string()))?;
-        let (body, meta) = stdout.rsplit_once('\n').ok_or_else(|| {
-            invalid_response_error(PROVIDER_LABEL, "curl response missing status footer")
-        })?;
-        Ok((meta.to_string(), body.to_string()))
+            })?
     }
+}
+
+fn run_curl_and_collect_blocking(
+    curl_path: String,
+    args: Vec<String>,
+) -> Result<(String, String), AppError> {
+    let output = Command::new(curl_path).args(args).output().map_err(|error| {
+        AppError::new(
+            ErrorCode::ProviderNetworkError,
+            format!("Bing Web failed to launch curl: {error}"),
+            true,
+        )
+    })?;
+    if !output.status.success() {
+        return Err(AppError::new(
+            ErrorCode::ProviderNetworkError,
+            format!(
+                "Bing Web curl failed with status {:?}: {}",
+                output.status.code(),
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
+            true,
+        ));
+    }
+    let stdout = String::from_utf8(output.stdout)
+        .map_err(|error| invalid_response_error(PROVIDER_LABEL, error.to_string()))?;
+    let (body, meta) = stdout
+        .rsplit_once('\n')
+        .ok_or_else(|| invalid_response_error(PROVIDER_LABEL, "curl response missing status footer"))?;
+    Ok((meta.to_string(), body.to_string()))
 }
 
 #[cfg(test)]

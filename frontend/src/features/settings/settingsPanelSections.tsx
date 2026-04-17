@@ -1,15 +1,20 @@
 import { ReactNode } from 'react';
+import { PermissionStatus, PermissionState } from './permissionStatus';
 import {
   DETECTION_OPTIONS,
   DEFAULT_TOOL_PROVIDERS,
   LANGUAGE_OPTIONS,
+  OcrProviderId,
   OCR_PANEL_POSITION_OPTIONS,
   SettingsState,
   ShortcutId,
   ToolProviderConfig,
   ToolProviderId,
+  TOOL_PROVIDER_DEFINITIONS,
+  TranslateProviderId,
   VOICE_OPTIONS,
 } from './settingsTypes';
+import { normalizeSettings } from './settingsStorage';
 import { SettingsTabId } from './settingsTabs';
 import { ShortcutPanel } from './ShortcutPanel';
 import { ProviderPanel } from './ProviderPanel';
@@ -27,7 +32,20 @@ type ToggleRowProps = {
   onChange: (value: boolean) => void;
 };
 
+type NumberRowProps = {
+  label: string;
+  max: number;
+  min: number;
+  onChange: (value: number) => void;
+  value: number;
+};
+
 type SettingsUpdater = (next: SettingsState) => void;
+
+type SettingsMeta = {
+  onRefreshPermissions?: () => void;
+  permissionStatus?: PermissionStatus | null;
+};
 
 function SettingLabelBlock(props: { label: string }) {
   return (
@@ -71,6 +89,29 @@ function ToggleRow({ label, checked, onChange }: ToggleRowProps) {
   );
 }
 
+function NumberRow({ label, max, min, onChange, value }: NumberRowProps) {
+  return (
+    <label className="settingRow">
+      <SettingLabelBlock label={label} />
+      <input
+        aria-label={label}
+        type="number"
+        min={min}
+        max={max}
+        step={1}
+        value={value}
+        onChange={(event) => {
+          const nextValue = Number(event.target.value);
+          if (!Number.isInteger(nextValue) || nextValue < min || nextValue > max) {
+            return;
+          }
+          onChange(nextValue);
+        }}
+      />
+    </label>
+  );
+}
+
 function Section(props: { title: string; description?: string; children: ReactNode }) {
   return (
     <section className="settingsSection">
@@ -89,11 +130,13 @@ function updateSettings(
   value: SettingsState,
   onChange: SettingsUpdater,
   key: keyof SettingsState,
-  nextValue: string | boolean,
+  nextValue: string | boolean | number,
 ) {
   onChange({
-    ...value,
-    [key]: nextValue,
+    ...normalizeSettings({
+      ...value,
+      [key]: nextValue,
+    }),
   });
 }
 
@@ -104,11 +147,13 @@ function updateShortcutSetting(
   nextValue: string,
 ) {
   onChange({
-    ...value,
-    shortcuts: {
-      ...value.shortcuts,
-      [key]: nextValue,
-    },
+    ...normalizeSettings({
+      ...value,
+      shortcuts: {
+        ...value.shortcuts,
+        [key]: nextValue,
+      },
+    }),
   });
 }
 
@@ -120,18 +165,71 @@ function updateProviderSetting(
 ) {
   const currentProvider = value.providers[key] ?? DEFAULT_TOOL_PROVIDERS[key];
   onChange({
-    ...value,
-    providers: {
-      ...value.providers,
-      [key]: {
-        ...currentProvider,
-        ...patch,
+    ...normalizeSettings({
+      ...value,
+      providers: {
+        ...value.providers,
+        [key]: {
+          ...currentProvider,
+          ...patch,
+        },
       },
-    },
+    }),
   });
 }
 
-function renderGeneralTab(current: SettingsState, onChange: SettingsUpdater) {
+function permissionLabel(state: PermissionState) {
+  if (state === 'granted') {
+    return '已授权';
+  }
+  if (state === 'denied') {
+    return '未授权';
+  }
+  return '未检测';
+}
+
+function PermissionStatusSection(props: SettingsMeta) {
+  const permissionStatus = props.permissionStatus;
+  return (
+    <Section title="系统权限" description="显示当前平台能力所需的系统授权状态。">
+      <div className="settingRow">
+        <SettingLabelBlock label="辅助功能权限" />
+        <span>
+          {permissionStatus ? permissionLabel(permissionStatus.accessibility) : '浏览器预览'}
+        </span>
+      </div>
+      <div className="settingRow">
+        <SettingLabelBlock label="屏幕录制权限" />
+        <span>
+          {permissionStatus ? permissionLabel(permissionStatus.screenRecording) : '浏览器预览'}
+        </span>
+      </div>
+      {props.onRefreshPermissions ? (
+        <div className="settingRow">
+          <SettingLabelBlock label="权限状态刷新" />
+          <button type="button" onClick={props.onRefreshPermissions}>
+            重新检测
+          </button>
+        </div>
+      ) : null}
+    </Section>
+  );
+}
+
+function renderGeneralTab(current: SettingsState, onChange: SettingsUpdater, meta: SettingsMeta) {
+  const translateProviderOptions = TOOL_PROVIDER_DEFINITIONS.filter(
+    (item) => item.category === '翻译',
+  ).map((item) => ({
+    value: item.id as TranslateProviderId,
+    label: item.name,
+  }));
+  const ocrProviderOptions = TOOL_PROVIDER_DEFINITIONS.filter(
+    (item) => item.category === 'OCR',
+  ).map((item) => ({
+    value: item.id as OcrProviderId,
+    label: item.name,
+  }));
+
   return (
     <>
       <Section
@@ -175,6 +273,24 @@ function renderGeneralTab(current: SettingsState, onChange: SettingsUpdater) {
           onChange={(next) => updateSettings(current, onChange, 'keepResultForSelection', next)}
         />
       </Section>
+      <Section
+        title="默认 Provider"
+        description="定义默认翻译源和 OCR 执行源。下拉仅显示已启用项，禁用当前默认值时会自动切换到可用项。"
+      >
+        <SelectRow
+          label="默认翻译源"
+          value={current.defaultTranslateProvider}
+          options={translateProviderOptions.filter((item) => current.providers[item.value].enabled)}
+          onChange={(next) => updateSettings(current, onChange, 'defaultTranslateProvider', next)}
+        />
+        <SelectRow
+          label="默认 OCR 源"
+          value={current.defaultOcrProvider}
+          options={ocrProviderOptions.filter((item) => current.providers[item.value].enabled)}
+          onChange={(next) => updateSettings(current, onChange, 'defaultOcrProvider', next)}
+        />
+      </Section>
+      <PermissionStatusSection {...meta} />
     </>
   );
 }
@@ -228,6 +344,13 @@ function renderServiceTab(current: SettingsState, onChange: SettingsUpdater) {
           checked={current.httpApiEnabled}
           onChange={(next) => updateSettings(current, onChange, 'httpApiEnabled', next)}
         />
+        <NumberRow
+          label="本地 HTTP API 端口"
+          min={1}
+          max={65535}
+          value={current.httpApiPort}
+          onChange={(next) => updateSettings(current, onChange, 'httpApiPort', next)}
+        />
       </Section>
     </>
   );
@@ -237,6 +360,7 @@ export function renderTabContent(
   tab: SettingsTabId,
   current: SettingsState,
   onChange: SettingsUpdater,
+  meta: SettingsMeta = {},
 ) {
   if (tab === 'tool') {
     return (
@@ -247,7 +371,7 @@ export function renderTabContent(
     );
   }
   if (tab === 'general') {
-    return renderGeneralTab(current, onChange);
+    return renderGeneralTab(current, onChange, meta);
   }
   if (tab === 'service') {
     return renderServiceTab(current, onChange);

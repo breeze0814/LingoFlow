@@ -8,6 +8,7 @@ import {
 
 type SelectionSettings = {
   autoQueryOnSelection: boolean;
+  defaultTranslateProvider: string;
   keepResultForSelection: boolean;
 };
 
@@ -82,9 +83,8 @@ export async function resolveSelectionWorkflowOutcome(
     return {
       kind: 'show_payload',
       payload: {
-        ...createInputTranslatePayload(labels),
+        ...createInputTranslatePayload(labels, selectedText, settings.defaultTranslateProvider),
         autoTranslate: settings.autoQueryOnSelection,
-        initialText: selectedText,
       },
     };
   } catch (error) {

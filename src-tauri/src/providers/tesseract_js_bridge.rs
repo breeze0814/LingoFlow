@@ -70,7 +70,7 @@ impl TesseractJsBridge {
 
     pub async fn recognize(&self, req: OcrRequest) -> Result<String, AppError> {
         let request_id = Uuid::new_v4().to_string();
-        let payload = self.build_request_payload(&request_id, &req)?;
+        let payload = self.build_request_payload(&request_id, &req).await?;
         let receiver = self.register_pending_request(&request_id).await;
         self.emit_request(payload)?;
         self.wait_for_response(WaitResponseContext {
@@ -92,14 +92,14 @@ impl TesseractJsBridge {
         let _ = sender.send(map_response_payload(payload));
     }
 
-    fn build_request_payload(
+    async fn build_request_payload(
         &self,
         request_id: &str,
         req: &OcrRequest,
     ) -> Result<TesseractOcrRequestPayload, AppError> {
         Ok(TesseractOcrRequestPayload {
             request_id: request_id.to_string(),
-            image_data_url: read_image_data_url(&req.image_path)?,
+            image_data_url: read_image_data_url_blocking(req.image_path.clone()).await?,
             source_lang_hint: req.source_lang_hint.clone(),
             timeout_ms: req.timeout_ms,
         })
@@ -199,6 +199,18 @@ fn read_image_data_url(image_path: &str) -> Result<String, AppError> {
         ));
     }
     Ok(format!("data:image/png;base64,{}", encode_base64(&bytes)))
+}
+
+async fn read_image_data_url_blocking(image_path: String) -> Result<String, AppError> {
+    tokio::task::spawn_blocking(move || read_image_data_url(&image_path))
+        .await
+        .map_err(|error| {
+            AppError::new(
+                ErrorCode::InternalError,
+                format!("Tesseract OCR image read task failed to join: {error}"),
+                true,
+            )
+        })?
 }
 
 fn map_response_payload(payload: TesseractOcrResponsePayload) -> Result<String, AppError> {

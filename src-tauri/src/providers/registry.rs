@@ -10,6 +10,7 @@ use crate::apiprovider::tencent_tmt::TencentTmtProvider;
 use crate::apiprovider::youdao_web::YoudaoWebProvider;
 #[cfg(target_os = "macos")]
 use crate::providers::apple_vision_ocr::AppleVisionOcrProvider;
+use crate::providers::openai_compatible::OpenAiCompatibleProvider;
 use crate::providers::openai_compatible_ocr::OpenAiCompatibleOcrProvider;
 #[cfg(all(target_os = "windows", not(test)))]
 use crate::providers::tesseract_js_bridge::TesseractJsBridge;
@@ -34,6 +35,11 @@ impl ProviderRegistry {
         #[cfg(all(target_os = "windows", not(test)))]
         let tesseract_js_bridge = Arc::new(TesseractJsBridge::new());
 
+        register_translate_provider(
+            &mut translate_providers,
+            &mut default_translate_provider_id,
+            OpenAiCompatibleProvider::from_env(),
+        );
         register_translate_provider(
             &mut translate_providers,
             &mut default_translate_provider_id,

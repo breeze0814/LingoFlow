@@ -46,6 +46,13 @@ pub(crate) struct YoudaoWebTranslationItem {
     pub tgt: String,
 }
 
+pub(crate) struct YoudaoSignArgs<'a> {
+    pub client: &'a str,
+    pub product: &'a str,
+    pub timestamp: &'a str,
+    pub key: &'a str,
+}
+
 pub(crate) fn current_millis_string() -> Result<String, AppError> {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -53,18 +60,10 @@ pub(crate) fn current_millis_string() -> Result<String, AppError> {
     Ok(now.as_millis().to_string())
 }
 
-/// Parameters for Youdao sign generation
-pub(crate) struct YoudaoSignParams<'a> {
-    pub client: &'a str,
-    pub product: &'a str,
-    pub timestamp: &'a str,
-    pub key: &'a str,
-}
-
-pub(crate) fn generate_sign(params: YoudaoSignParams<'_>) -> String {
+pub(crate) fn generate_sign(args: YoudaoSignArgs<'_>) -> String {
     let raw = format!(
         "client={}&mysticTime={}&product={}&key={}",
-        params.client, params.timestamp, params.product, params.key
+        args.client, args.timestamp, args.product, args.key
     );
     format!("{:x}", md5::compute(raw))
 }

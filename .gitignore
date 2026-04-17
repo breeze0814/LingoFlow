@@ -30,6 +30,7 @@ frontend/public/tesseract/
 # Tauri/Rust build output
 src-tauri/target/
 src-tauri/**/*.rs.bk
+src-tauri/binaries/lingoflow-helper-*
 
 # SwiftPM build/cache
 platform/macos/helper/.build/

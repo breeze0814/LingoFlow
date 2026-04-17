@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { PermissionStatus } from '../../features/settings/permissionStatus';
 import { SettingsState } from '../../features/settings/settingsTypes';
 
 type TranslateInput = {
@@ -9,6 +10,7 @@ type TranslateInput = {
     id: string;
     apiKey?: string;
     baseUrl?: string;
+    model?: string;
     region?: string;
     secretId?: string;
     secretKey?: string;
@@ -23,10 +25,19 @@ type SelectionInput = {
 };
 
 type OcrRecognizeInput = {
+  ocrProviderConfigs?: {
+    id: string;
+    apiKey?: string;
+    baseUrl?: string;
+    model?: string;
+  }[];
+  ocrProviderId?: string;
   sourceLangHint?: string;
 };
 
 type OcrTranslateInput = {
+  ocrProviderConfigs?: OcrRecognizeInput['ocrProviderConfigs'];
+  ocrProviderId?: string;
   sourceLang?: string;
   targetLang: string;
   sourceLangHint?: string;
@@ -42,11 +53,15 @@ type CaptureRect = {
 
 type OcrRecognizeRegionInput = {
   captureRect: CaptureRect;
+  ocrProviderConfigs?: OcrRecognizeInput['ocrProviderConfigs'];
+  ocrProviderId?: string;
   sourceLangHint?: string;
 };
 
 type OcrTranslateRegionInput = {
   captureRect: CaptureRect;
+  ocrProviderConfigs?: OcrRecognizeInput['ocrProviderConfigs'];
+  ocrProviderId?: string;
   sourceLang?: string;
   targetLang: string;
   sourceLangHint?: string;
@@ -59,6 +74,7 @@ type DebugPrintInput = {
 
 type RuntimeSettingsInput = {
   httpApiEnabled: boolean;
+  httpApiPort: number;
   sourceLang: string;
   targetLang: string;
 };
@@ -109,6 +125,7 @@ export const commandsClient = {
           id: item.id,
           api_key: item.apiKey,
           base_url: item.baseUrl,
+          model: item.model,
           region: item.region,
           secret_id: item.secretId,
           secret_key: item.secretKey,
@@ -126,6 +143,7 @@ export const commandsClient = {
           id: item.id,
           api_key: item.apiKey,
           base_url: item.baseUrl,
+          model: item.model,
           region: item.region,
           secret_id: item.secretId,
           secret_key: item.secretKey,
@@ -143,6 +161,13 @@ export const commandsClient = {
   ocrRecognize(input: OcrRecognizeInput): Promise<CommandTaskResponse> {
     return invoke('ocr_recognize', {
       payload: {
+        ocr_provider_id: input.ocrProviderId,
+        ocr_provider_configs: input.ocrProviderConfigs?.map((item) => ({
+          id: item.id,
+          api_key: item.apiKey,
+          base_url: item.baseUrl,
+          model: item.model,
+        })),
         source_lang_hint: input.sourceLangHint,
       },
     });
@@ -151,6 +176,13 @@ export const commandsClient = {
     return invoke('ocr_recognize_region', {
       payload: {
         capture_rect: input.captureRect,
+        ocr_provider_id: input.ocrProviderId,
+        ocr_provider_configs: input.ocrProviderConfigs?.map((item) => ({
+          id: item.id,
+          api_key: item.apiKey,
+          base_url: item.baseUrl,
+          model: item.model,
+        })),
         source_lang_hint: input.sourceLangHint,
       },
     });
@@ -158,6 +190,13 @@ export const commandsClient = {
   ocrTranslate(input: OcrTranslateInput): Promise<CommandTaskResponse> {
     return invoke('ocr_translate', {
       payload: {
+        ocr_provider_id: input.ocrProviderId,
+        ocr_provider_configs: input.ocrProviderConfigs?.map((item) => ({
+          id: item.id,
+          api_key: item.apiKey,
+          base_url: item.baseUrl,
+          model: item.model,
+        })),
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
         source_lang_hint: input.sourceLangHint,
@@ -165,6 +204,7 @@ export const commandsClient = {
           id: item.id,
           api_key: item.apiKey,
           base_url: item.baseUrl,
+          model: item.model,
           region: item.region,
           secret_id: item.secretId,
           secret_key: item.secretKey,
@@ -178,6 +218,13 @@ export const commandsClient = {
     return invoke('ocr_translate_region', {
       payload: {
         capture_rect: input.captureRect,
+        ocr_provider_id: input.ocrProviderId,
+        ocr_provider_configs: input.ocrProviderConfigs?.map((item) => ({
+          id: item.id,
+          api_key: item.apiKey,
+          base_url: item.baseUrl,
+          model: item.model,
+        })),
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
         source_lang_hint: input.sourceLangHint,
@@ -185,6 +232,7 @@ export const commandsClient = {
           id: item.id,
           api_key: item.apiKey,
           base_url: item.baseUrl,
+          model: item.model,
           region: item.region,
           secret_id: item.secretId,
           secret_key: item.secretKey,
@@ -201,10 +249,14 @@ export const commandsClient = {
     return invoke('sync_runtime_settings', {
       payload: {
         http_api_enabled: input.httpApiEnabled,
+        http_api_port: input.httpApiPort,
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
       },
     });
+  },
+  getPermissionStatus(): Promise<PermissionStatus> {
+    return invoke('get_permission_status');
   },
   loadSettings(): Promise<SettingsState | null> {
     return invoke('load_settings');

@@ -6,6 +6,12 @@ describe('translateProviderRequest', () => {
   it('collects enabled translate providers in UI order', () => {
     const providers: ToolProviderConfigMap = {
       ...DEFAULT_SETTINGS.providers,
+      openai_compatible: {
+        ...DEFAULT_SETTINGS.providers.openai_compatible,
+        enabled: true,
+        apiKey: 'openai-key',
+        model: 'gpt-4o-mini',
+      },
       bing_web: { ...DEFAULT_SETTINGS.providers.bing_web, enabled: true },
       deepl_free: {
         ...DEFAULT_SETTINGS.providers.deepl_free,
@@ -24,6 +30,12 @@ describe('translateProviderRequest', () => {
     };
 
     expect(buildEnabledTranslateProviderConfigs(providers)).toEqual([
+      {
+        id: 'openai_compatible',
+        apiKey: 'openai-key',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'gpt-4o-mini',
+      },
       { id: 'youdao_web' },
       { id: 'bing_web' },
       {

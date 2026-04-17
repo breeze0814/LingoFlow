@@ -7,7 +7,7 @@ use reqwest::header::{HeaderMap, HeaderValue, COOKIE, REFERER, USER_AGENT};
 use crate::apiprovider::http_error::{invalid_response_error, map_http_error};
 use crate::apiprovider::youdao_web_support::{
     current_millis_string, decrypt_payload, flatten_translated_text, generate_sign,
-    source_lang_to_youdao, target_lang_to_youdao, YoudaoSignParams, YoudaoWebKeyData,
+    source_lang_to_youdao, target_lang_to_youdao, YoudaoSignArgs, YoudaoWebKeyData,
     YoudaoWebKeyResponse, YoudaoWebTranslateResponse,
 };
 use crate::errors::app_error::AppError;
@@ -32,6 +32,14 @@ const YOUDAO_KEY_ID_GETTER: &str = "webfanyi-key-getter";
 const YOUDAO_KEY_ID_TRANSLATE: &str = "webfanyi";
 const YOUDAO_KEY_ENDPOINT: &str = "https://dict.youdao.com/webtranslate/key";
 const YOUDAO_TRANSLATE_ENDPOINT: &str = "https://dict.youdao.com/webtranslate";
+
+struct YoudaoTranslationArgs<'a> {
+    req: &'a TranslateRequest,
+    source_lang: &'a str,
+    target_lang: &'a str,
+    timeout_ms: u64,
+    secret_key: &'a str,
+}
 
 pub struct YoudaoWebProvider {
     config: YoudaoWebConfig,
@@ -103,7 +111,7 @@ impl YoudaoWebProvider {
         parameters.push(("keyid".to_string(), YOUDAO_KEY_ID_GETTER.to_string()));
         parameters.push((
             "sign".to_string(),
-            generate_sign(YoudaoSignParams {
+            generate_sign(YoudaoSignArgs {
                 client: YOUDAO_CLIENT,
                 product: YOUDAO_PRODUCT,
                 timestamp,
@@ -141,22 +149,22 @@ impl YoudaoWebProvider {
 
     async fn request_translation(
         &self,
-        ctx: YoudaoTranslationContext<'_>,
+        args: YoudaoTranslationArgs<'_>,
     ) -> Result<String, AppError> {
         let timestamp = current_millis_string()?;
         let mut parameters = Self::general_parameters(&timestamp);
-        parameters.push(("i".to_string(), ctx.req.text.clone()));
-        parameters.push(("from".to_string(), ctx.source_lang.to_string()));
-        parameters.push(("to".to_string(), ctx.target_lang.to_string()));
+        parameters.push(("i".to_string(), args.req.text.clone()));
+        parameters.push(("from".to_string(), args.source_lang.to_string()));
+        parameters.push(("to".to_string(), args.target_lang.to_string()));
         parameters.push(("dictResult".to_string(), "false".to_string()));
         parameters.push(("keyid".to_string(), YOUDAO_KEY_ID_TRANSLATE.to_string()));
         parameters.push((
             "sign".to_string(),
-            generate_sign(YoudaoSignParams {
+            generate_sign(YoudaoSignArgs {
                 client: YOUDAO_CLIENT,
                 product: YOUDAO_PRODUCT,
                 timestamp: &timestamp,
-                key: ctx.secret_key,
+                key: args.secret_key,
             }),
         ));
         let response = self
@@ -164,7 +172,7 @@ impl YoudaoWebProvider {
             .post(&self.config.translate_endpoint)
             .headers(self.headers()?)
             .form(&parameters)
-            .timeout(Duration::from_millis(ctx.timeout_ms))
+            .timeout(Duration::from_millis(args.timeout_ms))
             .send()
             .await
             .map_err(|error| map_http_error(PROVIDER_LABEL, error))?;
@@ -208,16 +216,15 @@ impl TranslateProvider for YoudaoWebProvider {
         let target_lang = target_lang_to_youdao(&req.target_lang)?;
         let key_timestamp = current_millis_string()?;
         let key_data = self.request_web_key(timeout_ms, &key_timestamp).await?;
-
-        let ctx = YoudaoTranslationContext {
-            req: &req,
-            source_lang: &source_lang,
-            target_lang: &target_lang,
-            timeout_ms,
-            secret_key: &key_data.secret_key,
-        };
-
-        let encrypted_payload = self.request_translation(ctx).await?;
+        let encrypted_payload = self
+            .request_translation(YoudaoTranslationArgs {
+                req: &req,
+                source_lang: &source_lang,
+                target_lang: &target_lang,
+                timeout_ms,
+                secret_key: &key_data.secret_key,
+            })
+            .await?;
         let decrypted_payload =
             decrypt_payload(&encrypted_payload, &key_data.aes_key, &key_data.aes_iv)?;
         Self::parse_translation_result(req, &decrypted_payload)

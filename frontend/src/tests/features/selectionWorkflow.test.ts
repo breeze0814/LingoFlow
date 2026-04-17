@@ -31,6 +31,7 @@ describe('selectionWorkflow', () => {
       resolveSelectionWorkflowOutcome(
         {
           autoQueryOnSelection: true,
+          defaultTranslateProvider: 'youdao_web',
           keepResultForSelection: true,
         },
         LABELS,
@@ -67,6 +68,7 @@ describe('selectionWorkflow', () => {
       resolveSelectionWorkflowOutcome(
         {
           autoQueryOnSelection: false,
+          defaultTranslateProvider: 'youdao_web',
           keepResultForSelection: true,
         },
         LABELS,
@@ -85,6 +87,7 @@ describe('selectionWorkflow', () => {
       resolveSelectionWorkflowOutcome(
         {
           autoQueryOnSelection: false,
+          defaultTranslateProvider: 'youdao_web',
           keepResultForSelection: false,
         },
         LABELS,

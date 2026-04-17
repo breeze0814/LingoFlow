@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(dead_code))]
+
 use std::path::PathBuf;
 
 use crate::errors::app_error::AppError;
@@ -49,7 +51,7 @@ fn ensure_capture_file_exists(output_path: PathBuf) -> Result<PathBuf, AppError>
 }
 
 #[cfg(target_os = "macos")]
-fn run_capture_command(output_path: &PathBuf) -> Result<(), AppError> {
+fn run_capture_command(output_path: &std::path::Path) -> Result<(), AppError> {
     let response = run_helper(
         HELPER_COMMAND,
         Some(HelperPayload {
@@ -120,7 +122,7 @@ fn run_capture_command(output_path: &std::path::Path) -> Result<(), AppError> {
     Err(map_windows_capture_failure(stderr.trim()))
 }
 
-#[cfg(any(test, not(any(target_os = "macos", target_os = "windows"))))]
+#[cfg(all(not(target_os = "macos"), any(test, not(target_os = "windows"))))]
 fn run_capture_command(_output_path: &std::path::Path) -> Result<(), AppError> {
     Err(AppError::new(
         ErrorCode::InternalError,

@@ -43,13 +43,7 @@ impl AppleVisionOcrProvider {
 #[async_trait]
 impl OcrProvider for AppleVisionOcrProvider {
     async fn recognize(&self, req: OcrRequest) -> Result<OcrResult, AppError> {
-        let response = run_helper(
-            HELPER_COMMAND,
-            Some(HelperPayload {
-                image_path: Some(req.image_path),
-                source_lang_hint: req.source_lang_hint,
-            }),
-        )?;
+        let response = run_helper_blocking(req).await?;
         if !response.ok {
             return Err(Self::map_helper_error(response.error));
         }
@@ -86,4 +80,24 @@ impl OcrProvider for AppleVisionOcrProvider {
     fn provider_id(&self) -> &'static str {
         PROVIDER_ID
     }
+}
+
+async fn run_helper_blocking(req: OcrRequest) -> Result<crate::platform::macos_helper::HelperResponse, AppError> {
+    tokio::task::spawn_blocking(move || {
+        run_helper(
+            HELPER_COMMAND,
+            Some(HelperPayload {
+                image_path: Some(req.image_path),
+                source_lang_hint: req.source_lang_hint,
+            }),
+        )
+    })
+    .await
+    .map_err(|error| {
+        AppError::new(
+            ErrorCode::InternalError,
+            format!("OCR helper task failed to join: {error}"),
+            true,
+        )
+    })?
 }

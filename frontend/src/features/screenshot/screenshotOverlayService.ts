@@ -54,6 +54,7 @@ async function waitUntilWindowCreated(target: WebviewWindow): Promise<void> {
 }
 
 async function createScreenshotOverlayWindow() {
+  overlayReady = false;
   const createdWindow = new WebviewWindow(SCREENSHOT_OVERLAY_WINDOW_LABEL, {
     url: SCREENSHOT_OVERLAY_WINDOW_QUERY,
     title: '截图选区',
@@ -125,10 +126,21 @@ async function waitForOverlayReady() {
     return;
   }
 
+  let waiter: (() => void) | null = null;
   await Promise.race([
-    new Promise<void>((resolve) => overlayReadyWaiters.push(resolve)),
+    new Promise<void>((resolve) => {
+      waiter = resolve;
+      overlayReadyWaiters.push(resolve);
+    }),
     new Promise<void>((resolve) => window.setTimeout(resolve, OVERLAY_READY_TIMEOUT_MS)),
   ]);
+  if (!waiter) {
+    return;
+  }
+  const staleWaiterIndex = overlayReadyWaiters.indexOf(waiter);
+  if (staleWaiterIndex >= 0) {
+    overlayReadyWaiters.splice(staleWaiterIndex, 1);
+  }
 }
 
 export async function primeScreenshotOverlayService() {
@@ -158,7 +170,6 @@ export async function showScreenshotOverlay(request: ScreenshotOverlayRequest) {
   };
   cacheScreenshotOverlayPayload(payload);
 
-  overlayReady = false;
   await positionScreenshotOverlayWindow(overlayWindow, monitor);
   await overlayWindow.show();
   await overlayWindow.setFocus();

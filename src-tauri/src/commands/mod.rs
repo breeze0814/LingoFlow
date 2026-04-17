@@ -1,5 +1,6 @@
 pub mod debug;
 pub mod ocr;
+pub mod permissions;
 pub mod runtime_settings;
 pub mod settings;
 pub mod shortcuts;

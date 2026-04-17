@@ -84,6 +84,22 @@ impl OpenAiCompatibleOcrProvider {
         })
     }
 
+    pub fn from_runtime_config(
+        api_key: Option<String>,
+        base_url: Option<String>,
+        model: Option<String>,
+    ) -> Result<Self, AppError> {
+        let api_key = required_field("openai_compatible_ocr", "api_key", api_key)?;
+        Ok(Self {
+            config: OpenAiCompatibleOcrConfig {
+                api_key,
+                base_url: optional_or_default(base_url, DEFAULT_BASE_URL),
+                model: optional_or_default(model, DEFAULT_MODEL),
+            },
+            client: reqwest::Client::new(),
+        })
+    }
+
     fn make_prompt(&self, req: &OcrRequest) -> String {
         let hint_text = req
             .source_lang_hint
@@ -97,7 +113,7 @@ Do not add explanations. Preserve line breaks where possible. {hint_text}"
         )
     }
 
-    fn read_image_base64(&self, image_path: &str) -> Result<String, AppError> {
+    fn read_image_base64(image_path: &str) -> Result<String, AppError> {
         let image_bytes = std::fs::read(image_path).map_err(|error| {
             AppError::new(
                 ErrorCode::InternalError,
@@ -222,6 +238,36 @@ Do not add explanations. Preserve line breaks where possible. {hint_text}"
     }
 }
 
+fn required_field(
+    provider_id: &str,
+    field_name: &str,
+    value: Option<String>,
+) -> Result<String, AppError> {
+    let normalized = optional_string(value);
+    normalized.ok_or_else(|| {
+        AppError::new(
+            ErrorCode::ProviderNotConfigured,
+            format!("OCR provider `{provider_id}` missing required field `{field_name}`"),
+            false,
+        )
+    })
+}
+
+fn optional_string(value: Option<String>) -> Option<String> {
+    value.and_then(|item| {
+        let trimmed = item.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
+}
+
+fn optional_or_default(value: Option<String>, default_value: &str) -> String {
+    optional_string(value).unwrap_or_else(|| default_value.to_string())
+}
+
 #[async_trait]
 impl OcrProvider for OpenAiCompatibleOcrProvider {
     async fn recognize(&self, req: OcrRequest) -> Result<OcrResult, AppError> {
@@ -230,7 +276,7 @@ impl OcrProvider for OpenAiCompatibleOcrProvider {
         } else {
             req.timeout_ms
         };
-        let image_base64 = self.read_image_base64(&req.image_path)?;
+        let image_base64 = read_image_base64_blocking(req.image_path.clone()).await?;
         let body = self.build_request_body(&req, image_base64);
         let payload = self.request_ocr(&body, timeout).await?;
         let recognized_text = Self::parse_recognized_text(payload)?;
@@ -245,6 +291,19 @@ impl OcrProvider for OpenAiCompatibleOcrProvider {
         PROVIDER_ID
     }
 }
+
+async fn read_image_base64_blocking(image_path: String) -> Result<String, AppError> {
+    tokio::task::spawn_blocking(move || OpenAiCompatibleOcrProvider::read_image_base64(&image_path))
+        .await
+        .map_err(|error| {
+            AppError::new(
+                ErrorCode::InternalError,
+                format!("OCR image read task failed to join: {error}"),
+                true,
+            )
+        })?
+}
+
 #[cfg(test)]
 mod tests {
     use crate::providers::base64::encode_base64;

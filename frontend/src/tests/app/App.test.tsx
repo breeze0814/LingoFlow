@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from '../../app/App';
 import { DEFAULT_SETTINGS } from '../../features/settings/settingsTypes';
 import { TRAY_ACTION_EVENT } from '../../features/tray/trayEvents';
+import { OPEN_INPUT_TRANSLATE_EVENT } from '../../features/translator/inputTranslateEvents';
 
 const {
   mockShowOcrResultWindow,
@@ -19,7 +20,8 @@ const {
   mockSyncRuntimeSettings,
   mockLoadNativeSettings,
   mockSaveNativeSettings,
-  mockTrayListeners,
+  mockLoadPermissionStatus,
+  mockEventListeners,
   mockListen,
 } = vi.hoisted(() => ({
   mockShowOcrResultWindow: vi.fn().mockResolvedValue(undefined),
@@ -37,9 +39,15 @@ const {
   mockSyncRuntimeSettings: vi.fn().mockResolvedValue(undefined),
   mockLoadNativeSettings: vi.fn().mockResolvedValue(null),
   mockSaveNativeSettings: vi.fn().mockResolvedValue(undefined),
-  mockTrayListeners: [] as Array<(event: { payload: unknown }) => void>,
-  mockListen: vi.fn().mockImplementation(async (_eventName, handler) => {
-    mockTrayListeners.push(handler as (event: { payload: unknown }) => void);
+  mockLoadPermissionStatus: vi.fn().mockResolvedValue({
+    accessibility: 'granted',
+    screenRecording: 'denied',
+  }),
+  mockEventListeners: new Map<string, Array<(event: { payload: unknown }) => void>>(),
+  mockListen: vi.fn().mockImplementation(async (eventName, handler) => {
+    const handlers = mockEventListeners.get(eventName) ?? [];
+    handlers.push(handler as (event: { payload: unknown }) => void);
+    mockEventListeners.set(eventName, handlers);
     return () => undefined;
   }),
 }));
@@ -97,6 +105,10 @@ vi.mock('../../features/settings/nativeSettingsStorage', () => ({
   saveSettingsToNativeStorage: mockSaveNativeSettings,
 }));
 
+vi.mock('../../features/settings/permissionStatusStorage', () => ({
+  loadPermissionStatusFromNative: mockLoadPermissionStatus,
+}));
+
 describe('App', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -130,8 +142,9 @@ describe('App', () => {
     mockLoadNativeSettings.mockClear();
     mockLoadNativeSettings.mockResolvedValue(null);
     mockSaveNativeSettings.mockClear();
+    mockLoadPermissionStatus.mockClear();
     mockListen.mockClear();
-    mockTrayListeners.length = 0;
+    mockEventListeners.clear();
     delete (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__;
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
@@ -293,6 +306,7 @@ describe('App', () => {
       expect(mockShowOcrResultWindow).not.toHaveBeenCalled();
       expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
       expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+      expect(mockLoadPermissionStatus).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -304,6 +318,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
       expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+      expect(mockLoadPermissionStatus).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -315,7 +330,24 @@ describe('App', () => {
     await waitFor(() => {
       expect(mockSyncNativeShortcuts).toHaveBeenCalledTimes(1);
       expect(mockSyncRuntimeSettings).toHaveBeenCalledTimes(1);
+      expect(mockLoadPermissionStatus).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('does not sync or persist native settings after native hydration failure', async () => {
+    (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ = {};
+    mockLoadNativeSettings.mockRejectedValueOnce(new Error('hydrate failed'));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(mockLoadNativeSettings).toHaveBeenCalledTimes(1);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 380));
+
+    expect(mockSyncNativeShortcuts).not.toHaveBeenCalled();
+    expect(mockSyncRuntimeSettings).not.toHaveBeenCalled();
+    expect(mockSaveNativeSettings).not.toHaveBeenCalled();
   });
 
   it('does not focus settings window for show-main-window tray action in tauri runtime', async () => {
@@ -324,11 +356,11 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(mockListen).toHaveBeenCalledTimes(1);
-      expect(mockTrayListeners[0]).toBeTypeOf('function');
+      expect(mockListen).toHaveBeenCalledTimes(2);
+      expect(mockListen).toHaveBeenCalledWith(TRAY_ACTION_EVENT, expect.any(Function));
     });
 
-    const trayListener = mockTrayListeners[0];
+    const trayListener = mockEventListeners.get(TRAY_ACTION_EVENT)?.[0];
     trayListener?.({ payload: { action: 'show_main_window' } });
 
     await waitFor(() => {
@@ -351,11 +383,11 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('第二语言'), { target: { value: 'ja' } });
 
     await waitFor(() => {
-      expect(mockListen).toHaveBeenCalledTimes(1);
+      expect(mockListen).toHaveBeenCalledTimes(2);
       expect(mockListen).toHaveBeenCalledWith(TRAY_ACTION_EVENT, expect.any(Function));
     });
 
-    const trayListener = mockTrayListeners[0];
+    const trayListener = mockEventListeners.get(TRAY_ACTION_EVENT)?.[0];
     trayListener?.({ payload: { action: 'ocr_translate' } });
 
     await waitFor(() => {
@@ -364,6 +396,36 @@ describe('App', () => {
           mode: 'ocr_translate',
           targetLanguageCode: 'ja',
           targetLanguageLabel: '日语',
+        }),
+      );
+    });
+  });
+
+  it('opens input translate workspace from the native open-input event', async () => {
+    (window as Window & { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__ = {};
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(mockListen).toHaveBeenCalledWith(OPEN_INPUT_TRANSLATE_EVENT, expect.any(Function));
+    });
+
+    const inputListener = mockEventListeners.get(OPEN_INPUT_TRANSLATE_EVENT)?.[0];
+    inputListener?.({
+      payload: {
+        text: 'prefilled text',
+        sourceLang: 'en',
+        targetLang: 'ja',
+      },
+    });
+
+    await waitFor(() => {
+      expect(mockShowOcrResultWindow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          initialText: 'prefilled text',
+          mode: 'input_translate',
+          sourceLanguageCode: 'en',
+          targetLanguageCode: 'ja',
         }),
       );
     });

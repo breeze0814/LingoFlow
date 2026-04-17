@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   loadSettingsFromStorage,
+  normalizeSettings,
   redactSensitiveSettings,
 } from '../../features/settings/settingsStorage';
 import { DEFAULT_SETTINGS } from '../../features/settings/settingsTypes';
@@ -68,6 +69,8 @@ describe('settingsStorage', () => {
   it('exposes the full translate provider set in default settings', () => {
     expect(Object.keys(DEFAULT_SETTINGS.providers)).toEqual([
       'localOcr',
+      'openai_compatible_ocr',
+      'openai_compatible',
       'youdao_web',
       'bing_web',
       'deepl_free',
@@ -76,6 +79,9 @@ describe('settingsStorage', () => {
       'tencent_tmt',
       'baidu_fanyi',
     ]);
+    expect(DEFAULT_SETTINGS.defaultTranslateProvider).toBe('youdao_web');
+    expect(DEFAULT_SETTINGS.defaultOcrProvider).toBe('localOcr');
+    expect(DEFAULT_SETTINGS.httpApiPort).toBe(61928);
   });
 
   it('migrates legacy deepLTranslate settings into deepl_free', () => {
@@ -144,5 +150,26 @@ describe('settingsStorage', () => {
     expect(redacted.providers.tencent_tmt.region).toBe('ap-shanghai');
     expect(redacted.providers.baidu_fanyi.appId).toBe('');
     expect(redacted.providers.baidu_fanyi.appSecret).toBe('');
+  });
+
+  it('normalizes default providers when the current defaults are disabled', () => {
+    const normalized = normalizeSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslateProvider: 'youdao_web',
+      defaultOcrProvider: 'localOcr',
+      providers: {
+        ...DEFAULT_SETTINGS.providers,
+        localOcr: { ...DEFAULT_SETTINGS.providers.localOcr, enabled: false },
+        openai_compatible_ocr: {
+          ...DEFAULT_SETTINGS.providers.openai_compatible_ocr,
+          enabled: true,
+        },
+        youdao_web: { ...DEFAULT_SETTINGS.providers.youdao_web, enabled: false },
+        bing_web: { ...DEFAULT_SETTINGS.providers.bing_web, enabled: true },
+      },
+    });
+
+    expect(normalized.defaultTranslateProvider).toBe('bing_web');
+    expect(normalized.defaultOcrProvider).toBe('openai_compatible_ocr');
   });
 });

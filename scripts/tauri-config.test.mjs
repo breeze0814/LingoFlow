@@ -22,3 +22,7 @@ test('resolves frontendDist to the built frontend assets directory', () => {
 test('uses a bundle identifier without the macOS app suffix', () => {
   assert.equal(tauriConfig.identifier.endsWith('.app'), false);
 });
+
+test('declares the macOS helper as a bundled external binary', () => {
+  assert.deepEqual(tauriConfig.bundle.externalBin, ['binaries/lingoflow-helper']);
+});

@@ -4,19 +4,25 @@ import {
   DEFAULT_TOOL_PROVIDERS,
   DetectionMode,
   EnglishVoice,
+  OcrProviderId,
   OcrPanelPosition,
   SettingsState,
   ShortcutConfig,
   ToolProviderConfig,
   ToolProviderConfigMap,
   ToolProviderId,
+  TranslateProviderId,
 } from './settingsTypes';
+import { OCR_PROVIDER_ORDER } from './ocrProviderRequest';
+import { TRANSLATE_PROVIDER_ORDER } from './translateProviderRequest';
 
 const SETTINGS_STORAGE_KEY = 'lingoflow.settings.v1';
 
 type SettingsRecord = Record<string, unknown>;
 const SECRET_PROVIDER_FIELDS: Record<ToolProviderId, Array<keyof ToolProviderConfig>> = {
   localOcr: [],
+  openai_compatible_ocr: ['apiKey'],
+  openai_compatible: ['apiKey'],
   youdao_web: [],
   bing_web: [],
   deepl_free: ['apiKey'],
@@ -39,6 +45,13 @@ function parseString(value: unknown, key: string): string {
 
 function parseBoolean(value: unknown, key: string): boolean {
   if (typeof value !== 'boolean') {
+    throw new Error(`invalid settings field: ${key}`);
+  }
+  return value;
+}
+
+function parseNumber(value: unknown, key: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new Error(`invalid settings field: ${key}`);
   }
   return value;
@@ -69,6 +82,29 @@ function parseOcrPanelPosition(value: unknown): OcrPanelPosition {
     return value;
   }
   throw new Error('invalid settings field: ocrPanelPosition');
+}
+
+function parseTranslateProviderId(value: unknown): TranslateProviderId {
+  if (
+    value === 'openai_compatible' ||
+    value === 'youdao_web' ||
+    value === 'bing_web' ||
+    value === 'deepl_free' ||
+    value === 'azure_translator' ||
+    value === 'google_translate' ||
+    value === 'tencent_tmt' ||
+    value === 'baidu_fanyi'
+  ) {
+    return value;
+  }
+  throw new Error('invalid settings field: defaultTranslateProvider');
+}
+
+function parseOcrProviderId(value: unknown): OcrProviderId {
+  if (value === 'localOcr' || value === 'openai_compatible_ocr') {
+    return value;
+  }
+  throw new Error('invalid settings field: defaultOcrProvider');
 }
 
 function parseShortcuts(value: unknown): ShortcutConfig {
@@ -185,6 +221,8 @@ function parseProviders(value: unknown): ToolProviderConfigMap {
   if (value === undefined) {
     return {
       localOcr: parseProviderConfig(undefined, 'localOcr'),
+      openai_compatible_ocr: parseProviderConfig(undefined, 'openai_compatible_ocr'),
+      openai_compatible: parseProviderConfig(undefined, 'openai_compatible'),
       youdao_web: parseProviderConfig(undefined, 'youdao_web'),
       bing_web: parseProviderConfig(undefined, 'bing_web'),
       deepl_free: parseProviderConfig(undefined, 'deepl_free'),
@@ -200,6 +238,11 @@ function parseProviders(value: unknown): ToolProviderConfigMap {
   const legacyDeepL = value.deepLTranslate;
   return {
     localOcr: parseProviderConfig(value.localOcr, 'localOcr'),
+    openai_compatible_ocr: parseProviderConfig(
+      value.openai_compatible_ocr,
+      'openai_compatible_ocr',
+    ),
+    openai_compatible: parseProviderConfig(value.openai_compatible, 'openai_compatible'),
     youdao_web: parseProviderConfig(value.youdao_web, 'youdao_web'),
     bing_web: parseProviderConfig(value.bing_web, 'bing_web'),
     deepl_free: parseProviderConfig(value.deepl_free ?? legacyDeepL, 'deepl_free'),
@@ -211,9 +254,21 @@ function parseProviders(value: unknown): ToolProviderConfigMap {
 }
 
 function parseSettings(record: SettingsRecord): SettingsState {
-  return {
+  return normalizeSettings({
     primaryLanguage: parseString(record.primaryLanguage, 'primaryLanguage'),
     secondaryLanguage: parseString(record.secondaryLanguage, 'secondaryLanguage'),
+    defaultTranslateProvider:
+      record.defaultTranslateProvider === undefined
+        ? DEFAULT_SETTINGS.defaultTranslateProvider
+        : parseTranslateProviderId(record.defaultTranslateProvider),
+    defaultOcrProvider:
+      record.defaultOcrProvider === undefined
+        ? DEFAULT_SETTINGS.defaultOcrProvider
+        : parseOcrProviderId(record.defaultOcrProvider),
+    httpApiPort:
+      record.httpApiPort === undefined
+        ? DEFAULT_SETTINGS.httpApiPort
+        : parseNumber(record.httpApiPort, 'httpApiPort'),
     detectionMode: parseDetectionMode(record.detectionMode),
     ocrPanelPosition: parseOcrPanelPosition(record.ocrPanelPosition),
     clearInputOnTranslate: parseBoolean(record.clearInputOnTranslate, 'clearInputOnTranslate'),
@@ -231,7 +286,7 @@ function parseSettings(record: SettingsRecord): SettingsState {
     httpApiEnabled: parseBoolean(record.httpApiEnabled, 'httpApiEnabled'),
     shortcuts: parseShortcuts(record.shortcuts),
     providers: parseProviders(record.providers),
-  };
+  });
 }
 
 export function parseStoredSettings(value: unknown): SettingsState {
@@ -239,6 +294,39 @@ export function parseStoredSettings(value: unknown): SettingsState {
     throw new Error('settings storage payload is not object');
   }
   return parseSettings(value);
+}
+
+function firstEnabledTranslateProvider(providers: ToolProviderConfigMap): TranslateProviderId | null {
+  for (const providerId of TRANSLATE_PROVIDER_ORDER) {
+    if (providers[providerId].enabled) {
+      return providerId;
+    }
+  }
+  return null;
+}
+
+function firstEnabledOcrProvider(providers: ToolProviderConfigMap): OcrProviderId | null {
+  for (const providerId of OCR_PROVIDER_ORDER) {
+    if (providers[providerId].enabled) {
+      return providerId;
+    }
+  }
+  return null;
+}
+
+export function normalizeSettings(settings: SettingsState): SettingsState {
+  const defaultTranslateProvider = settings.providers[settings.defaultTranslateProvider].enabled
+    ? settings.defaultTranslateProvider
+    : firstEnabledTranslateProvider(settings.providers) ?? DEFAULT_SETTINGS.defaultTranslateProvider;
+  const defaultOcrProvider = settings.providers[settings.defaultOcrProvider].enabled
+    ? settings.defaultOcrProvider
+    : firstEnabledOcrProvider(settings.providers) ?? DEFAULT_SETTINGS.defaultOcrProvider;
+
+  return {
+    ...settings,
+    defaultTranslateProvider,
+    defaultOcrProvider,
+  };
 }
 
 export function redactSensitiveSettings(settings: SettingsState): SettingsState {

@@ -13,6 +13,7 @@ function createPayload(
   initialText: string,
   labels: WorkspaceLabels,
   autoTranslate: boolean,
+  preferredProviderId?: string,
   result?: TaskResult,
 ): OcrResultWindowPayload {
   return {
@@ -23,37 +24,59 @@ function createPayload(
     targetLanguageLabel: labels.targetLanguageLabel,
     targetLanguageCode: labels.targetLanguageCode,
     autoTranslate,
+    preferredProviderId,
     result,
   };
 }
 
-export function createInputTranslatePayload(labels: WorkspaceLabels): OcrResultWindowPayload {
-  return createPayload('input_translate', '', labels, false);
+export function createInputTranslatePayload(
+  labels: WorkspaceLabels,
+  initialText = '',
+  preferredProviderId?: string,
+): OcrResultWindowPayload {
+  return createPayload('input_translate', initialText, labels, false, preferredProviderId);
 }
 
 export function createOcrRecognizePayload(
   result: TaskResult,
   labels: WorkspaceLabels,
   autoTranslate = false,
+  preferredProviderId?: string,
 ): OcrResultWindowPayload {
-  return createPayload('ocr_recognize', result.sourceText, labels, autoTranslate, result);
+  return createPayload(
+    'ocr_recognize',
+    result.sourceText,
+    labels,
+    autoTranslate,
+    preferredProviderId,
+    result,
+  );
 }
 
 export function createOcrTranslatePayload(
   result: TaskResult,
   labels: WorkspaceLabels,
   autoTranslate = false,
+  preferredProviderId?: string,
 ): OcrResultWindowPayload {
-  return createPayload('ocr_translate', result.sourceText, labels, autoTranslate, result);
+  return createPayload(
+    'ocr_translate',
+    result.sourceText,
+    labels,
+    autoTranslate,
+    preferredProviderId,
+    result,
+  );
 }
 
 export function createErrorPayload(
   mode: OcrResultWindowPayload['mode'],
   errorMessage: string,
   labels: WorkspaceLabels,
+  preferredProviderId?: string,
 ): OcrResultWindowPayload {
   return {
-    ...createPayload(mode, '', labels, false),
+    ...createPayload(mode, '', labels, false, preferredProviderId),
     initialErrorMessage: errorMessage,
   };
 }
