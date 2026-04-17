@@ -2,6 +2,7 @@ use tauri::State;
 
 use crate::app_state::AppState;
 use crate::errors::app_error::AppError;
+use crate::orchestrator::ocr_execution::CapturedOcrContext;
 use crate::orchestrator::models::{
     CaptureRect, OcrTranslateTaskOptions, TaskCommandPayload, TaskRequest, TaskResponse,
 };
@@ -53,11 +54,11 @@ pub async fn ocr_recognize_region(
     let (image_path, capture_rect) = capture_region_image_file(&payload.capture_rect)?;
     state
         .orchestrator
-        .execute_captured_ocr(
+        .execute_captured_ocr(CapturedOcrContext {
             request,
-            image_path.to_string_lossy().into_owned(),
+            image_path: image_path.to_string_lossy().into_owned(),
             capture_rect,
-        )
+        })
         .await
 }
 
@@ -77,10 +78,10 @@ pub async fn ocr_translate_region(
     let (image_path, capture_rect) = capture_region_image_file(&payload.capture_rect)?;
     state
         .orchestrator
-        .execute_captured_ocr(
+        .execute_captured_ocr(CapturedOcrContext {
             request,
-            image_path.to_string_lossy().into_owned(),
+            image_path: image_path.to_string_lossy().into_owned(),
             capture_rect,
-        )
+        })
         .await
 }

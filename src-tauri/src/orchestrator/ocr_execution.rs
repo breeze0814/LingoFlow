@@ -1,27 +1,38 @@
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
-use crate::orchestrator::models::{TaskData, TaskRequest, TaskResponse, TaskType};
+use crate::orchestrator::models::{CaptureRect, TaskData, TaskRequest, TaskResponse, TaskType};
 use crate::orchestrator::ocr_text::normalize_ocr_text;
 use crate::orchestrator::service::{OcrExecution, Orchestrator, DEFAULT_OCR_TIMEOUT_MS};
 use crate::platform::capture::capture_interactive_image;
 use crate::providers::traits::OcrRequest;
 
+/// Context for captured OCR operations
+pub struct CapturedOcrContext {
+    pub request: TaskRequest,
+    pub image_path: String,
+    pub capture_rect: CaptureRect,
+}
+
+/// Context for OCR image processing
+struct OcrImageContext<'a> {
+    request: &'a TaskRequest,
+    image_path: &'a str,
+    capture_rect: CaptureRect,
+}
+
 impl Orchestrator {
     pub async fn execute_captured_ocr(
         &self,
-        request: TaskRequest,
-        image_path: String,
-        capture_rect: crate::orchestrator::models::CaptureRect,
+        ctx: CapturedOcrContext,
     ) -> Result<TaskResponse, AppError> {
-        self.replace_active_task(request.task_id.clone()).await;
-        match request.task_type {
+        self.replace_active_task(ctx.request.task_id.clone())
+            .await;
+        match ctx.request.task_type {
             TaskType::OcrRecognize => {
-                self.handle_ocr_recognize_from_image(request, image_path, capture_rect)
-                    .await
+                self.handle_ocr_recognize_from_image(ctx).await
             }
             TaskType::OcrTranslate => {
-                self.handle_ocr_translate_from_image(request, image_path, capture_rect)
-                    .await
+                self.handle_ocr_translate_from_image(ctx).await
             }
             _ => Err(AppError::new(
                 ErrorCode::InternalError,
@@ -52,13 +63,15 @@ impl Orchestrator {
 
     async fn handle_ocr_recognize_from_image(
         &self,
-        request: TaskRequest,
-        image_path: String,
-        capture_rect: crate::orchestrator::models::CaptureRect,
+        ctx: CapturedOcrContext,
     ) -> Result<TaskResponse, AppError> {
-        let task_id = request.task_id.clone();
+        let task_id = ctx.request.task_id.clone();
         let ocr = match self
-            .execute_ocr_image(&request, &image_path, capture_rect)
+            .execute_ocr_image(OcrImageContext {
+                request: &ctx.request,
+                image_path: &ctx.image_path,
+                capture_rect: ctx.capture_rect,
+            })
             .await
         {
             Ok(result) => result,
@@ -90,13 +103,15 @@ impl Orchestrator {
 
     async fn handle_ocr_translate_from_image(
         &self,
-        request: TaskRequest,
-        image_path: String,
-        capture_rect: crate::orchestrator::models::CaptureRect,
+        ctx: CapturedOcrContext,
     ) -> Result<TaskResponse, AppError> {
-        let task_id = request.task_id.clone();
+        let task_id = ctx.request.task_id.clone();
         let ocr = match self
-            .execute_ocr_image(&request, &image_path, capture_rect)
+            .execute_ocr_image(OcrImageContext {
+                request: &ctx.request,
+                image_path: &ctx.image_path,
+                capture_rect: ctx.capture_rect,
+            })
             .await
         {
             Ok(result) => result,
@@ -104,7 +119,7 @@ impl Orchestrator {
         };
         println!("[task:{task_id}] OCR: {}", ocr.recognized_text);
 
-        self.finish_ocr_translate(task_id, request, ocr).await
+        self.finish_ocr_translate(task_id, ctx.request, ocr).await
     }
 
     async fn finish_ocr_translate(
@@ -167,14 +182,12 @@ impl Orchestrator {
 
     async fn execute_ocr_image(
         &self,
-        request: &TaskRequest,
-        image_path: &str,
-        capture_rect: crate::orchestrator::models::CaptureRect,
+        ctx: OcrImageContext<'_>,
     ) -> Result<OcrExecution, AppError> {
-        let result = self.run_ocr_provider(request, image_path).await;
-        let _ = std::fs::remove_file(image_path);
+        let result = self.run_ocr_provider(ctx.request, ctx.image_path).await;
+        let _ = std::fs::remove_file(ctx.image_path);
         result.map(|mut ocr| {
-            ocr.capture_rect = Some(capture_rect);
+            ocr.capture_rect = Some(ctx.capture_rect);
             ocr
         })
     }
