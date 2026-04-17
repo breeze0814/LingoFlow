@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Rust Clippy warnings: reduced function parameters using context objects (Bing Web, Youdao Web, Microsoft Translator, Tencent TMT)
+- Code quality: eliminated all too_many_arguments warnings
+
 ### Added
 - Windows platform support (core features)
 - Comprehensive test coverage (50+ tests)
+- CI/CD: GitHub Actions workflow for automated testing
+- LICENSE: MIT License
+- CHANGELOG: Following Keep a Changelog format
 
-### Fixed
-- Desktop build and native settings sync
+### Changed
+- Documentation: synced README and CLAUDE.md with current project state
 
 ## [0.1.0] - 2026-04-08
 
