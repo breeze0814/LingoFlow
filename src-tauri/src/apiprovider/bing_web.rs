@@ -33,6 +33,15 @@ struct BingWebConfig {
     curl_path: String,
 }
 
+/// Request context for Bing translation
+struct BingTranslationContext<'a> {
+    req: &'a TranslateRequest,
+    source_lang: &'a str,
+    target_lang: &'a str,
+    timeout_ms: u64,
+    context: &'a BingPageContext,
+}
+
 impl BingWebProvider {
     pub fn from_env() -> Option<Self> {
         Some(Self {
@@ -81,11 +90,7 @@ impl BingWebProvider {
 
     async fn request_translation(
         &self,
-        req: &TranslateRequest,
-        source_lang: &str,
-        target_lang: &str,
-        _timeout_ms: u64,
-        context: &BingPageContext,
+        ctx: BingTranslationContext<'_>,
     ) -> Result<String, AppError> {
         let endpoint = format!(
             "{}/ttranslatev3",
@@ -94,31 +99,31 @@ impl BingWebProvider {
         log_bing_web(format!(
             "request_translation start endpoint={} source_lang={} target_lang={} text_len={} text_preview={} ig={} token_len={} key_len={}",
             endpoint,
-            source_lang,
-            target_lang,
-            req.text.len(),
-            preview_debug(&req.text),
-            context.ig,
-            context.token.len(),
-            context.key.len()
+            ctx.source_lang,
+            ctx.target_lang,
+            ctx.req.text.len(),
+            preview_debug(&ctx.req.text),
+            ctx.context.ig,
+            ctx.context.token.len(),
+            ctx.context.key.len()
         ));
         let request_url = format!(
             "{}?isVertical=1&IG={}&IID={}",
-            endpoint, context.ig, DEFAULT_IID
+            endpoint, ctx.context.ig, DEFAULT_IID
         );
         let data_args = vec![
             "--data-urlencode".to_string(),
-            format!("fromLang={source_lang}"),
+            format!("fromLang={}", ctx.source_lang),
             "--data-urlencode".to_string(),
-            format!("to={target_lang}"),
+            format!("to={}", ctx.target_lang),
             "--data-urlencode".to_string(),
-            format!("text={}", req.text),
+            format!("text={}", ctx.req.text),
             "--data-urlencode".to_string(),
             "tryFetchingGenderDebiasedTranslations=true".to_string(),
             "--data-urlencode".to_string(),
-            format!("token={}", context.token),
+            format!("token={}", ctx.context.token),
             "--data-urlencode".to_string(),
-            format!("key={}", context.key),
+            format!("key={}", ctx.context.key),
         ];
         let mut args = vec![
             "-s".to_string(),
@@ -211,9 +216,16 @@ impl TranslateProvider for BingWebProvider {
         let source_lang = source_lang_to_bing(&req.source_lang);
         let target_lang = target_lang_to_bing(&req.target_lang)?;
         let context = self.fetch_page_context(timeout_ms).await?;
-        let payload = self
-            .request_translation(&req, &source_lang, &target_lang, timeout_ms, &context)
-            .await?;
+
+        let ctx = BingTranslationContext {
+            req: &req,
+            source_lang: &source_lang,
+            target_lang: &target_lang,
+            timeout_ms,
+            context: &context,
+        };
+
+        let payload = self.request_translation(ctx).await?;
         Self::parse_translation_result(req, &payload)
     }
 
