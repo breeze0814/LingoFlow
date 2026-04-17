@@ -53,8 +53,19 @@ pub(crate) fn current_millis_string() -> Result<String, AppError> {
     Ok(now.as_millis().to_string())
 }
 
-pub(crate) fn generate_sign(client: &str, product: &str, timestamp: &str, key: &str) -> String {
-    let raw = format!("client={client}&mysticTime={timestamp}&product={product}&key={key}");
+/// Parameters for Youdao sign generation
+pub(crate) struct YoudaoSignParams<'a> {
+    pub client: &'a str,
+    pub product: &'a str,
+    pub timestamp: &'a str,
+    pub key: &'a str,
+}
+
+pub(crate) fn generate_sign(params: YoudaoSignParams<'_>) -> String {
+    let raw = format!(
+        "client={}&mysticTime={}&product={}&key={}",
+        params.client, params.timestamp, params.product, params.key
+    );
     format!("{:x}", md5::compute(raw))
 }
 
