@@ -4,22 +4,25 @@ use std::path::Path;
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
 
-pub fn write_rgba_png(
-    output_path: &Path,
-    width: u32,
-    height: u32,
-    rgba_pixels: &[u8],
-) -> Result<(), AppError> {
-    let row_len = (width as usize) * 4;
-    let mut raw_data = Vec::with_capacity((row_len + 1) * height as usize);
-    for row in rgba_pixels.chunks_exact(row_len) {
+/// Parameters for PNG encoding
+pub struct PngEncodeParams<'a> {
+    pub output_path: &'a Path,
+    pub width: u32,
+    pub height: u32,
+    pub rgba_pixels: &'a [u8],
+}
+
+pub fn write_rgba_png(params: PngEncodeParams<'_>) -> Result<(), AppError> {
+    let row_len = (params.width as usize) * 4;
+    let mut raw_data = Vec::with_capacity((row_len + 1) * params.height as usize);
+    for row in params.rgba_pixels.chunks_exact(row_len) {
         raw_data.push(0u8);
         raw_data.extend_from_slice(row);
     }
 
     let compressed = deflate_zlib(&raw_data);
 
-    let mut file = std::fs::File::create(output_path).map_err(|error| {
+    let mut file = std::fs::File::create(params.output_path).map_err(|error| {
         AppError::new(
             ErrorCode::InternalError,
             format!("Failed to create capture file: {error}"),
@@ -31,8 +34,8 @@ pub fn write_rgba_png(
         .map_err(map_png_write_error)?;
 
     let mut ihdr = Vec::with_capacity(13);
-    ihdr.extend_from_slice(&width.to_be_bytes());
-    ihdr.extend_from_slice(&height.to_be_bytes());
+    ihdr.extend_from_slice(&params.width.to_be_bytes());
+    ihdr.extend_from_slice(&params.height.to_be_bytes());
     ihdr.push(8);
     ihdr.push(6);
     ihdr.push(0);

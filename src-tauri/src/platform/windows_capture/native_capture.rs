@@ -10,7 +10,7 @@ use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
 use crate::orchestrator::models::CaptureRect;
 
-use super::png_encoding::write_rgba_png;
+use super::png_encoding::{write_rgba_png, PngEncodeParams};
 
 pub struct PixelCaptureRect {
     pub x: i32,
@@ -131,7 +131,12 @@ pub fn native_capture_region(output_path: &Path, rect: &PixelCaptureRect) -> Res
             chunk.swap(0, 2);
         }
 
-        write_rgba_png(output_path, rect.width as u32, rect.height as u32, &pixels)
+        write_rgba_png(PngEncodeParams {
+            output_path,
+            width: rect.width as u32,
+            height: rect.height as u32,
+            rgba_pixels: &pixels,
+        })
     }
 }
 
