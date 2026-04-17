@@ -47,6 +47,13 @@ pub struct TesseractJsBridge {
     pending: Mutex<PendingMap>,
 }
 
+/// Context for waiting for Tesseract response
+struct WaitResponseContext {
+    request_id: String,
+    timeout_ms: u64,
+    receiver: oneshot::Receiver<Result<String, AppError>>,
+}
+
 impl TesseractJsBridge {
     pub fn new() -> Self {
         Self {
@@ -66,8 +73,12 @@ impl TesseractJsBridge {
         let payload = self.build_request_payload(&request_id, &req)?;
         let receiver = self.register_pending_request(&request_id).await;
         self.emit_request(payload)?;
-        self.wait_for_response(request_id, req.timeout_ms, receiver)
-            .await
+        self.wait_for_response(WaitResponseContext {
+            request_id,
+            timeout_ms: req.timeout_ms,
+            receiver,
+        })
+        .await
     }
 
     pub async fn resolve(&self, payload: TesseractOcrResponsePayload) {
@@ -127,16 +138,11 @@ impl TesseractJsBridge {
             })
     }
 
-    async fn wait_for_response(
-        &self,
-        request_id: String,
-        timeout_ms: u64,
-        receiver: oneshot::Receiver<Result<String, AppError>>,
-    ) -> Result<String, AppError> {
-        match tokio::time::timeout(Duration::from_millis(timeout_ms), receiver).await {
+    async fn wait_for_response(&self, ctx: WaitResponseContext) -> Result<String, AppError> {
+        match tokio::time::timeout(Duration::from_millis(ctx.timeout_ms), ctx.receiver).await {
             Ok(Ok(result)) => result,
             Ok(Err(_)) => {
-                self.remove_pending_request(&request_id).await;
+                self.remove_pending_request(&ctx.request_id).await;
                 Err(AppError::new(
                     ErrorCode::InternalError,
                     "Tesseract OCR runtime closed response channel unexpectedly",
@@ -144,7 +150,7 @@ impl TesseractJsBridge {
                 ))
             }
             Err(_) => {
-                self.remove_pending_request(&request_id).await;
+                self.remove_pending_request(&ctx.request_id).await;
                 Err(AppError::new(
                     ErrorCode::ProviderTimeout,
                     "Tesseract OCR request timed out",

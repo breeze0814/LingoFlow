@@ -58,14 +58,17 @@ pub fn build_clipboard_wait_script(output_path: &str, timeout_seconds: u64) -> S
     )
 }
 
-pub fn build_region_capture_script(
-    output_path: &str,
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
-) -> String {
-    let escaped_path = output_path.replace('\'', "''");
+/// Parameters for region capture script
+pub struct RegionCaptureParams<'a> {
+    pub output_path: &'a str,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+}
+
+pub fn build_region_capture_script(params: RegionCaptureParams<'_>) -> String {
+    let escaped_path = params.output_path.replace('\'', "''");
     format!(
         concat!(
             "Add-Type -AssemblyName System.Drawing; ",
@@ -77,10 +80,10 @@ pub fn build_region_capture_script(
             "$bitmap.Dispose(); ",
             "exit 0"
         ),
-        width,
-        height,
-        x,
-        y,
+        params.width,
+        params.height,
+        params.x,
+        params.y,
         escaped_path
     )
 }
