@@ -8,8 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- Rust Clippy warnings: reduced function parameters using context objects (Bing Web, Youdao Web, Microsoft Translator, Tencent TMT)
-- Code quality: eliminated all too_many_arguments warnings
+- Rust Clippy warnings: eliminated all 18 too_many_arguments warnings
+  - API providers: Bing Web, Youdao Web, Microsoft Translator, Tencent TMT (6 warnings)
+  - Orchestrator: OCR execution and translation execution (8 warnings)
+  - Refactored using context objects for better code organization
+- Code quality: all tests pass (52 tests)
 
 ### Added
 - Windows platform support (core features)
@@ -20,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Documentation: synced README and CLAUDE.md with current project state
+- Architecture: improved parameter passing with context objects
 
 ## [0.1.0] - 2026-04-08
 
