@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 use crate::apiprovider::http_error::{invalid_response_error, map_http_error};
-use crate::apiprovider::tencent_tmt_signer::TencentTmtSigner;
+use crate::apiprovider::tencent_tmt_signer::{TencentAuthParams, TencentTmtSigner};
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
 use crate::providers::traits::{TranslateProvider, TranslateRequest, TranslateResult};
@@ -32,6 +32,13 @@ pub(crate) struct TencentTmtConfig {
     pub(crate) base_url: String,
     pub(crate) host: String,
     pub(crate) signer: TencentTmtSigner,
+}
+
+/// Request context for Tencent translation
+struct TencentTranslateContext {
+    headers: HeaderMap,
+    body_json: String,
+    timeout_ms: u64,
 }
 
 #[derive(Serialize)]
@@ -162,27 +169,25 @@ impl TencentTmtProvider {
     fn build_signed_headers(&self, body_json: &str) -> Result<HeaderMap, AppError> {
         let timestamp = OffsetDateTime::now_utc().unix_timestamp();
         let date = Self::utc_date_from_timestamp(timestamp)?;
-        let authorization = self.config.signer.build_authorization(
-            ACTION_TEXT_TRANSLATE,
+        let authorization = self.config.signer.build_authorization(TencentAuthParams {
+            action: ACTION_TEXT_TRANSLATE,
             timestamp,
-            &date,
-            body_json,
-        )?;
+            date: &date,
+            payload: body_json,
+        })?;
         self.build_headers(&authorization, timestamp)
     }
 
     async fn request_translate(
         &self,
-        headers: HeaderMap,
-        body_json: String,
-        timeout_ms: u64,
+        ctx: TencentTranslateContext,
     ) -> Result<TencentTranslateApiResponse, AppError> {
         let response = self
             .client
             .post(&self.config.base_url)
-            .headers(headers)
-            .timeout(Duration::from_millis(timeout_ms))
-            .body(body_json)
+            .headers(ctx.headers)
+            .timeout(Duration::from_millis(ctx.timeout_ms))
+            .body(ctx.body_json)
             .send()
             .await
             .map_err(|error| map_http_error(PROVIDER_LABEL, error))?;
@@ -226,9 +231,14 @@ impl TranslateProvider for TencentTmtProvider {
         let body = Self::build_request_body(&req)?;
         let body_json = Self::serialize_body(&body)?;
         let headers = self.build_signed_headers(&body_json)?;
-        let payload = self
-            .request_translate(headers, body_json, timeout_ms)
-            .await?;
+
+        let ctx = TencentTranslateContext {
+            headers,
+            body_json,
+            timeout_ms,
+        };
+
+        let payload = self.request_translate(ctx).await?;
         Self::parse_result(req, payload)
     }
 
