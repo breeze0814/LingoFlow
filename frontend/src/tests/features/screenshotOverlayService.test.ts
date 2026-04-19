@@ -130,9 +130,8 @@ describe('screenshotOverlayService', () => {
   });
 
   it('waits for a new ready event after overlay window recreation', async () => {
-    const { showScreenshotOverlay } = await import(
-      '../../features/screenshot/screenshotOverlayService'
-    );
+    const { showScreenshotOverlay } =
+      await import('../../features/screenshot/screenshotOverlayService');
     const request = {
       mode: 'ocr_translate' as const,
       sourceLanguageLabel: '英语',

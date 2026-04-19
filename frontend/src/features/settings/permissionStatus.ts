@@ -15,7 +15,6 @@ export function isPermissionStatus(value: unknown): value is PermissionStatus {
   }
   const maybeStatus = value as Record<string, unknown>;
   return (
-    isPermissionState(maybeStatus.accessibility) &&
-    isPermissionState(maybeStatus.screenRecording)
+    isPermissionState(maybeStatus.accessibility) && isPermissionState(maybeStatus.screenRecording)
   );
 }

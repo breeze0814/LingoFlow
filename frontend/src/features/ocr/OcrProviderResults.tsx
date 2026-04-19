@@ -44,9 +44,7 @@ const ResultActions = memo(function ResultActions(props: {
   );
 });
 
-export const OcrProviderResults = memo(function OcrProviderResults(
-  props: OcrProviderResultsProps,
-) {
+export const OcrProviderResults = memo(function OcrProviderResults(props: OcrProviderResultsProps) {
   const { onCopy, onPromoteProvider, resultState } = props;
   const [expandedProviderIds, setExpandedProviderIds] = useState<string[]>([]);
 

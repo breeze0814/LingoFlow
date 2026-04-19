@@ -3,6 +3,7 @@
 .claude
 .spec-workflow
 .playwright-mcp
+.serena
 # Logs
 *.log
 npm-debug.log*

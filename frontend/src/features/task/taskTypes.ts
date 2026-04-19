@@ -1,9 +1,4 @@
-export type TaskStatus =
-  | 'idle'
-  | 'pending'
-  | 'success'
-  | 'failure'
-  | 'cancelled';
+export type TaskStatus = 'idle' | 'pending' | 'success' | 'failure' | 'cancelled';
 
 export type TaskType =
   | 'selection_translate'

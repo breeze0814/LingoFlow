@@ -326,7 +326,9 @@ export function parseStoredSettings(value: unknown): SettingsState {
   return parseSettings(value);
 }
 
-function firstEnabledTranslateProvider(providers: ToolProviderConfigMap): TranslateProviderId | null {
+function firstEnabledTranslateProvider(
+  providers: ToolProviderConfigMap,
+): TranslateProviderId | null {
   for (const providerId of TRANSLATE_PROVIDER_ORDER) {
     if (providers[providerId].enabled) {
       return providerId;
@@ -347,10 +349,11 @@ function firstEnabledOcrProvider(providers: ToolProviderConfigMap): OcrProviderI
 export function normalizeSettings(settings: SettingsState): SettingsState {
   const defaultTranslateProvider = settings.providers[settings.defaultTranslateProvider].enabled
     ? settings.defaultTranslateProvider
-    : firstEnabledTranslateProvider(settings.providers) ?? DEFAULT_SETTINGS.defaultTranslateProvider;
+    : (firstEnabledTranslateProvider(settings.providers) ??
+      DEFAULT_SETTINGS.defaultTranslateProvider);
   const defaultOcrProvider = settings.providers[settings.defaultOcrProvider].enabled
     ? settings.defaultOcrProvider
-    : firstEnabledOcrProvider(settings.providers) ?? DEFAULT_SETTINGS.defaultOcrProvider;
+    : (firstEnabledOcrProvider(settings.providers) ?? DEFAULT_SETTINGS.defaultOcrProvider);
 
   return {
     ...settings,

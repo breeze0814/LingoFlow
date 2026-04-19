@@ -184,13 +184,15 @@ function trimEdgeNoise(line: string) {
  * ```
  */
 export function normalizeOcrText(text: string) {
-  return removeIgnoredCharacters(text)
-    // Normalize line endings to Unix style
-    .replace(/\r\n/g, '\n')
-    .split('\n')
-    .map(normalizeLine)
-    .join('\n')
-    // Limit consecutive blank lines to MAX_PARAGRAPH_BREAKS (e.g., "\n\n\n\n" → "\n\n")
-    .replace(new RegExp(`\\n{${MAX_PARAGRAPH_BREAKS + 1},}`, 'g'), '\n\n')
-    .trim();
+  return (
+    removeIgnoredCharacters(text)
+      // Normalize line endings to Unix style
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .map(normalizeLine)
+      .join('\n')
+      // Limit consecutive blank lines to MAX_PARAGRAPH_BREAKS (e.g., "\n\n\n\n" → "\n\n")
+      .replace(new RegExp(`\\n{${MAX_PARAGRAPH_BREAKS + 1},}`, 'g'), '\n\n')
+      .trim()
+  );
 }
