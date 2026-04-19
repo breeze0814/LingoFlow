@@ -2,7 +2,7 @@
   display: grid;
   gap: 12px;
   padding: 12px;
-  border-radius: 18px;
+  border-radius: 12px;
 }
 
 .ocrSectionHeader {
@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .ocrSectionHeader h3 {
@@ -18,12 +18,14 @@
   color: #fafafa;
   font-size: 14px;
   font-weight: 700;
+  font-family: 'Inter Tight', sans-serif;
   letter-spacing: 0.02em;
 }
 
 .ocrSectionHeader span {
-  color: #a1a1aa;
+  color: #a3a3a3;
   font-size: 12px;
+  font-family: 'Inter Tight', sans-serif;
 }
 
 .ocrProviderStack {
@@ -35,73 +37,123 @@
   display: grid;
   gap: 10px;
   padding: 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 50%), #2a2a2e;
+  border-radius: 12px;
+  border: 1px solid #262626;
+  border-left: 3px solid #f59e0b;
+  background: #171717;
+  position: relative;
+  overflow: hidden;
   transition:
     border-color 180ms ease,
     transform 180ms ease,
     box-shadow 180ms ease;
+  animation: cardSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ocrProviderCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: #f59e0b;
+  filter: blur(8px);
+  opacity: 0.6;
+  transition: opacity 180ms ease;
 }
 
 .ocrProviderCard:hover {
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: #404040;
+  background: #262626;
   transform: translateY(-1px);
 }
 
+.ocrProviderCard:hover::before {
+  opacity: 1;
+}
+
 .ocrProviderCardPinned {
-  border-color: rgba(96, 165, 250, 0.4);
-  background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.16), transparent 38%),
-    linear-gradient(180deg, rgba(96, 165, 250, 0.08), transparent 50%), #23252b;
-  box-shadow: 0 12px 26px rgba(30, 64, 175, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+  background: #171717;
+  box-shadow: 0 12px 26px rgba(245, 158, 11, 0.2);
 }
 
 .ocrProviderCardHeader {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: nowrap;
 }
 
 .ocrProviderCardLead {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: start;
-  gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .ocrProviderOrder {
-  min-width: 36px;
-  height: 22px;
-  padding: 0 7px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #a1a1aa;
+  min-width: auto;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 3px;
+  border: 1px solid #404040;
+  color: #a3a3a3;
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  font-family: 'Inter Tight', sans-serif;
+  letter-spacing: 0.01em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  text-transform: uppercase;
   background: rgba(255, 255, 255, 0.03);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ocrProviderOrderPinned {
-  color: #dbeafe;
-  border-color: rgba(96, 165, 250, 0.35);
-  background: rgba(59, 130, 246, 0.16);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.16);
+}
+
+.ocrProviderStatus {
+  color: #a3a3a3;
+  font-size: 10px;
+  font-family: 'Inter Tight', sans-serif;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 2;
+  min-width: 0;
+  max-width: 70px;
 }
 
 .ocrProviderBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   border: 1px solid color-mix(in srgb, var(--provider-color) 44%, rgba(255, 255, 255, 0.2));
   background: color-mix(in srgb, var(--provider-color) 18%, rgba(255, 255, 255, 0.04));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -109,50 +161,58 @@
 }
 
 .ocrProviderBadge svg {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   display: block;
 }
 
 .ocrProviderMeta {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.ocrProviderMeta strong {
+  color: #fafafa;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter Tight', sans-serif;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100px;
 }
 
 .ocrProviderMetaTopline {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
-}
-
-.ocrProviderStatus {
-  color: #a1a1aa;
-  font-size: 11px;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.ocrProviderMeta strong {
-  color: #f4f4f5;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  flex-shrink: 1;
 }
 
 .ocrProviderCardBody {
   display: grid;
-  gap: 6px;
+  gap: 10px;
 }
 
 .ocrResultText {
   margin: 0;
-  color: #e4e4e7;
-  font-size: 13px;
-  line-height: 1.65;
+  padding-left: 26px;
+  color: #fafafa;
+  font-size: 15px;
+  font-family: 'Crimson Pro', serif;
+  line-height: 1.8;
+  letter-spacing: -0.01em;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -166,14 +226,15 @@
 
 .ocrMiniActions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 4px;
   flex-shrink: 0;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .ocrCompactWindowCondensed .ocrProviderCardHeader {
-  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
 }
 
 .ocrCompactWindowCondensed .ocrProviderMetaTopline {
@@ -182,22 +243,22 @@
 
 .ocrEmptyState {
   padding: 8px 2px;
-  color: #a1a1aa;
+  color: #a3a3a3;
   font-size: 12px;
+  font-family: 'Inter Tight', sans-serif;
   line-height: 1.6;
 }
 
 @media (max-width: 420px) {
   .ocrProviderCardHeader {
-    grid-template-columns: 1fr;
-    display: grid;
+    align-items: center;
   }
 
   .ocrProviderCardLead {
-    grid-template-columns: auto 1fr;
+    flex-direction: row;
   }
 
-  .ocrProviderMetaTopline {
-    flex-wrap: wrap;
+  .ocrMiniActions {
+    justify-content: flex-start;
   }
 }

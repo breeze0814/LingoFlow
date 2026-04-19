@@ -1,5 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap');
+
 body[data-window-type='ocr_result'] #root {
-  background: linear-gradient(180deg, #1f1f22 0%, #18181b 100%);
+  background: #0a0a0a;
+  font-family: 'Inter Tight', sans-serif;
 }
 
 .ocrResultWindowRoot {
@@ -9,7 +12,20 @@ body[data-window-type='ocr_result'] #root {
 .ocrResultPanel {
   width: 100%;
   max-width: 410px;
-  height: calc(100vh - 16px);
+  height: auto;
+  max-height: calc(100vh - 16px);
+  animation: panelFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .ocrCompactWindow {
@@ -22,8 +38,8 @@ body[data-window-type='ocr_result'] #root {
 .ocrFixedSection,
 .ocrSectionCard,
 .ocrInlineMessage {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(36, 36, 39, 0.94);
+  border: 1px solid #262626;
+  background: #171717;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
 }
 
@@ -31,7 +47,7 @@ body[data-window-type='ocr_result'] #root {
   display: grid;
   gap: 8px;
   padding: 8px;
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 .ocrCompactWindowCondensed .ocrFixedSection {
@@ -46,21 +62,17 @@ body[data-window-type='ocr_result'] #root {
   position: relative;
 }
 
-.ocrCompactWindowCondensed .ocrInputWrapper {
-  display: grid;
-  gap: 8px;
-}
-
 .ocrCompactInput {
   width: 100%;
   min-height: 60px;
   max-height: 260px;
-  padding: 10px 12px 40px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: #27272a;
-  color: #f4f4f5;
+  padding: 10px 12px 48px;
+  border: 1px solid #262626;
+  border-radius: 12px;
+  background: #171717;
+  color: #fafafa;
   font-size: 14px;
+  font-family: 'Inter Tight', sans-serif;
   line-height: 1.6;
   resize: none;
   overflow: hidden;
@@ -71,28 +83,27 @@ body[data-window-type='ocr_result'] #root {
 
 .ocrCompactWindowCondensed .ocrCompactInput {
   min-height: 96px;
-  padding: 10px 12px;
+  padding: 10px 12px 48px;
 }
 
 .ocrCompactInput:focus {
   outline: none;
-  border-color: rgba(96, 165, 250, 0.56);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 }
 
 .ocrInputActions {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: 10px;
+  bottom: 10px;
   display: flex;
-  gap: 4px;
+  gap: 6px;
+  z-index: 1;
 }
 
 .ocrCompactWindowCondensed .ocrInputActions {
-  position: static;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 6px;
+  right: 10px;
+  bottom: 10px;
 }
 
 /* ============================================
@@ -105,25 +116,25 @@ body[data-window-type='ocr_result'] #root {
   justify-content: center;
   width: 38px;
   height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: #303033;
-  color: #d4d4d8;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  background: transparent;
+  color: #a3a3a3;
   cursor: pointer;
   transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 
 .ocrIconBtn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   stroke-width: 1.8;
   transition: transform 180ms ease;
 }
 
 .ocrIconBtn:hover {
-  background: #3f3f46;
-  border-color: rgba(255, 255, 255, 0.14);
+  background: #262626;
+  border-color: #525252;
   color: #fafafa;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -140,41 +151,41 @@ body[data-window-type='ocr_result'] #root {
 
 /* Primary variant (translate button) */
 .ocrIconBtnPrimary {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-color: rgba(139, 92, 246, 0.4);
-  color: white;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+  background: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #0a0a0a;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
 .ocrIconBtnPrimary:hover {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  border-color: rgba(139, 92, 246, 0.6);
-  color: white;
-  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+  background: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #0a0a0a;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
 }
 
 /* Active variant (pinned) */
 .ocrIconBtnActive {
-  border-color: rgba(96, 165, 250, 0.48);
-  color: #93c5fd;
-  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(245, 158, 11, 0.48);
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.14);
 }
 
 .ocrIconBtnActive:hover {
-  background: rgba(59, 130, 246, 0.22);
-  color: #bfdbfe;
+  background: rgba(245, 158, 11, 0.22);
+  color: #fcd34d;
 }
 
 /* Small variant (for inline mini actions) */
 .ocrIconBtnSmall {
   width: 30px;
   height: 30px;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .ocrIconBtnSmall svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 /* ============================================
@@ -234,11 +245,13 @@ body[data-window-type='ocr_result'] #root {
 .ocrLanguageOption {
   width: 100%;
   min-height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: #303033;
-  color: #f4f4f5;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  background: transparent;
+  color: #fafafa;
   font-size: 12px;
+  font-family: 'Inter Tight', sans-serif;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease;
 }
@@ -257,19 +270,20 @@ body[data-window-type='ocr_result'] #root {
 
 .ocrLanguageButton:hover,
 .ocrLanguageOption:hover {
-  background: #3f3f46;
-  border-color: rgba(255, 255, 255, 0.14);
+  background: #262626;
+  border-color: #525252;
 }
 
 .ocrSwapButton {
   width: 32px;
-  background: rgba(59, 130, 246, 0.14);
-  color: #93c5fd;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
 }
 
 .ocrSwapButton:hover {
-  background: rgba(59, 130, 246, 0.24);
-  color: #bfdbfe;
+  background: rgba(245, 158, 11, 0.24);
+  color: #fcd34d;
+  transform: rotate(180deg);
 }
 
 .ocrLanguageMenu {
@@ -281,14 +295,14 @@ body[data-window-type='ocr_result'] #root {
   display: grid;
   gap: 6px;
   padding: 8px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(24, 24, 27, 0.98);
+  border-radius: 12px;
+  border: 1px solid #262626;
+  background: rgba(10, 10, 10, 0.98);
 }
 
 .ocrLanguageOptionActive {
-  border-color: rgba(96, 165, 250, 0.54);
-  color: #bfdbfe;
+  border-color: rgba(245, 158, 11, 0.54);
+  color: #fcd34d;
 }
 
 /* ============================================
@@ -313,13 +327,14 @@ body[data-window-type='ocr_result'] #root {
 
 .ocrInlineMessage {
   padding: 8px 10px;
-  border-radius: 12px;
-  color: #bfdbfe;
+  border-radius: 8px;
+  color: #fcd34d;
   font-size: 12px;
+  font-family: 'Inter Tight', sans-serif;
 }
 
 .ocrInlineMessageError {
-  color: #fecaca;
+  color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.22);
 }
 

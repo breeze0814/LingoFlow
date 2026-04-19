@@ -83,19 +83,13 @@ export function OcrProviderResults(props: OcrProviderResultsProps) {
                       <ProviderGlyph icon={item.icon} />
                     </span>
                     <span className="ocrProviderMeta">
+                      <strong>{item.label}</strong>
                       <span className="ocrProviderMetaTopline">
-                        <span
-                          className={
-                            item.isPinned
-                              ? 'ocrProviderOrder ocrProviderOrderPinned'
-                              : 'ocrProviderOrder'
-                          }
-                        >
-                          {item.isPinned ? '置顶' : item.rankLabel}
-                        </span>
+                        {item.isPinned ? (
+                          <span className="ocrProviderOrder ocrProviderOrderPinned">置顶</span>
+                        ) : null}
                         <span className="ocrProviderStatus">{item.statusLabel}</span>
                       </span>
-                      <strong>{item.label}</strong>
                     </span>
                   </div>
                   <ResultActions

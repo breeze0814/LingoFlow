@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR 结果界面 - 新设计预览</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --amber: #f59e0b;
+      --amber-dark: #d97706;
+      --amber-light: #fbbf24;
+      --black: #0a0a0a;
+      --gray-900: #171717;
+      --gray-800: #262626;
+      --gray-700: #404040;
+      --gray-600: #525252;
+      --gray-400: #a3a3a3;
+      --gray-300: #d4d4d4;
+      --white: #fafafa;
+
+      --font-display: 'Crimson Pro', serif;
+      --font-body: 'Inter Tight', sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--black);
+      color: var(--white);
+      padding: 24px;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      overflow-x: hidden;
+    }
+
+    .preview-container {
+      width: 100%;
+      max-width: 440px;
+      animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Header */
+    .ocr-header {
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--gray-800);
+      animation: slideDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .ocr-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      color: var(--white);
+    }
+
+    .ocr-subtitle {
+      font-size: 13px;
+      color: var(--gray-400);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    /* Language Bar */
+    .language-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding: 16px 20px;
+      background: var(--gray-900);
+      border: 1px solid var(--gray-800);
+      border-radius: 12px;
+      animation: slideRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+    }
+
+    @keyframes slideRight {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .lang-select {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 8px;
+      transition: all 0.2s;
+    }
+
+    .lang-select:hover {
+      color: var(--amber);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .lang-swap {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: 1px solid var(--gray-700);
+      border-radius: 8px;
+      color: var(--gray-400);
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lang-swap:hover {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--black);
+      transform: rotate(180deg);
+    }
+
+    /* Input Section */
+    .input-section {
+      margin-bottom: 32px;
+      animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s backwards;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .input-label {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: block;
+      color: var(--white);
+      letter-spacing: -0.01em;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-field {
+      width: 100%;
+      min-height: 120px;
+      padding: 16px;
+      padding-bottom: 52px;
+      background: var(--gray-900);
+      border: 1px solid var(--gray-800);
+      border-radius: 12px;
+      color: var(--white);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.7;
+      resize: vertical;
+      transition: all 0.3s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    }
+
+    .input-field::placeholder {
+      color: var(--gray-600);
+    }
+
+    .input-actions {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .input-btn {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: 1px solid var(--gray-700);
+      border-radius: 8px;
+      color: var(--gray-400);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      font-size: 14px;
+    }
+
+    .input-btn:hover {
+      background: var(--gray-800);
+      border-color: var(--gray-600);
+      color: var(--white);
+      transform: translateY(-1px);
+    }
+
+    .input-btn-primary {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--black);
+    }
+
+    .input-btn-primary:hover {
+      background: var(--amber-light);
+      border-color: var(--amber-light);
+      color: var(--black);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Results Section */
+    .results-section {
+      animation: fadeInStagger 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards;
+    }
+
+    @keyframes fadeInStagger {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--gray-800);
+    }
+
+    .results-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--white);
+      letter-spacing: -0.01em;
+    }
+
+    .results-count {
+      font-size: 12px;
+      color: var(--gray-500);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* Result Card */
+    .result-card {
+      margin-bottom: 20px;
+      padding: 20px;
+      background: var(--gray-900);
+      border-left: 3px solid var(--amber);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      animation: cardSlide 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+
+    .result-card:nth-child(2) { animation-delay: 0.5s; }
+    .result-card:nth-child(3) { animation-delay: 0.6s; }
+    .result-card:nth-child(4) { animation-delay: 0.7s; }
+
+    @keyframes cardSlide {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--amber);
+      filter: blur(8px);
+      opacity: 0.6;
+    }
+
+    .result-card:hover {
+      background: var(--gray-800);
+    }
+
+    .result-card:hover::before {
+      opacity: 1;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .provider-name {
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--amber);
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      background: transparent;
+      border: 1px solid var(--gray-700);
+      border-radius: 6px;
+      color: var(--gray-400);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .icon-btn:hover {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: var(--black);
+      transform: scale(1.1);
+    }
+
+    .result-text {
+      font-family: var(--font-display);
+      font-size: 17px;
+      line-height: 1.8;
+      color: var(--white);
+      font-weight: 400;
+      letter-spacing: -0.01em;
+    }
+
+    /* Status Message */
+    .status-message {
+      padding: 12px 16px;
+      background: rgba(245, 158, 11, 0.1);
+      border-left: 3px solid var(--amber);
+      border-radius: 8px;
+      color: var(--amber-light);
+      font-size: 13px;
+      margin-bottom: 20px;
+      font-weight: 500;
+      animation: slideRight 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      body {
+        padding: 16px;
+      }
+
+      .ocr-title {
+        font-size: 24px;
+      }
+
+      .input-actions {
+        right: 8px;
+        bottom: 8px;
+        gap: 4px;
+      }
+
+      .input-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+    }
+
+    /* Demo Note */
+    .demo-note {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      background: var(--gray-900);
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      z-index: 1000;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-note">✨ 设计预览</div>
+
+  <div class="preview-container">
+    <!-- Header -->
+    <header class="ocr-header">
+      <h1 class="ocr-title">OCR 翻译</h1>
+      <p class="ocr-subtitle">Editorial Workspace</p>
+    </header>
+
+    <!-- Language Bar -->
+    <div class="language-bar">
+      <select class="lang-select">
+        <option>自动检测</option>
+        <option>英语</option>
+        <option>日语</option>
+      </select>
+      <button class="lang-swap">⇄</button>
+      <select class="lang-select">
+        <option>简体中文</option>
+        <option>英语</option>
+        <option>日语</option>
+      </select>
+    </div>
+
+    <!-- Input Section -->
+    <div class="input-section">
+      <label class="input-label">源文本</label>
+      <div class="input-wrapper">
+        <textarea
+          class="input-field"
+          placeholder="输入或粘贴文本，按 Enter 翻译..."
+        >The quick brown fox jumps over the lazy dog.</textarea>
+        <div class="input-actions">
+          <button class="input-btn input-btn-primary" title="翻译">→</button>
+          <button class="input-btn" title="复制">📋</button>
+          <button class="input-btn" title="清空">🗑️</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Message -->
+    <div class="status-message">
+      ✓ 已复制到剪贴板
+    </div>
+
+    <!-- Results Section -->
+    <div class="results-section">
+      <div class="results-header">
+        <h2 class="results-title">翻译结果</h2>
+        <span class="results-count">3 个服务</span>
+      </div>
+
+      <!-- Result Card 1 -->
+      <div class="result-card">
+        <div class="card-header">
+          <span class="provider-name">DeepL</span>
+          <div class="card-actions">
+            <button class="icon-btn" title="复制">📋</button>
+            <button class="icon-btn" title="置顶">⭐</button>
+          </div>
+        </div>
+        <p class="result-text">
+          敏捷的棕色狐狸跳过了懒惰的狗。
+        </p>
+      </div>
+
+      <!-- Result Card 2 -->
+      <div class="result-card">
+        <div class="card-header">
+          <span class="provider-name">Google</span>
+          <div class="card-actions">
+            <button class="icon-btn" title="复制">📋</button>
+            <button class="icon-btn" title="置顶">⭐</button>
+          </div>
+        </div>
+        <p class="result-text">
+          敏捷的棕色狐狸跳过懒狗。
+        </p>
+      </div>
+
+      <!-- Result Card 3 -->
+      <div class="result-card">
+        <div class="card-header">
+          <span class="provider-name">Microsoft</span>
+          <div class="card-actions">
+            <button class="icon-btn" title="复制">📋</button>
+            <button class="icon-btn" title="置顶">⭐</button>
+          </div>
+        </div>
+        <p class="result-text">
+          敏捷的棕色狐狸跳过了懒狗。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 简单的交互演示
+    document.querySelectorAll('.icon-btn, .input-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        this.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+          this.style.transform = '';
+        }, 100);
+      });
+    });
+
+    document.querySelector('.lang-swap').addEventListener('click', function() {
+      const selects = document.querySelectorAll('.lang-select');
+      const temp = selects[0].value;
+      selects[0].value = selects[1].value;
+      selects[1].value = temp;
+    });
+  </script>
+</body>
+</html>
