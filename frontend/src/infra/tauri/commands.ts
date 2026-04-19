@@ -2,21 +2,63 @@ import { invoke } from '@tauri-apps/api/core';
 import { PermissionStatus } from '../../features/settings/permissionStatus';
 import { SettingsState } from '../../features/settings/settingsTypes';
 
+type TranslateProviderConfig = {
+  id: string;
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+  region?: string;
+  secretId?: string;
+  secretKey?: string;
+  appId?: string;
+  appSecret?: string;
+};
+
+type OcrProviderConfig = {
+  id: string;
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+};
+
+/**
+ * Maps a translate provider config from camelCase to snake_case for Rust backend.
+ * @param config - The translate provider configuration
+ * @returns The mapped configuration with snake_case keys
+ */
+function mapTranslateProviderConfig(config: TranslateProviderConfig) {
+  return {
+    id: config.id,
+    api_key: config.apiKey,
+    base_url: config.baseUrl,
+    model: config.model,
+    region: config.region,
+    secret_id: config.secretId,
+    secret_key: config.secretKey,
+    app_id: config.appId,
+    app_secret: config.appSecret,
+  };
+}
+
+/**
+ * Maps an OCR provider config from camelCase to snake_case for Rust backend.
+ * @param config - The OCR provider configuration
+ * @returns The mapped configuration with snake_case keys
+ */
+function mapOcrProviderConfig(config: OcrProviderConfig) {
+  return {
+    id: config.id,
+    api_key: config.apiKey,
+    base_url: config.baseUrl,
+    model: config.model,
+  };
+}
+
 type TranslateInput = {
   text: string;
   sourceLang?: string;
   targetLang: string;
-  translateProviderConfigs?: {
-    id: string;
-    apiKey?: string;
-    baseUrl?: string;
-    model?: string;
-    region?: string;
-    secretId?: string;
-    secretKey?: string;
-    appId?: string;
-    appSecret?: string;
-  }[];
+  translateProviderConfigs?: TranslateProviderConfig[];
 };
 
 type SelectionInput = {
@@ -25,12 +67,7 @@ type SelectionInput = {
 };
 
 type OcrRecognizeInput = {
-  ocrProviderConfigs?: {
-    id: string;
-    apiKey?: string;
-    baseUrl?: string;
-    model?: string;
-  }[];
+  ocrProviderConfigs?: OcrProviderConfig[];
   ocrProviderId?: string;
   sourceLangHint?: string;
 };
@@ -121,17 +158,7 @@ export const commandsClient = {
         text: input.text,
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
-        translate_provider_configs: input.translateProviderConfigs?.map((item) => ({
-          id: item.id,
-          api_key: item.apiKey,
-          base_url: item.baseUrl,
-          model: item.model,
-          region: item.region,
-          secret_id: item.secretId,
-          secret_key: item.secretKey,
-          app_id: item.appId,
-          app_secret: item.appSecret,
-        })),
+        translate_provider_configs: input.translateProviderConfigs?.map(mapTranslateProviderConfig),
       },
     });
   },
@@ -139,17 +166,7 @@ export const commandsClient = {
     return invoke('selection_translate', {
       payload: {
         target_lang: input.targetLang,
-        translate_provider_configs: input.translateProviderConfigs?.map((item) => ({
-          id: item.id,
-          api_key: item.apiKey,
-          base_url: item.baseUrl,
-          model: item.model,
-          region: item.region,
-          secret_id: item.secretId,
-          secret_key: item.secretKey,
-          app_id: item.appId,
-          app_secret: item.appSecret,
-        })),
+        translate_provider_configs: input.translateProviderConfigs?.map(mapTranslateProviderConfig),
       },
     });
   },
@@ -162,12 +179,7 @@ export const commandsClient = {
     return invoke('ocr_recognize', {
       payload: {
         ocr_provider_id: input.ocrProviderId,
-        ocr_provider_configs: input.ocrProviderConfigs?.map((item) => ({
-          id: item.id,
-          api_key: item.apiKey,
-          base_url: item.baseUrl,
-          model: item.model,
-        })),
+        ocr_provider_configs: input.ocrProviderConfigs?.map(mapOcrProviderConfig),
         source_lang_hint: input.sourceLangHint,
       },
     });
@@ -177,12 +189,7 @@ export const commandsClient = {
       payload: {
         capture_rect: input.captureRect,
         ocr_provider_id: input.ocrProviderId,
-        ocr_provider_configs: input.ocrProviderConfigs?.map((item) => ({
-          id: item.id,
-          api_key: item.apiKey,
-          base_url: item.baseUrl,
-          model: item.model,
-        })),
+        ocr_provider_configs: input.ocrProviderConfigs?.map(mapOcrProviderConfig),
         source_lang_hint: input.sourceLangHint,
       },
     });
@@ -191,26 +198,11 @@ export const commandsClient = {
     return invoke('ocr_translate', {
       payload: {
         ocr_provider_id: input.ocrProviderId,
-        ocr_provider_configs: input.ocrProviderConfigs?.map((item) => ({
-          id: item.id,
-          api_key: item.apiKey,
-          base_url: item.baseUrl,
-          model: item.model,
-        })),
+        ocr_provider_configs: input.ocrProviderConfigs?.map(mapOcrProviderConfig),
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
         source_lang_hint: input.sourceLangHint,
-        translate_provider_configs: input.translateProviderConfigs?.map((item) => ({
-          id: item.id,
-          api_key: item.apiKey,
-          base_url: item.baseUrl,
-          model: item.model,
-          region: item.region,
-          secret_id: item.secretId,
-          secret_key: item.secretKey,
-          app_id: item.appId,
-          app_secret: item.appSecret,
-        })),
+        translate_provider_configs: input.translateProviderConfigs?.map(mapTranslateProviderConfig),
       },
     });
   },
@@ -219,26 +211,11 @@ export const commandsClient = {
       payload: {
         capture_rect: input.captureRect,
         ocr_provider_id: input.ocrProviderId,
-        ocr_provider_configs: input.ocrProviderConfigs?.map((item) => ({
-          id: item.id,
-          api_key: item.apiKey,
-          base_url: item.baseUrl,
-          model: item.model,
-        })),
+        ocr_provider_configs: input.ocrProviderConfigs?.map(mapOcrProviderConfig),
         source_lang: input.sourceLang,
         target_lang: input.targetLang,
         source_lang_hint: input.sourceLangHint,
-        translate_provider_configs: input.translateProviderConfigs?.map((item) => ({
-          id: item.id,
-          api_key: item.apiKey,
-          base_url: item.baseUrl,
-          model: item.model,
-          region: item.region,
-          secret_id: item.secretId,
-          secret_key: item.secretKey,
-          app_id: item.appId,
-          app_secret: item.appSecret,
-        })),
+        translate_provider_configs: input.translateProviderConfigs?.map(mapTranslateProviderConfig),
       },
     });
   },

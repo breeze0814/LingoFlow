@@ -25,6 +25,7 @@ import {
   resolveOcrProviderRequestId,
 } from '../settings/ocrProviderRequest';
 import { loadSettingsForTranslation } from '../settings/nativeSettingsStorage';
+import { isTauriRuntime } from '../../app/appRuntime';
 
 type DragState = {
   startX: number;
@@ -32,10 +33,6 @@ type DragState = {
   endX: number;
   endY: number;
 };
-
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
 
 function buildSelectionStyle(selection: DragState | null) {
   if (!selection) {

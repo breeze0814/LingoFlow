@@ -82,6 +82,36 @@ function compareRows(left: DisplayRow, right: DisplayRow): number {
   return left.providerId.localeCompare(right.providerId);
 }
 
+/**
+ * Builds the result state for the OCR workbench, organizing provider results into a sorted,
+ * pinned display order with status labels and metadata.
+ *
+ * This function:
+ * 1. Merges actual results with enabled providers (to show "waiting" states)
+ * 2. Determines which provider should be pinned (preferred or first successful)
+ * 3. Sorts providers with pinned provider first, then by predefined priority order
+ * 4. Enriches each row with display metadata (color, icon, status label)
+ *
+ * The pinning logic prioritizes:
+ * - User's preferred provider (if it has results)
+ * - First non-error provider (if preferred has no results)
+ * - Preferred provider ID (as fallback)
+ *
+ * @param rows - Array of display rows with provider results
+ * @param preferredProviderId - User's preferred provider ID (or null)
+ * @param enabledProviderIds - List of enabled provider IDs to show
+ * @returns Result state with ordered provider rows ready for display
+ *
+ * @example
+ * ```ts
+ * const rows = [
+ *   { providerId: 'deepl_free', content: 'Hello', isError: false },
+ *   { providerId: 'google_translate', content: 'Error', isError: true }
+ * ];
+ * const state = buildResultState(rows, 'deepl_free', ['deepl_free', 'google_translate']);
+ * // Returns: { orderedRows: [deepl_free (pinned), google_translate] }
+ * ```
+ */
 export function buildResultState(
   rows: DisplayRow[],
   preferredProviderId: string | null,

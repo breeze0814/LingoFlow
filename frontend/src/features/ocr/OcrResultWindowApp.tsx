@@ -23,6 +23,7 @@ import {
   submitTranslationWorkspaceText,
   type TranslationWorkspaceState,
 } from './translationWorkspaceService';
+import { isTauriRuntime } from '../../app/appRuntime';
 
 type WorkspaceDirection = {
   sourceLanguageCode: string;
@@ -30,10 +31,6 @@ type WorkspaceDirection = {
   targetLanguageCode: string;
   targetLanguageLabel: string;
 };
-
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
 
 function languageLabel(code: string): string {
   const found = LANGUAGE_OPTIONS.find((item) => item.value === code);

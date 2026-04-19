@@ -1,10 +1,7 @@
 import { commandsClient } from '../../infra/tauri/commands';
 import { SettingsState } from './settingsTypes';
 import { loadSettingsFromStorage, parseStoredSettings } from './settingsStorage';
-
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
+import { isTauriRuntime } from '../../app/appRuntime';
 
 export async function loadSettingsFromNativeStorage(): Promise<SettingsState | null> {
   if (!isTauriRuntime()) {

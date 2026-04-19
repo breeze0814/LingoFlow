@@ -289,6 +289,36 @@ function parseSettings(record: SettingsRecord): SettingsState {
   });
 }
 
+/**
+ * Parses and validates stored settings from localStorage or Tauri store.
+ *
+ * This function:
+ * 1. Validates the structure and types of all settings fields
+ * 2. Applies default values for missing optional fields
+ * 3. Migrates legacy settings formats (e.g., old shortcut defaults)
+ * 4. Normalizes provider selections to ensure enabled providers are selected
+ * 5. Throws descriptive errors for invalid data
+ *
+ * The parser is strict about required fields but lenient about optional ones,
+ * falling back to defaults when values are missing or undefined.
+ *
+ * Legacy migrations handled:
+ * - Old shortcut key combinations (Option+A/S → Option+S/Q)
+ * - Previous default shortcuts (Option+S/Q/F → new defaults)
+ * - Renamed provider IDs (deepLTranslate → deepl_free)
+ * - Deprecated panel positions (cursor → center)
+ *
+ * @param value - The raw stored settings object (from JSON.parse)
+ * @returns Validated and normalized settings state
+ * @throws {Error} If settings structure is invalid or required fields are missing
+ *
+ * @example
+ * ```ts
+ * const raw = JSON.parse(localStorage.getItem('lingoflow.settings.v1'));
+ * const settings = parseStoredSettings(raw);
+ * // Returns: SettingsState with all fields validated and normalized
+ * ```
+ */
 export function parseStoredSettings(value: unknown): SettingsState {
   if (!isSettingsRecord(value)) {
     throw new Error('settings storage payload is not object');

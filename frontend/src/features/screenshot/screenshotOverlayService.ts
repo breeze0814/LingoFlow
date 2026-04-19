@@ -16,6 +16,7 @@ import {
   ScreenshotOverlayPayload,
   cacheScreenshotOverlayPayload,
 } from './screenshotOverlayBridge';
+import { isTauriRuntime } from '../../app/appRuntime';
 
 type ScreenshotOverlayRequest = Omit<ScreenshotOverlayPayload, 'monitor'>;
 
@@ -25,10 +26,6 @@ const OVERLAY_PAYLOAD_RETRY_DELAY_MS = 32;
 let overlayReady = false;
 let overlayListenerPromise: Promise<void> | null = null;
 const overlayReadyWaiters: Array<() => void> = [];
-
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
 
 async function waitUntilWindowCreated(target: WebviewWindow): Promise<void> {
   return new Promise((resolve, reject) => {

@@ -9,10 +9,7 @@ import {
   isOcrRuntimeRequestPayload,
 } from './ocrRuntimeBridge';
 import { recognizeImageWithTesseract, terminateTesseractWorker } from './tesseractWorkerService';
-
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
+import { isTauriRuntime } from '../../app/appRuntime';
 
 function buildErrorPayload(error: unknown): OcrRuntimeErrorPayload {
   const message = error instanceof Error ? error.message : String(error);

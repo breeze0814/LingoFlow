@@ -141,6 +141,39 @@ function trimEdgeNoise(line: string) {
   }
 }
 
+/**
+ * Normalizes OCR-recognized text by removing control characters, collapsing whitespace,
+ * trimming edge noise (misrecognized punctuation/symbols), and limiting paragraph breaks.
+ *
+ * This function performs the following transformations:
+ * 1. Removes invisible control characters (zero-width spaces, BOM, etc.)
+ * 2. Normalizes line endings to \n
+ * 3. Collapses multiple spaces within lines to single spaces
+ * 4. Trims leading/trailing whitespace from each line
+ * 5. Removes misrecognized punctuation/symbols at line edges (e.g., stray quotes, bullets)
+ * 6. Limits consecutive paragraph breaks to a maximum of 2 newlines
+ *
+ * The edge noise removal is intelligent: it preserves matching pairs of quotes/brackets
+ * but removes unmatched ones that are likely OCR artifacts.
+ *
+ * @param text - The raw OCR text to normalize
+ * @returns The normalized text with cleaned formatting
+ *
+ * @example
+ * ```ts
+ * // Removes control characters and edge noise
+ * normalizeOcrText('• Hello World •\n\n\n\nNext paragraph')
+ * // Returns: 'Hello World\n\nNext paragraph'
+ *
+ * // Preserves matching quotes
+ * normalizeOcrText('"Hello World"')
+ * // Returns: '"Hello World"'
+ *
+ * // Removes unmatched quotes
+ * normalizeOcrText('"Hello World')
+ * // Returns: 'Hello World'
+ * ```
+ */
 export function normalizeOcrText(text: string) {
   return removeIgnoredCharacters(text)
     .replace(/\r\n/g, '\n')

@@ -18,6 +18,7 @@ import {
   cacheOcrResultPayload,
   readCachedOcrResultPayload,
 } from './ocrResultWindowBridge';
+import { isTauriRuntime } from '../../app/appRuntime';
 
 const OCR_WINDOW_WIDTH = 460;
 const OCR_WINDOW_HEIGHT = 560;
@@ -29,10 +30,6 @@ type PositionPoint = {
   x: number;
   y: number;
 };
-
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);

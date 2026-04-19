@@ -1,9 +1,6 @@
 import { commandsClient } from '../../infra/tauri/commands';
 import { PermissionStatus, isPermissionStatus } from './permissionStatus';
-
-function isTauriRuntime() {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
+import { isTauriRuntime } from '../../app/appRuntime';
 
 export async function loadPermissionStatusFromNative(): Promise<PermissionStatus | null> {
   if (!isTauriRuntime()) {
