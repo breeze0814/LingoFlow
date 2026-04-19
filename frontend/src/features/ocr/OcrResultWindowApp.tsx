@@ -24,6 +24,7 @@ import {
   type TranslationWorkspaceState,
 } from './translationWorkspaceService';
 import { isTauriRuntime } from '../../app/appRuntime';
+import { ErrorBoundary } from '../../infra/ErrorBoundary';
 
 type WorkspaceDirection = {
   sourceLanguageCode: string;
@@ -362,53 +363,57 @@ export function OcrResultWindowApp() {
 
   if (payload) {
     return (
-      <main className="ocrResultWindowRoot" onMouseDown={handleRootMouseDown}>
-        <OcrResultPanel
-          autoQueryOnPaste={runtimeSettings.autoQueryOnPaste}
-          autoSelectTextOnOpen={runtimeSettings.autoSelectQueryTextOnOpen}
-          enabledProviderIds={enabledProviderIds}
-          errorMessage={workspaceState.errorMessage}
-          isPinned={isPinned}
-          onClear={handleClear}
-          onClose={() => {
-            void hideCurrentWindow(true);
-          }}
-          onPromoteProvider={handlePromoteProvider}
-          onSourceLanguageChange={handleSourceLanguageChange}
-          onSubmit={() => {
-            void handleSubmit();
-          }}
-          onSwapLanguages={handleSwapLanguages}
-          onTargetLanguageChange={handleTargetLanguageChange}
-          onTextChange={(text) => {
-            setWorkspaceState((current) => ({
-              ...current,
-              text,
-            }));
-          }}
-          onTogglePin={() => {
-            void handleTogglePin();
-          }}
-          preferredProviderId={preferredProviderId}
-          rows={buildDisplayRows(workspaceState.result)}
-          sourceLanguageCode={direction.sourceLanguageCode}
-          sourceLanguageLabel={direction.sourceLanguageLabel}
-          status={workspaceState.status}
-          targetLanguageCode={direction.targetLanguageCode}
-          targetLanguageLabel={direction.targetLanguageLabel}
-          text={workspaceState.text}
-          textSelectionToken={textSelectionToken}
-        />
-      </main>
+      <ErrorBoundary>
+        <main className="ocrResultWindowRoot" onMouseDown={handleRootMouseDown}>
+          <OcrResultPanel
+            autoQueryOnPaste={runtimeSettings.autoQueryOnPaste}
+            autoSelectTextOnOpen={runtimeSettings.autoSelectQueryTextOnOpen}
+            enabledProviderIds={enabledProviderIds}
+            errorMessage={workspaceState.errorMessage}
+            isPinned={isPinned}
+            onClear={handleClear}
+            onClose={() => {
+              void hideCurrentWindow(true);
+            }}
+            onPromoteProvider={handlePromoteProvider}
+            onSourceLanguageChange={handleSourceLanguageChange}
+            onSubmit={() => {
+              void handleSubmit();
+            }}
+            onSwapLanguages={handleSwapLanguages}
+            onTargetLanguageChange={handleTargetLanguageChange}
+            onTextChange={(text) => {
+              setWorkspaceState((current) => ({
+                ...current,
+                text,
+              }));
+            }}
+            onTogglePin={() => {
+              void handleTogglePin();
+            }}
+            preferredProviderId={preferredProviderId}
+            rows={buildDisplayRows(workspaceState.result)}
+            sourceLanguageCode={direction.sourceLanguageCode}
+            sourceLanguageLabel={direction.sourceLanguageLabel}
+            status={workspaceState.status}
+            targetLanguageCode={direction.targetLanguageCode}
+            targetLanguageLabel={direction.targetLanguageLabel}
+            text={workspaceState.text}
+            textSelectionToken={textSelectionToken}
+          />
+        </main>
+      </ErrorBoundary>
     );
   }
 
   return (
-    <main className="ocrResultWindowRoot">
-      <section className="ocrResultWindowEmpty">
-        <strong>等待 OCR 结果</strong>
-        <p>{listenError || '请从托盘触发“截图翻译”或“静默截图 OCR”。'}</p>
-      </section>
-    </main>
+    <ErrorBoundary>
+      <main className="ocrResultWindowRoot">
+        <section className="ocrResultWindowEmpty">
+          <strong>等待 OCR 结果</strong>
+          <p>{listenError || '请从托盘触发"截图翻译"或"静默截图 OCR"。'}</p>
+        </section>
+      </main>
+    </ErrorBoundary>
   );
 }

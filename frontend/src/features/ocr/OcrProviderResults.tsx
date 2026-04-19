@@ -1,4 +1,4 @@
-import { type CSSProperties, useCallback, useMemo, useState } from 'react';
+import { type CSSProperties, memo, useCallback, useMemo, useState } from 'react';
 import { ResultState } from './ocrResultWorkbenchModel';
 import { CopyHandler } from './ocrResultWorkbenchModel';
 import { ProviderGlyph } from './ProviderGlyph';
@@ -10,13 +10,15 @@ import {
   TooltipIconButton,
 } from './OcrWorkbenchIcons';
 
+const CONTENT_COLLAPSE_THRESHOLD = 96;
+
 type OcrProviderResultsProps = {
   onCopy: CopyHandler;
   onPromoteProvider: (providerId: string) => void;
   resultState: ResultState;
 };
 
-function ResultActions(props: {
+const ResultActions = memo(function ResultActions(props: {
   canCopy: boolean;
   isPinned: boolean;
   onCopy?: () => void;
@@ -40,9 +42,11 @@ function ResultActions(props: {
       </TooltipIconButton>
     </div>
   );
-}
+});
 
-export function OcrProviderResults(props: OcrProviderResultsProps) {
+export const OcrProviderResults = memo(function OcrProviderResults(
+  props: OcrProviderResultsProps,
+) {
   const { onCopy, onPromoteProvider, resultState } = props;
   const [expandedProviderIds, setExpandedProviderIds] = useState<string[]>([]);
 
@@ -74,7 +78,7 @@ export function OcrProviderResults(props: OcrProviderResultsProps) {
         <div className="ocrProviderStack">
           {orderedRows.map((item) => {
             const isExpanded = expandedProviderIds.includes(item.providerId);
-            const canExpand = item.content.length > 96;
+            const canExpand = item.content.length > CONTENT_COLLAPSE_THRESHOLD;
             return (
               <article
                 key={item.providerId}
@@ -142,4 +146,4 @@ export function OcrProviderResults(props: OcrProviderResultsProps) {
       )}
     </section>
   );
-}
+});

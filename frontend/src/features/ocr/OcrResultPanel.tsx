@@ -3,6 +3,8 @@ import { DisplayRow } from './ocrResultRows';
 import { OcrResultWorkbench } from './OcrResultWorkbench';
 import { TranslationWorkspaceStatus } from './translationWorkspaceService';
 
+const COPY_MESSAGE_TIMEOUT_MS = 1200;
+
 type OcrResultPanelProps = {
   autoQueryOnPaste: boolean;
   autoSelectTextOnOpen: boolean;
@@ -93,7 +95,7 @@ export function OcrResultPanel({
     copyMessageTimeoutRef.current = window.setTimeout(() => {
       setCopyMessage('');
       copyMessageTimeoutRef.current = null;
-    }, 1200);
+    }, COPY_MESSAGE_TIMEOUT_MS);
   }
 
   async function handleCopy(content: string, successMessage: string) {

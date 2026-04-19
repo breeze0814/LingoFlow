@@ -1,4 +1,4 @@
-import { KeyboardEvent, ReactNode, useState } from 'react';
+import { KeyboardEvent, memo, ReactNode, useState } from 'react';
 import { PermissionStatus } from './permissionStatus';
 import { DEFAULT_SETTINGS, SettingsState } from './settingsTypes';
 import { SETTINGS_TAB_ITEMS, SettingsTabId } from './settingsTabs';
@@ -54,7 +54,7 @@ type SettingsTabButtonProps = {
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>, tabId: SettingsTabId) => void;
 };
 
-function SettingsTabButton(props: SettingsTabButtonProps) {
+const SettingsTabButton = memo(function SettingsTabButton(props: SettingsTabButtonProps) {
   const className = props.active
     ? 'settingsTabButton settingsTabButtonActive'
     : 'settingsTabButton';
@@ -81,7 +81,7 @@ function SettingsTabButton(props: SettingsTabButtonProps) {
       </span>
     </button>
   );
-}
+});
 
 type SettingsWindowBarProps = {
   activeTab: SettingsTabId;

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { TaskResult, TaskState } from '../task/taskTypes';
 import { providerLabel } from './providerMeta';
 
+const COPY_MESSAGE_TIMEOUT_MS = 1200;
+
 type TranslatorPanelProps = {
   taskState: TaskState;
   sourceLanguageLabel: string;
@@ -122,7 +124,7 @@ export function TranslatorPanel({
     } catch (error) {
       setCopyMessage(`复制失败: ${String(error)}`);
     }
-    window.setTimeout(() => setCopyMessage(''), 1200);
+    window.setTimeout(() => setCopyMessage(''), COPY_MESSAGE_TIMEOUT_MS);
   }
 
   return (

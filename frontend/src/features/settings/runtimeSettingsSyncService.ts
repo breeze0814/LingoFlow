@@ -11,7 +11,9 @@ let runtimeSettingsSyncQueue: Promise<void> = Promise.resolve();
 
 export async function syncRuntimeSettings(settings: RuntimeSettingsSyncInput): Promise<void> {
   runtimeSettingsSyncQueue = runtimeSettingsSyncQueue
-    .catch(() => undefined)
+    .catch((error) => {
+      console.warn('Previous runtime settings sync failed, continuing with new sync:', error);
+    })
     .then(async () => {
       await commandsClient.syncRuntimeSettings(settings);
     });

@@ -34,6 +34,7 @@ import {
   shouldSkipKeybindingTarget,
 } from './appRuntime';
 import { useAppActions } from './useAppActions';
+import { ErrorBoundary } from '../infra/ErrorBoundary';
 
 const NATIVE_SETTINGS_SAVE_DEBOUNCE_MS = 300;
 type NativeSettingsHydrationState = 'pending' | 'ready' | 'failed';
@@ -333,27 +334,29 @@ export function App() {
   }, []);
 
   return (
-    <MainLayout>
-      <section className="workspace">
-        <section className="settingsHome">
-          <SettingsPanel
-            value={settings}
-            onChange={setSettings}
-            permissionStatus={permissionStatus}
-            onRefreshPermissions={
-              tauriRuntime
-                ? () => {
-                    void loadPermissionStatusFromNative()
-                      .then((nextStatus) => setPermissionStatus(nextStatus))
-                      .catch((error) => {
-                        console.error('permission status refresh failed', error);
-                      });
-                  }
-                : undefined
-            }
-          />
+    <ErrorBoundary>
+      <MainLayout>
+        <section className="workspace">
+          <section className="settingsHome">
+            <SettingsPanel
+              value={settings}
+              onChange={setSettings}
+              permissionStatus={permissionStatus}
+              onRefreshPermissions={
+                tauriRuntime
+                  ? () => {
+                      void loadPermissionStatusFromNative()
+                        .then((nextStatus) => setPermissionStatus(nextStatus))
+                        .catch((error) => {
+                          console.error('permission status refresh failed', error);
+                        });
+                    }
+                  : undefined
+              }
+            />
+          </section>
         </section>
-      </section>
-    </MainLayout>
+      </MainLayout>
+    </ErrorBoundary>
   );
 }
