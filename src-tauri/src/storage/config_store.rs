@@ -40,7 +40,13 @@ impl ConfigStore {
     }
 
     pub fn get(&self) -> Config {
-        self.config.read().expect("config lock poisoned").clone()
+        self.config
+            .read()
+            .unwrap_or_else(|poisoned| {
+                tracing::error!("ConfigStore lock poisoned, returning default config");
+                poisoned.into_inner()
+            })
+            .clone()
     }
 
     pub fn http_server_options(&self) -> HttpServerOptions {
@@ -54,31 +60,51 @@ impl ConfigStore {
     pub fn http_api_enabled(&self) -> bool {
         self.config
             .read()
-            .expect("config lock poisoned")
+            .unwrap_or_else(|poisoned| {
+                tracing::error!("ConfigStore lock poisoned, returning default config");
+                poisoned.into_inner()
+            })
             .http_api
             .enabled
     }
 
     pub fn set_app_languages(&self, source_lang: String, target_lang: String) {
-        let mut config = self.config.write().expect("config lock poisoned");
-        config.app.source_lang = source_lang;
-        config.app.target_lang = target_lang;
+        match self.config.write() {
+            Ok(mut config) => {
+                config.app.source_lang = source_lang;
+                config.app.target_lang = target_lang;
+            }
+            Err(poisoned) => {
+                tracing::error!("ConfigStore lock poisoned during set_app_languages, recovering");
+                let mut config = poisoned.into_inner();
+                config.app.source_lang = source_lang;
+                config.app.target_lang = target_lang;
+            }
+        }
     }
 
     pub fn set_http_api_enabled(&self, enabled: bool) {
-        self.config
-            .write()
-            .expect("config lock poisoned")
-            .http_api
-            .enabled = enabled;
+        match self.config.write() {
+            Ok(mut config) => {
+                config.http_api.enabled = enabled;
+            }
+            Err(poisoned) => {
+                tracing::error!("ConfigStore lock poisoned during set_http_api_enabled, recovering");
+                poisoned.into_inner().http_api.enabled = enabled;
+            }
+        }
     }
 
     pub fn set_http_api_port(&self, port: u16) {
-        self.config
-            .write()
-            .expect("config lock poisoned")
-            .http_api
-            .port = port;
+        match self.config.write() {
+            Ok(mut config) => {
+                config.http_api.port = port;
+            }
+            Err(poisoned) => {
+                tracing::error!("ConfigStore lock poisoned during set_http_api_port, recovering");
+                poisoned.into_inner().http_api.port = port;
+            }
+        }
     }
 }
 

@@ -37,7 +37,10 @@ fn build_macos_helper_if_needed() {
 }
 
 fn manifest_dir() -> PathBuf {
-    PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set"))
+    PathBuf::from(
+        env::var("CARGO_MANIFEST_DIR")
+            .expect("CARGO_MANIFEST_DIR environment variable must be set by cargo"),
+    )
 }
 
 fn build_macos_helper(manifest_dir: &Path) {
@@ -49,19 +52,30 @@ fn build_macos_helper(manifest_dir: &Path) {
         .join("release")
         .join(HELPER_EXECUTABLE);
     if !helper_source_binary.is_file() {
+        eprintln!(
+            "ERROR: Swift build completed but helper binary not found at expected location: {}",
+            helper_source_binary.display()
+        );
+        eprintln!("This may indicate a Swift build configuration issue.");
         panic!(
             "expected helper binary does not exist: {}",
             helper_source_binary.display()
         );
     }
 
-    let target_triple = env::var("TARGET").expect("TARGET must be set");
+    let target_triple = env::var("TARGET")
+        .expect("TARGET environment variable must be set by cargo");
     let helper_target_binary_name = format!("{HELPER_EXECUTABLE}-{target_triple}");
     let helper_target_binary_path = manifest_dir
         .join(HELPER_BINARY_OUTPUT_RELATIVE_PATH)
         .join(helper_target_binary_name);
     ensure_binary_parent_dir(&helper_target_binary_path);
     fs::copy(&helper_source_binary, &helper_target_binary_path).unwrap_or_else(|error| {
+        eprintln!(
+            "ERROR: Failed to copy helper binary\n  From: {}\n  To: {}\n  Error: {error}",
+            helper_source_binary.display(),
+            helper_target_binary_path.display()
+        );
         panic!(
             "failed to copy helper binary from {} to {}: {error}",
             helper_source_binary.display(),
@@ -83,9 +97,19 @@ fn run_swift_build(helper_package_dir: &Path) {
         ])
         .arg(helper_package_dir)
         .status()
-        .unwrap_or_else(|error| panic!("failed to execute swift build: {error}"));
+        .unwrap_or_else(|error| {
+            eprintln!("ERROR: Failed to execute 'swift build' command");
+            eprintln!("Make sure Swift toolchain is installed and available in PATH");
+            eprintln!("Error: {error}");
+            panic!("failed to execute swift build: {error}")
+        });
 
     if !status.success() {
+        eprintln!(
+            "ERROR: Swift build failed for helper package at {}",
+            helper_package_dir.display()
+        );
+        eprintln!("Check the Swift build output above for details");
         panic!("swift build failed for helper package {}", helper_package_dir.display());
     }
 }
@@ -95,6 +119,11 @@ fn ensure_binary_parent_dir(binary_path: &Path) {
         .parent()
         .expect("helper target binary path must have a parent directory");
     fs::create_dir_all(parent).unwrap_or_else(|error| {
+        eprintln!(
+            "ERROR: Failed to create helper binary output directory at {}",
+            parent.display()
+        );
+        eprintln!("Error: {error}");
         panic!(
             "failed to create helper binary output directory {}: {error}",
             parent.display()
@@ -107,6 +136,11 @@ fn set_executable_permissions(_binary_path: &Path) {
     {
         let permissions = fs::Permissions::from_mode(0o755);
         fs::set_permissions(_binary_path, permissions).unwrap_or_else(|error| {
+            eprintln!(
+                "ERROR: Failed to set executable permissions on helper binary at {}",
+                _binary_path.display()
+            );
+            eprintln!("Error: {error}");
             panic!(
                 "failed to mark helper binary as executable at {}: {error}",
                 _binary_path.display()

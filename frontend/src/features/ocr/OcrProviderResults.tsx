@@ -1,4 +1,4 @@
-import { type CSSProperties, useState } from 'react';
+import { type CSSProperties, useCallback, useMemo, useState } from 'react';
 import { ResultState } from './ocrResultWorkbenchModel';
 import { CopyHandler } from './ocrResultWorkbenchModel';
 import { ProviderGlyph } from './ProviderGlyph';
@@ -43,26 +43,36 @@ function ResultActions(props: {
 }
 
 export function OcrProviderResults(props: OcrProviderResultsProps) {
+  const { onCopy, onPromoteProvider, resultState } = props;
   const [expandedProviderIds, setExpandedProviderIds] = useState<string[]>([]);
 
-  function toggleExpanded(providerId: string) {
+  const toggleExpanded = useCallback((providerId: string) => {
     setExpandedProviderIds((current) =>
       current.includes(providerId)
         ? current.filter((item) => item !== providerId)
         : [...current, providerId],
     );
-  }
+  }, []);
+
+  const orderedRows = useMemo(() => resultState.orderedRows, [resultState.orderedRows]);
+
+  const handleCopy = useCallback(
+    (content: string, label: string) => {
+      onCopy(content, `已复制 ${label} 结果`);
+    },
+    [onCopy],
+  );
 
   return (
     <section className="ocrSectionCard">
       <header className="ocrSectionHeader">
         <h3>翻译结果</h3>
-        <span>{props.resultState.orderedRows.length}</span>
+        <span>{orderedRows.length}</span>
       </header>
 
-      {props.resultState.orderedRows.length > 0 ? (
+      {orderedRows.length > 0 ? (
         <div className="ocrProviderStack">
-          {props.resultState.orderedRows.map((item) => {
+          {orderedRows.map((item) => {
             const isExpanded = expandedProviderIds.includes(item.providerId);
             const canExpand = item.content.length > 96;
             return (
@@ -97,10 +107,10 @@ export function OcrProviderResults(props: OcrProviderResultsProps) {
                     isPinned={item.isPinned}
                     onCopy={
                       item.hasResult && !item.isError
-                        ? () => props.onCopy(item.content, `已复制 ${item.label} 结果`)
+                        ? () => handleCopy(item.content, item.label)
                         : undefined
                     }
-                    onPromote={() => props.onPromoteProvider(item.providerId)}
+                    onPromote={() => onPromoteProvider(item.providerId)}
                   />
                 </header>
 
