@@ -39,3 +39,6 @@ platform/macos/helper/.swiftpm/
 # IDE
 .vscode/
 .idea/
+
+# Design preview files
+ocr-redesign-preview.html

@@ -8,6 +8,7 @@ use windows::Win32::Graphics::Gdi::{
 
 use crate::errors::app_error::AppError;
 use crate::errors::error_code::ErrorCode;
+#[cfg_attr(test, allow(unused_imports))]
 use crate::orchestrator::models::CaptureRect;
 
 use super::png_encoding::{write_rgba_png, PngEncodeParams};
@@ -19,6 +20,8 @@ pub struct PixelCaptureRect {
     pub height: i32,
 }
 
+// Used in non-test Windows builds via platform/capture.rs
+#[cfg(not(test))]
 pub fn capture_region_image(
     output_path: &Path,
     capture_rect: &CaptureRect,
@@ -140,6 +143,7 @@ pub fn native_capture_region(output_path: &Path, rect: &PixelCaptureRect) -> Res
     }
 }
 
+#[cfg(not(test))]
 fn normalize_capture_rect(capture_rect: &CaptureRect) -> Result<PixelCaptureRect, AppError> {
     let x = capture_rect.x.round() as i32;
     let y = capture_rect.y.round() as i32;

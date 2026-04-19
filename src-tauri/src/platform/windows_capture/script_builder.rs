@@ -1,11 +1,19 @@
+#[cfg_attr(test, allow(unused_imports))]
 use std::path::Path;
+#[cfg_attr(test, allow(unused_imports))]
 use std::process::{Command, Output};
 
+// Used in tests
+#[allow(dead_code)]
 pub const WINDOWS_CAPTURE_TIMEOUT_SECONDS: u64 = 120;
 
+#[allow(dead_code)]
 const WINDOWS_CAPTURE_LAUNCHER: &str = "explorer.exe";
+#[allow(dead_code)]
 const WINDOWS_SCREENCLIP_URI: &str = "ms-screenclip:";
 
+// Used in non-test Windows builds via platform/capture.rs
+#[cfg(not(test))]
 pub fn launch_screenclip() -> std::io::Result<()> {
     let _child = Command::new(WINDOWS_CAPTURE_LAUNCHER)
         .arg(WINDOWS_SCREENCLIP_URI)
@@ -13,6 +21,8 @@ pub fn launch_screenclip() -> std::io::Result<()> {
     Ok(())
 }
 
+// Used in non-test Windows builds via platform/capture.rs
+#[cfg(not(test))]
 pub fn wait_for_clipboard_image(output_path: &Path) -> std::io::Result<Output> {
     Command::new("powershell")
         .arg("-NoProfile")

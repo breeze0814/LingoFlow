@@ -68,7 +68,11 @@ test('build helper invokes swift build with release product settings', () => {
 
   assert.equal(spawnCalls.length, 1);
   assert.equal(spawnCalls[0].command, 'swift');
-  assert.deepEqual(spawnCalls[0].args, [
+  // Normalize path separators for cross-platform testing
+  const actualArgs = spawnCalls[0].args.map((arg) =>
+    typeof arg === 'string' ? arg.replace(/\\/g, '/') : arg,
+  );
+  assert.deepEqual(actualArgs, [
     'build',
     '--configuration',
     'release',
