@@ -296,13 +296,16 @@ fn run_curl_and_collect_blocking(
     curl_path: String,
     args: Vec<String>,
 ) -> Result<(String, String), AppError> {
-    let output = Command::new(curl_path).args(args).output().map_err(|error| {
-        AppError::new(
-            ErrorCode::ProviderNetworkError,
-            format!("Bing Web failed to launch curl: {error}"),
-            true,
-        )
-    })?;
+    let output = Command::new(curl_path)
+        .args(args)
+        .output()
+        .map_err(|error| {
+            AppError::new(
+                ErrorCode::ProviderNetworkError,
+                format!("Bing Web failed to launch curl: {error}"),
+                true,
+            )
+        })?;
     if !output.status.success() {
         return Err(AppError::new(
             ErrorCode::ProviderNetworkError,
@@ -316,9 +319,9 @@ fn run_curl_and_collect_blocking(
     }
     let stdout = String::from_utf8(output.stdout)
         .map_err(|error| invalid_response_error(PROVIDER_LABEL, error.to_string()))?;
-    let (body, meta) = stdout
-        .rsplit_once('\n')
-        .ok_or_else(|| invalid_response_error(PROVIDER_LABEL, "curl response missing status footer"))?;
+    let (body, meta) = stdout.rsplit_once('\n').ok_or_else(|| {
+        invalid_response_error(PROVIDER_LABEL, "curl response missing status footer")
+    })?;
     Ok((meta.to_string(), body.to_string()))
 }
 

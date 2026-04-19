@@ -89,7 +89,9 @@ impl ConfigStore {
                 config.http_api.enabled = enabled;
             }
             Err(poisoned) => {
-                tracing::error!("ConfigStore lock poisoned during set_http_api_enabled, recovering");
+                tracing::error!(
+                    "ConfigStore lock poisoned during set_http_api_enabled, recovering"
+                );
                 poisoned.into_inner().http_api.enabled = enabled;
             }
         }

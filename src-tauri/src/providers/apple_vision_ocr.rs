@@ -82,7 +82,9 @@ impl OcrProvider for AppleVisionOcrProvider {
     }
 }
 
-async fn run_helper_blocking(req: OcrRequest) -> Result<crate::platform::macos_helper::HelperResponse, AppError> {
+async fn run_helper_blocking(
+    req: OcrRequest,
+) -> Result<crate::platform::macos_helper::HelperResponse, AppError> {
     tokio::task::spawn_blocking(move || {
         run_helper(
             HELPER_COMMAND,

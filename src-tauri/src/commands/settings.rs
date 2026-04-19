@@ -94,7 +94,11 @@ struct RuntimeSyncRollbackContext<'a> {
 }
 
 fn rollback_after_runtime_sync_failure(context: RuntimeSyncRollbackContext) -> AppError {
-    let settings_restore_error = context.state.settings_store.restore(context.settings_snapshot).err();
+    let settings_restore_error = context
+        .state
+        .settings_store
+        .restore(context.settings_snapshot)
+        .err();
     let keychain_restore_error =
         restore_keychain_snapshot(&context.state.keychain_store, context.secret_snapshot).err();
     if settings_restore_error.is_none() && keychain_restore_error.is_none() {
@@ -108,5 +112,9 @@ fn rollback_after_runtime_sync_failure(context: RuntimeSyncRollbackContext) -> A
     if let Some(error) = keychain_restore_error {
         message.push_str(&format!("; keychain restore failed: {}", error.message));
     }
-    AppError::new(context.sync_error.code, message, context.sync_error.retryable)
+    AppError::new(
+        context.sync_error.code,
+        message,
+        context.sync_error.retryable,
+    )
 }

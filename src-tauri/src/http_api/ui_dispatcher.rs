@@ -99,7 +99,9 @@ impl RecordingHttpUiDispatcher {
         self.requests
             .lock()
             .unwrap_or_else(|poisoned| {
-                eprintln!("RecordingHttpUiDispatcher lock poisoned during requests read, recovering");
+                eprintln!(
+                    "RecordingHttpUiDispatcher lock poisoned during requests read, recovering"
+                );
                 poisoned.into_inner()
             })
             .clone()
@@ -112,7 +114,9 @@ impl HttpUiDispatcher for RecordingHttpUiDispatcher {
         self.requests
             .lock()
             .unwrap_or_else(|poisoned| {
-                eprintln!("RecordingHttpUiDispatcher lock poisoned during request push, recovering");
+                eprintln!(
+                    "RecordingHttpUiDispatcher lock poisoned during request push, recovering"
+                );
                 poisoned.into_inner()
             })
             .push(request);

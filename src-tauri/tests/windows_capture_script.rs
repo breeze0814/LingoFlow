@@ -1,5 +1,7 @@
 #[cfg(target_os = "windows")]
-use lingoflow_lib::{build_clipboard_wait_script, build_region_capture_script, RegionCaptureParams};
+use lingoflow_lib::{
+    build_clipboard_wait_script, build_region_capture_script, RegionCaptureParams,
+};
 
 #[cfg(target_os = "windows")]
 #[test]

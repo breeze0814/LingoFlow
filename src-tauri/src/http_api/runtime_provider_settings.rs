@@ -1,6 +1,8 @@
 use serde_json::{Map, Value};
 
-use crate::apiprovider::runtime_config::{OcrProviderRuntimeConfig, TranslateProviderRuntimeConfig};
+use crate::apiprovider::runtime_config::{
+    OcrProviderRuntimeConfig, TranslateProviderRuntimeConfig,
+};
 use crate::errors::app_error::AppError;
 use crate::storage::keychain_store::KeychainStore;
 use crate::storage::settings_store::SettingsStore;
@@ -30,7 +32,8 @@ impl RuntimeProviderSettings {
         settings_store: &SettingsStore,
         keychain_store: &KeychainStore,
     ) -> Result<Self, AppError> {
-        let Some(settings) = crate::settings_persistence::load_settings(settings_store, keychain_store)?
+        let Some(settings) =
+            crate::settings_persistence::load_settings(settings_store, keychain_store)?
         else {
             return Ok(Self::default());
         };

@@ -63,8 +63,8 @@ fn build_macos_helper(manifest_dir: &Path) {
         );
     }
 
-    let target_triple = env::var("TARGET")
-        .expect("TARGET environment variable must be set by cargo");
+    let target_triple =
+        env::var("TARGET").expect("TARGET environment variable must be set by cargo");
     let helper_target_binary_name = format!("{HELPER_EXECUTABLE}-{target_triple}");
     let helper_target_binary_path = manifest_dir
         .join(HELPER_BINARY_OUTPUT_RELATIVE_PATH)
@@ -110,7 +110,10 @@ fn run_swift_build(helper_package_dir: &Path) {
             helper_package_dir.display()
         );
         eprintln!("Check the Swift build output above for details");
-        panic!("swift build failed for helper package {}", helper_package_dir.display());
+        panic!(
+            "swift build failed for helper package {}",
+            helper_package_dir.display()
+        );
     }
 }
 
