@@ -1,10 +1,81 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Changelog
+
+**2026-04-19 17:26:20** - AI context initialization: Added comprehensive module structure diagram, module index, and detailed module-level documentation.
+
+---
 
 ## Project Overview
 
 LingoFlow is a lightweight desktop translator built with **Tauri 2 + React 19 + Rust**. Core features: selection translate, input translate, screenshot OCR, screenshot translate, and local HTTP API. The project supports macOS (V1 complete) and Windows (core features implemented, platform integration in progress).
+
+## Module Structure
+
+```mermaid
+graph TD
+    Root["LingoFlow (Root)"] --> Frontend["frontend/"];
+    Root --> SrcTauri["src-tauri/"];
+    Root --> Platform["platform/"];
+    Root --> Scripts["scripts/"];
+    
+    Frontend --> FrontendSrc["src/"];
+    FrontendSrc --> FeaturesDir["features/"];
+    FrontendSrc --> InfraDir["infra/"];
+    FrontendSrc --> AppDir["app/"];
+    FrontendSrc --> TestsDir["tests/"];
+    
+    FeaturesDir --> OcrFeature["ocr/"];
+    FeaturesDir --> SettingsFeature["settings/"];
+    FeaturesDir --> TranslatorFeature["translator/"];
+    FeaturesDir --> ScreenshotFeature["screenshot/"];
+    FeaturesDir --> TaskFeature["task/"];
+    FeaturesDir --> SelectionFeature["selection/"];
+    FeaturesDir --> TrayFeature["tray/"];
+    
+    SrcTauri --> SrcTauriSrc["src/"];
+    SrcTauriSrc --> CommandsModule["commands/"];
+    SrcTauriSrc --> OrchestratorModule["orchestrator/"];
+    SrcTauriSrc --> ProvidersModule["providers/"];
+    SrcTauriSrc --> ApiProviderModule["apiprovider/"];
+    SrcTauriSrc --> HttpApiModule["http_api/"];
+    SrcTauriSrc --> StorageModule["storage/"];
+    SrcTauriSrc --> PlatformModule["platform/"];
+    SrcTauriSrc --> ErrorsModule["errors/"];
+    
+    Platform --> MacOSPlatform["macos/"];
+    MacOSPlatform --> HelperModule["helper/"];
+    
+    click Frontend "./frontend/CLAUDE.md" "Frontend module documentation"
+    click SrcTauri "./src-tauri/CLAUDE.md" "Rust backend documentation"
+    click Platform "./platform/CLAUDE.md" "Platform bridge documentation"
+    click CommandsModule "./src-tauri/src/commands/CLAUDE.md" "Tauri commands"
+    click OrchestratorModule "./src-tauri/src/orchestrator/CLAUDE.md" "Task orchestration"
+    click ProvidersModule "./src-tauri/src/providers/CLAUDE.md" "OCR providers"
+    click ApiProviderModule "./src-tauri/src/apiprovider/CLAUDE.md" "Translation API clients"
+    click HttpApiModule "./src-tauri/src/http_api/CLAUDE.md" "HTTP API server"
+    click StorageModule "./src-tauri/src/storage/CLAUDE.md" "Config & keychain storage"
+    click PlatformModule "./src-tauri/src/platform/CLAUDE.md" "Platform-specific capture"
+    click ErrorsModule "./src-tauri/src/errors/CLAUDE.md" "Error handling"
+    click HelperModule "./platform/macos/helper/CLAUDE.md" "macOS Swift helper"
+```
+
+## Module Index
+
+| Module | Path | Language | Purpose |
+|--------|------|----------|---------|
+| **Frontend** | `frontend/` | TypeScript + React | UI layer: multi-window architecture, settings, OCR results, screenshot overlay |
+| **Rust Backend** | `src-tauri/` | Rust | Core logic: Tauri app, commands, orchestration, providers, HTTP API |
+| **Commands** | `src-tauri/src/commands/` | Rust | Tauri command handlers (translation, OCR, settings, shortcuts, debug) |
+| **Orchestrator** | `src-tauri/src/orchestrator/` | Rust | Task orchestration: models, state machine, execution logic |
+| **Providers** | `src-tauri/src/providers/` | Rust | OCR provider implementations (Apple Vision, OpenAI-compatible, Tesseract.js) |
+| **API Provider** | `src-tauri/src/apiprovider/` | Rust | Translation API clients (Baidu, DeepL, Google, Microsoft, Tencent, Youdao) |
+| **HTTP API** | `src-tauri/src/http_api/` | Rust | Local Axum HTTP server for external integrations |
+| **Storage** | `src-tauri/src/storage/` | Rust | Config store (tauri-plugin-store) + keychain store (keyring) |
+| **Platform** | `src-tauri/src/platform/` | Rust | Platform-specific capture (macOS via Swift helper, Windows native) |
+| **Errors** | `src-tauri/src/errors/` | Rust | Unified error codes and AppError type |
+| **macOS Helper** | `platform/macos/helper/` | Swift | Swift executable for macOS-specific features (capture, OCR, permissions) |
+| **Scripts** | `scripts/` | JavaScript | Build and test automation scripts |
 
 ## Common Commands
 
@@ -104,3 +175,15 @@ Swift executable communicating with Rust via stdin/stdout JSON bridge. Modules: 
 - Shared models are defined once, then mapped by frontend and backend
 - `tesseract_ocr` command is conditionally compiled out in `#[cfg(test)]` builds
 - The `ocr_runtime` window is a hidden WebView that hosts the Tesseract.js worker, bridged to Rust
+
+## AI Usage Guidelines
+
+When working with this codebase:
+
+1. **Respect the three-layer architecture**: Frontend → Rust → Platform
+2. **Follow dependency rules**: Never create circular dependencies
+3. **Use existing patterns**: Check similar features before implementing new ones
+4. **Test coverage**: Add tests for new features (frontend: Vitest, Rust: cargo test)
+5. **Error handling**: Use `AppError` in Rust, surface errors to UI
+6. **Platform differences**: Check `#[cfg(target_os = "...")]` for platform-specific code
+7. **Module documentation**: Update module-level CLAUDE.md when making significant changes
