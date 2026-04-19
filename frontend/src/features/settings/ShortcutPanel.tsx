@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { ShortcutConfig, ShortcutId } from './settingsTypes';
 import { SHORTCUT_FIELDS } from './settingsTabs';
 import { getShortcutEventKey } from './shortcutMatcher';
@@ -60,8 +60,15 @@ function getShortcutTokens(shortcut: string): string[] {
     .filter((part) => part.length > 0);
 }
 
-export function ShortcutPanel({ shortcuts, onChangeShortcut }: ShortcutPanelProps) {
+export const ShortcutPanel = memo(function ShortcutPanel({
+  shortcuts,
+  onChangeShortcut,
+}: ShortcutPanelProps) {
   const [recordingShortcutId, setRecordingShortcutId] = useState<ShortcutId | null>(null);
+
+  const handleStartRecording = useCallback((shortcutId: ShortcutId) => {
+    setRecordingShortcutId(shortcutId);
+  }, []);
 
   useEffect(() => {
     if (!recordingShortcutId) {
@@ -132,7 +139,7 @@ export function ShortcutPanel({ shortcuts, onChangeShortcut }: ShortcutPanelProp
                     : 'settingsShortcutButton'
                 }
                 aria-label={`修改${item.action}快捷键`}
-                onClick={() => setRecordingShortcutId(item.id)}
+                onClick={() => handleStartRecording(item.id)}
               >
                 {isRecording ? '监听中' : '修改'}
               </button>
@@ -142,4 +149,4 @@ export function ShortcutPanel({ shortcuts, onChangeShortcut }: ShortcutPanelProp
       </div>
     </section>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { KeyboardEvent, useEffect, useState } from 'react';
+import { KeyboardEvent, memo, useCallback, useEffect, useState } from 'react';
 import {
   TOOL_PROVIDER_DEFINITIONS,
   ToolProviderConfig,
@@ -70,19 +70,34 @@ function fieldValue(config: ToolProviderConfig, field: ToolProviderFieldDefiniti
   return config[field.key];
 }
 
-function ProviderRow(props: ProviderRowProps) {
+const ProviderRow = memo(function ProviderRow(props: ProviderRowProps) {
   const className = props.active ? 'providerRow providerRowActive' : 'providerRow';
   const switchClass = props.enabled
     ? 'switch providerRowSwitch switchOn'
     : 'switch providerRowSwitch switchOff';
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
-    }
-    event.preventDefault();
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
+      event.preventDefault();
+      props.onSelect(props.definition.id);
+    },
+    [props],
+  );
+
+  const handleToggle = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation();
+      props.onToggle(props.definition.id, !props.enabled);
+    },
+    [props],
+  );
+
+  const handleSelect = useCallback(() => {
     props.onSelect(props.definition.id);
-  };
+  }, [props]);
 
   return (
     <div
@@ -92,8 +107,8 @@ function ProviderRow(props: ProviderRowProps) {
       aria-pressed={props.active}
       className={className}
       data-provider={props.definition.id}
-      onClick={() => props.onSelect(props.definition.id)}
-      onKeyDown={onKeyDown}
+      onClick={handleSelect}
+      onKeyDown={handleKeyDown}
     >
       <span className="providerRowLead">
         <span className="providerRowIconShell" aria-hidden="true">
@@ -115,16 +130,13 @@ function ProviderRow(props: ProviderRowProps) {
         aria-pressed={props.enabled}
         aria-label={`启用${props.definition.name}`}
         className={switchClass}
-        onClick={(event) => {
-          event.stopPropagation();
-          props.onToggle(props.definition.id, !props.enabled);
-        }}
+        onClick={handleToggle}
       >
         <span className="switchKnob" />
       </button>
     </div>
   );
-}
+});
 
 function ProviderFields(props: ProviderDetailProps) {
   return (

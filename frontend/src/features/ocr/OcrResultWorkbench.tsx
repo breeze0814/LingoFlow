@@ -1,6 +1,7 @@
 import {
   ClipboardEvent as ReactClipboardEvent,
   KeyboardEvent as ReactKeyboardEvent,
+  memo,
   useCallback,
   useEffect,
   useId,
@@ -45,7 +46,7 @@ type OcrResultWorkbenchProps = {
   textSelectionToken: string;
 };
 
-function LanguageMenu(props: {
+const LanguageMenu = memo(function LanguageMenu(props: {
   activeCode: string;
   activeLabel: string;
   isOpen: boolean;
@@ -87,7 +88,7 @@ function LanguageMenu(props: {
       ) : null}
     </div>
   );
-}
+});
 
 function isCondensedWorkbenchWidth(viewportWidth: number) {
   return viewportWidth <= OCR_WORKBENCH_CONDENSED_MAX_WIDTH;
