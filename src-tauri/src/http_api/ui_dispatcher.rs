@@ -98,7 +98,10 @@ impl RecordingHttpUiDispatcher {
     pub fn requests(&self) -> Vec<OpenInputTranslateRequest> {
         self.requests
             .lock()
-            .expect("recording ui dispatcher lock poisoned")
+            .unwrap_or_else(|poisoned| {
+                eprintln!("RecordingHttpUiDispatcher lock poisoned during requests read, recovering");
+                poisoned.into_inner()
+            })
             .clone()
     }
 }
@@ -108,7 +111,10 @@ impl HttpUiDispatcher for RecordingHttpUiDispatcher {
     fn open_input_translate(&self, request: OpenInputTranslateRequest) -> Result<(), AppError> {
         self.requests
             .lock()
-            .expect("recording ui dispatcher lock poisoned")
+            .unwrap_or_else(|poisoned| {
+                eprintln!("RecordingHttpUiDispatcher lock poisoned during request push, recovering");
+                poisoned.into_inner()
+            })
             .push(request);
         Ok(())
     }

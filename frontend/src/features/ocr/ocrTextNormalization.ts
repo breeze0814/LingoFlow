@@ -1,39 +1,44 @@
 const MAX_PARAGRAPH_BREAKS = 2;
 
+// Mapping of opening quotes/brackets to their corresponding closing characters
+// Used to detect balanced pairs that should be preserved
 const MATCHING_CLOSERS = new Map<string, string>([
   ['"', '"'],
   ["'", "'"],
   ['`', '`'],
-  ['“', '”'],
-  ['‘', '’'],
-  ['«', '»'],
-  ['‹', '›'],
-  ['「', '」'],
-  ['『', '』'],
-  ['《', '》'],
-  ['〈', '〉'],
-  ['（', '）'],
+  ['\u201c', '\u201d'], // Curly double quotes
+  ['\u2018', '\u2019'], // Curly single quotes
+  ['\u00ab', '\u00bb'], // Guillemets
+  ['\u2039', '\u203a'], // Single guillemets
+  ['\u300c', '\u300d'], // Japanese corner brackets
+  ['\u300e', '\u300f'], // Japanese white corner brackets
+  ['\u300a', '\u300b'], // Double angle brackets
+  ['\u3008', '\u3009'], // Angle brackets
+  ['\uff08', '\uff09'], // Fullwidth parentheses
   ['(', ')'],
   ['[', ']'],
-  ['【', '】'],
+  ['\u3010', '\u3011'], // Black lenticular brackets
   ['{', '}'],
 ]);
 
+// Reverse mapping: closing characters to their opening counterparts
 const MATCHING_OPENERS = new Map<string, string>(
   Array.from(MATCHING_CLOSERS.entries()).map(([open, close]) => [close, open]),
 );
 
+// Characters that are likely OCR noise when appearing at the start of text
+// Includes quotes, bullets, separators, and other punctuation marks
 const OPENING_NOISE = new Set([
   ...MATCHING_CLOSERS.keys(),
   '|',
-  '¦',
-  '•',
-  '·',
-  '●',
-  '▪',
-  '■',
-  '◆',
-  '※',
+  '\u00a6', // Broken bar
+  '\u2022', // Bullet
+  '\u00b7', // Middle dot
+  '\u25cf', // Black circle
+  '\u25aa', // Black small square
+  '\u25a0', // Black square
+  '\u25c6', // Black diamond
+  '\u203b', // Reference mark
   '*',
   '#',
   '=',
@@ -41,17 +46,18 @@ const OPENING_NOISE = new Set([
   '^',
 ]);
 
+// Characters that are likely OCR noise when appearing at the end of text
 const CLOSING_NOISE = new Set([
   ...MATCHING_OPENERS.keys(),
   '|',
-  '¦',
-  '•',
-  '·',
-  '●',
-  '▪',
-  '■',
-  '◆',
-  '※',
+  '\u00a6', // Broken bar
+  '\u2022', // Bullet
+  '\u00b7', // Middle dot
+  '\u25cf', // Black circle
+  '\u25aa', // Black small square
+  '\u25a0', // Black square
+  '\u25c6', // Black diamond
+  '\u203b', // Reference mark
   '*',
   '#',
   '=',
@@ -59,6 +65,8 @@ const CLOSING_NOISE = new Set([
   '^',
 ]);
 
+// Control characters and invisible Unicode characters to remove
+// Includes C0/C1 control codes, zero-width spaces, and byte order marks
 const IGNORED_CONTROL_CODEPOINTS = new Set([
   0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x000b, 0x000c, 0x000e,
   0x000f, 0x0010, 0x0011, 0x0012, 0x0013, 0x0014, 0x0015, 0x0016, 0x0017, 0x0018, 0x0019, 0x001a,
@@ -73,6 +81,7 @@ function removeIgnoredCharacters(text: string) {
 
 function normalizeLine(line: string) {
   const collapsed = removeIgnoredCharacters(line)
+    // Collapse multiple spaces/tabs to single space (preserves line breaks)
     .replace(/[^\S\r\n]+/g, ' ')
     .trim();
   return trimEdgeNoise(collapsed);
@@ -176,10 +185,12 @@ function trimEdgeNoise(line: string) {
  */
 export function normalizeOcrText(text: string) {
   return removeIgnoredCharacters(text)
+    // Normalize line endings to Unix style
     .replace(/\r\n/g, '\n')
     .split('\n')
     .map(normalizeLine)
     .join('\n')
+    // Limit consecutive blank lines to MAX_PARAGRAPH_BREAKS (e.g., "\n\n\n\n" → "\n\n")
     .replace(new RegExp(`\\n{${MAX_PARAGRAPH_BREAKS + 1},}`, 'g'), '\n\n')
     .trim();
 }

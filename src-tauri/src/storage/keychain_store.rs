@@ -69,7 +69,10 @@ impl KeychainStore {
                 false,
             ));
         }
-        let mut entries = self.entries.lock().expect("keychain lock poisoned");
+        let mut entries = self.entries.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Keychain entries lock poisoned during set operation, recovering");
+            poisoned.into_inner()
+        });
         entries.insert(key.to_string(), value.to_string());
         Ok(())
     }
@@ -96,7 +99,10 @@ impl KeychainStore {
 
     #[cfg(test)]
     pub fn get(&self, key: &str) -> Result<Option<String>, AppError> {
-        let entries = self.entries.lock().expect("keychain lock poisoned");
+        let entries = self.entries.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Keychain entries lock poisoned during get operation, recovering");
+            poisoned.into_inner()
+        });
         Ok(entries.get(key).cloned())
     }
 
@@ -128,35 +134,38 @@ impl KeychainStore {
                 false,
             ));
         }
-        let mut entries = self.entries.lock().expect("keychain lock poisoned");
+        let mut entries = self.entries.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Keychain entries lock poisoned during delete operation, recovering");
+            poisoned.into_inner()
+        });
         entries.remove(key);
         Ok(())
     }
 
     #[cfg(test)]
     pub fn fail_on_set(&self, key: &str) {
-        let mut failures = self
-            .failures
-            .lock()
-            .expect("keychain failure lock poisoned");
+        let mut failures = self.failures.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Keychain failures lock poisoned during fail_on_set, recovering");
+            poisoned.into_inner()
+        });
         failures.set.insert(key.to_string());
     }
 
     #[cfg(test)]
     fn should_fail_set(&self, key: &str) -> bool {
-        let failures = self
-            .failures
-            .lock()
-            .expect("keychain failure lock poisoned");
+        let failures = self.failures.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Keychain failures lock poisoned during should_fail_set, recovering");
+            poisoned.into_inner()
+        });
         failures.set.contains(key)
     }
 
     #[cfg(test)]
     fn should_fail_delete(&self, key: &str) -> bool {
-        let failures = self
-            .failures
-            .lock()
-            .expect("keychain failure lock poisoned");
+        let failures = self.failures.lock().unwrap_or_else(|poisoned| {
+            eprintln!("Keychain failures lock poisoned during should_fail_delete, recovering");
+            poisoned.into_inner()
+        });
         failures.delete.contains(key)
     }
 }

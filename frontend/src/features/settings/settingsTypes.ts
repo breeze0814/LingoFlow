@@ -39,15 +39,15 @@ export type ToolProviderFieldKey =
   | 'appSecret';
 
 export type ToolProviderFieldDefinition = {
-  key: ToolProviderFieldKey;
-  label: string;
-  placeholder: string;
-  secret?: boolean;
+  readonly key: ToolProviderFieldKey;
+  readonly label: string;
+  readonly placeholder: string;
+  readonly secret?: boolean;
 };
 
 export type ToolProviderLinkDefinition = {
-  label: string;
-  url: string;
+  readonly label: string;
+  readonly url: string;
 };
 
 export type ToolProviderConfig = {
@@ -65,14 +65,14 @@ export type ToolProviderConfig = {
 export type ToolProviderConfigMap = Record<ToolProviderId, ToolProviderConfig>;
 
 export type ToolProviderDefinition = {
-  id: ToolProviderId;
-  name: string;
-  group: 'no_api_key' | 'requires_api_key';
-  category: 'OCR' | '翻译';
-  description: string;
-  fields: ToolProviderFieldDefinition[];
-  links: ToolProviderLinkDefinition[];
-  helpText?: string;
+  readonly id: ToolProviderId;
+  readonly name: string;
+  readonly group: 'no_api_key' | 'requires_api_key';
+  readonly category: 'OCR' | '翻译';
+  readonly description: string;
+  readonly fields: readonly ToolProviderFieldDefinition[];
+  readonly links: readonly ToolProviderLinkDefinition[];
+  readonly helpText?: string;
 };
 
 export type SettingsState = {
@@ -98,8 +98,8 @@ export type SettingsState = {
 };
 
 export type Option = {
-  value: string;
-  label: string;
+  readonly value: string;
+  readonly label: string;
 };
 
 const EMPTY_PROVIDER_FIELDS = {
@@ -124,7 +124,7 @@ function createProviderConfig(
   };
 }
 
-export const LANGUAGE_OPTIONS: Option[] = [
+export const LANGUAGE_OPTIONS: readonly Option[] = [
   { value: 'zh-CN', label: '简体中文' },
   { value: 'en', label: '英语' },
   { value: 'ja', label: '日语' },
@@ -133,17 +133,17 @@ export const LANGUAGE_OPTIONS: Option[] = [
   { value: 'de', label: '德语' },
 ];
 
-export const DETECTION_OPTIONS: Option[] = [
+export const DETECTION_OPTIONS: readonly Option[] = [
   { value: 'system_only', label: '仅使用系统语种识别' },
   { value: 'auto', label: '自动检测并纠偏' },
 ];
 
-export const VOICE_OPTIONS: Option[] = [
+export const VOICE_OPTIONS: readonly Option[] = [
   { value: 'us', label: '美音' },
   { value: 'uk', label: '英音' },
 ];
 
-export const OCR_PANEL_POSITION_OPTIONS: Option[] = [
+export const OCR_PANEL_POSITION_OPTIONS: readonly Option[] = [
   { value: 'top_left', label: '左上角' },
   { value: 'top_right', label: '右上角' },
   { value: 'center', label: '中间' },
@@ -158,7 +158,7 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig = {
   openSettings: 'Cmd/Ctrl + ,',
 };
 
-export const TOOL_PROVIDER_DEFINITIONS: ToolProviderDefinition[] = [
+export const TOOL_PROVIDER_DEFINITIONS: readonly ToolProviderDefinition[] = [
   {
     id: 'localOcr',
     name: '本地 OCR',
