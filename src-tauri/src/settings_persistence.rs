@@ -39,13 +39,13 @@ pub fn save_settings(
 
     settings_store.save(&redacted)?;
     if let Err(error) = apply_secret_updates(keychain_store, &updates) {
-        return Err(rollback_failed_save(
+        return Err(rollback_failed_save(RollbackContext {
             settings_store,
             keychain_store,
-            &file_snapshot,
-            &secret_snapshot,
+            file_snapshot: &file_snapshot,
+            secret_snapshot: &secret_snapshot,
             error,
-        ));
+        }));
     }
     Ok(())
 }
@@ -113,20 +113,23 @@ fn restore_secret_snapshot(
     Ok(())
 }
 
-fn rollback_failed_save(
-    settings_store: &SettingsStore,
-    keychain_store: &KeychainStore,
-    file_snapshot: &SettingsFileSnapshot,
-    secret_snapshot: &[SecretSnapshot],
+struct RollbackContext<'a> {
+    settings_store: &'a SettingsStore,
+    keychain_store: &'a KeychainStore,
+    file_snapshot: &'a SettingsFileSnapshot,
+    secret_snapshot: &'a [SecretSnapshot],
     error: AppError,
-) -> AppError {
-    let file_restore_error = settings_store.restore(file_snapshot).err();
-    let secret_restore_error = restore_secret_snapshot(keychain_store, secret_snapshot).err();
+}
+
+fn rollback_failed_save(context: RollbackContext) -> AppError {
+    let file_restore_error = context.settings_store.restore(context.file_snapshot).err();
+    let secret_restore_error =
+        restore_secret_snapshot(context.keychain_store, context.secret_snapshot).err();
     if file_restore_error.is_none() && secret_restore_error.is_none() {
-        return error;
+        return context.error;
     }
 
-    let mut message = format!("{}; rollback attempted", error.message);
+    let mut message = format!("{}; rollback attempted", context.error.message);
     if let Some(restore_error) = file_restore_error {
         message.push_str(&format!(
             "; settings restore failed: {}",
@@ -139,7 +142,7 @@ fn rollback_failed_save(
             restore_error.message
         ));
     }
-    AppError::new(error.code, message, error.retryable)
+    AppError::new(context.error.code, message, context.error.retryable)
 }
 
 #[cfg(test)]

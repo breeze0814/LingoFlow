@@ -15,12 +15,16 @@ const mocks = vi.hoisted(() => {
     return () => undefined;
   });
 
+  const setExistingWindow = (window: MockOverlayWindow | null) => {
+    existingWindow = window;
+  };
+
   class MockOverlayWindow {
     label: string;
 
     constructor(label: string) {
       this.label = label;
-      existingWindow = this;
+      setExistingWindow(this);
     }
 
     static async getByLabel(label: string) {

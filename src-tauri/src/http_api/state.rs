@@ -7,6 +7,13 @@ use crate::orchestrator::service::Orchestrator;
 use crate::storage::keychain_store::KeychainStore;
 use crate::storage::settings_store::SettingsStore;
 
+pub struct HttpApiStateConfig {
+    pub orchestrator: Arc<Orchestrator>,
+    pub ui_dispatcher: SharedHttpUiDispatcher,
+    pub settings_store: Arc<SettingsStore>,
+    pub keychain_store: Arc<KeychainStore>,
+}
+
 pub struct HttpApiState {
     pub orchestrator: Arc<Orchestrator>,
     pub ui_dispatcher: SharedHttpUiDispatcher,
@@ -15,17 +22,12 @@ pub struct HttpApiState {
 }
 
 impl HttpApiState {
-    pub fn new(
-        orchestrator: Arc<Orchestrator>,
-        ui_dispatcher: SharedHttpUiDispatcher,
-        settings_store: Arc<SettingsStore>,
-        keychain_store: Arc<KeychainStore>,
-    ) -> Self {
+    pub fn new(config: HttpApiStateConfig) -> Self {
         Self {
-            orchestrator,
-            ui_dispatcher,
-            settings_store,
-            keychain_store,
+            orchestrator: config.orchestrator,
+            ui_dispatcher: config.ui_dispatcher,
+            settings_store: config.settings_store,
+            keychain_store: config.keychain_store,
         }
     }
 

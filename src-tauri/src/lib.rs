@@ -23,8 +23,10 @@ use tauri::Manager;
 #[cfg(not(test))]
 use window_lifecycle::{close_request_action, CloseRequestAction};
 
-#[cfg(all(target_os = "windows", not(test)))]
-pub use platform::windows_capture::{build_clipboard_wait_script, build_region_capture_script};
+#[cfg(target_os = "windows")]
+pub use platform::windows_capture::{
+    build_clipboard_wait_script, build_region_capture_script, RegionCaptureParams,
+};
 
 #[cfg(not(test))]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

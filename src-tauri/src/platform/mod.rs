@@ -3,7 +3,7 @@ pub mod capture;
 pub mod macos_helper;
 pub mod permissions;
 pub mod selection;
-#[cfg(all(target_os = "windows", not(test)))]
+#[cfg(target_os = "windows")]
 pub mod windows_capture;
 #[cfg(all(target_os = "windows", not(test)))]
 pub mod windows_window;

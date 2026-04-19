@@ -1,5 +1,5 @@
 #[cfg(target_os = "windows")]
-use lingoflow_lib::{build_clipboard_wait_script, build_region_capture_script};
+use lingoflow_lib::{build_clipboard_wait_script, build_region_capture_script, RegionCaptureParams};
 
 #[cfg(target_os = "windows")]
 #[test]
@@ -19,7 +19,13 @@ fn clipboard_wait_script_does_not_launch_screenclip() {
 #[cfg(target_os = "windows")]
 #[test]
 fn region_capture_script_uses_copy_from_screen() {
-    let script = build_region_capture_script("C:\\temp\\capture.png", 100, 200, 300, 400);
+    let script = build_region_capture_script(RegionCaptureParams {
+        output_path: "C:\\temp\\capture.png",
+        x: 100,
+        y: 200,
+        width: 300,
+        height: 400,
+    });
 
     assert!(
         script.contains("CopyFromScreen"),

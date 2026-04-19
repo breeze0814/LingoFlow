@@ -107,10 +107,12 @@ mod tests {
         ))));
         let keychain_store = Arc::new(KeychainStore::new("test"));
         Arc::new(HttpApiState::new(
-            orchestrator,
-            Arc::new(NoopHttpUiDispatcher),
-            settings_store,
-            keychain_store,
+            crate::http_api::state::HttpApiStateConfig {
+                orchestrator,
+                ui_dispatcher: Arc::new(NoopHttpUiDispatcher),
+                settings_store,
+                keychain_store,
+            },
         ))
     }
 

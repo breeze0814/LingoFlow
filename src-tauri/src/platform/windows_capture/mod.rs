@@ -10,5 +10,5 @@ pub use native_capture::capture_region_image;
 #[cfg(target_os = "windows")]
 pub use script_builder::{
     build_clipboard_wait_script, build_region_capture_script, launch_screenclip,
-    wait_for_clipboard_image,
+    wait_for_clipboard_image, RegionCaptureParams,
 };

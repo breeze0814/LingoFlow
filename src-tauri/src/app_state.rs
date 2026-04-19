@@ -48,10 +48,12 @@ impl AppState {
         let providers = Arc::new(ProviderRegistry::new());
         let orchestrator = Arc::new(Orchestrator::new(config_store.clone(), providers.clone()));
         let http_api_state = Arc::new(HttpApiState::new(
-            orchestrator.clone(),
-            Arc::new(TauriHttpUiDispatcher::new(app.clone())),
-            settings_store.clone(),
-            keychain_store.clone(),
+            crate::http_api::state::HttpApiStateConfig {
+                orchestrator: orchestrator.clone(),
+                ui_dispatcher: Arc::new(TauriHttpUiDispatcher::new(app.clone())),
+                settings_store: settings_store.clone(),
+                keychain_store: keychain_store.clone(),
+            },
         ));
         Ok(Self {
             orchestrator,

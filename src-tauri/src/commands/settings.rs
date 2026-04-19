@@ -46,10 +46,12 @@ pub async fn save_settings(state: State<'_, AppState>, payload: Value) -> Result
         .await;
         if let Err(sync_error) = sync_result {
             return Err(rollback_after_runtime_sync_failure(
-                &state,
-                &settings_snapshot,
-                &secret_snapshot,
-                sync_error,
+                RuntimeSyncRollbackContext {
+                    state: &state,
+                    settings_snapshot: &settings_snapshot,
+                    secret_snapshot: &secret_snapshot,
+                    sync_error,
+                },
             ));
         }
     }
@@ -84,24 +86,27 @@ fn restore_keychain_snapshot(
     Ok(())
 }
 
-fn rollback_after_runtime_sync_failure(
-    state: &AppState,
-    settings_snapshot: &SettingsFileSnapshot,
-    secret_snapshot: &[SecretSnapshotEntry],
+struct RuntimeSyncRollbackContext<'a> {
+    state: &'a AppState,
+    settings_snapshot: &'a SettingsFileSnapshot,
+    secret_snapshot: &'a [SecretSnapshotEntry],
     sync_error: AppError,
-) -> AppError {
-    let settings_restore_error = state.settings_store.restore(settings_snapshot).err();
-    let keychain_restore_error = restore_keychain_snapshot(&state.keychain_store, secret_snapshot).err();
+}
+
+fn rollback_after_runtime_sync_failure(context: RuntimeSyncRollbackContext) -> AppError {
+    let settings_restore_error = context.state.settings_store.restore(context.settings_snapshot).err();
+    let keychain_restore_error =
+        restore_keychain_snapshot(&context.state.keychain_store, context.secret_snapshot).err();
     if settings_restore_error.is_none() && keychain_restore_error.is_none() {
-        return sync_error;
+        return context.sync_error;
     }
 
-    let mut message = format!("{}; rollback attempted", sync_error.message);
+    let mut message = format!("{}; rollback attempted", context.sync_error.message);
     if let Some(error) = settings_restore_error {
         message.push_str(&format!("; settings restore failed: {}", error.message));
     }
     if let Some(error) = keychain_restore_error {
         message.push_str(&format!("; keychain restore failed: {}", error.message));
     }
-    AppError::new(sync_error.code, message, sync_error.retryable)
+    AppError::new(context.sync_error.code, message, context.sync_error.retryable)
 }
