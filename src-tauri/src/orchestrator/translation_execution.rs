@@ -151,9 +151,17 @@ impl Orchestrator {
             }
         }
 
-        for task in pending {
-            let index = task.index;
-            results[index] = Some(Self::await_translate_provider_task(task).await);
+        // Await all tasks in parallel
+        let completed_tasks: Vec<(usize, ProviderTranslationData)> =
+            futures::future::join_all(pending.into_iter().map(|task| async move {
+                let index = task.index;
+                let result = Self::await_translate_provider_task(task).await;
+                (index, result)
+            }))
+            .await;
+
+        for (index, result) in completed_tasks {
+            results[index] = Some(result);
         }
 
         results.into_iter().flatten().collect()

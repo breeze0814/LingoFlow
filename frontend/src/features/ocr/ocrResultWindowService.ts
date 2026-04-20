@@ -82,7 +82,12 @@ async function createOcrResultWindow() {
 async function ensureOcrResultWindow() {
   const existing = await WebviewWindow.getByLabel(OCR_RESULT_WINDOW_LABEL);
   if (existing) {
-    return existing;
+    try {
+      await existing.isVisible();
+      return existing;
+    } catch {
+      // Window is damaged, recreate
+    }
   }
   return createOcrResultWindow();
 }
@@ -101,14 +106,17 @@ async function resolveActiveMonitor(): Promise<Monitor> {
 }
 
 async function positionOcrResultWindow(target: WebviewWindow) {
-  await target.setSize(new LogicalSize(OCR_WINDOW_WIDTH, OCR_WINDOW_HEIGHT));
+  const ocrPanelPosition = loadSettingsFromStorage().ocrPanelPosition;
+  const [monitor] = await Promise.all([
+    resolveActiveMonitor(),
+    target.setSize(new LogicalSize(OCR_WINDOW_WIDTH, OCR_WINDOW_HEIGHT)),
+  ]);
 
-  const [monitor, windowSize] = await Promise.all([resolveActiveMonitor(), target.outerSize()]);
   const point = calculatePinnedPosition(
-    loadSettingsFromStorage().ocrPanelPosition,
+    ocrPanelPosition,
     monitor,
-    windowSize.width,
-    windowSize.height,
+    OCR_WINDOW_WIDTH,
+    OCR_WINDOW_HEIGHT,
   );
   await target.setPosition(new PhysicalPosition(Math.round(point.x), Math.round(point.y)));
 }
@@ -147,9 +155,7 @@ async function emitResultPayload(payload: OcrResultWindowPayload) {
 }
 
 async function showAndFocusOcrWindow(ocrWindow: WebviewWindow) {
-  await positionOcrResultWindow(ocrWindow);
-  await ocrWindow.show();
-  await ocrWindow.setFocus();
+  await Promise.all([positionOcrResultWindow(ocrWindow), ocrWindow.show(), ocrWindow.setFocus()]);
 }
 
 export async function showOcrResultWindow(payload: OcrResultWindowPayload) {
@@ -160,9 +166,7 @@ export async function showOcrResultWindow(payload: OcrResultWindowPayload) {
 
   const ocrWindow = await ensureOcrResultWindow();
 
-  await showAndFocusOcrWindow(ocrWindow);
-
-  await emitResultPayload(payload);
+  await Promise.all([showAndFocusOcrWindow(ocrWindow), emitResultPayload(payload)]);
 }
 
 export async function showCachedOcrResultWindow() {
@@ -171,9 +175,10 @@ export async function showCachedOcrResultWindow() {
   }
   const payload = readCachedOcrResultPayload();
   const ocrWindow = await ensureOcrResultWindow();
-  await showAndFocusOcrWindow(ocrWindow);
   if (payload) {
-    await emitResultPayload(payload);
+    await Promise.all([showAndFocusOcrWindow(ocrWindow), emitResultPayload(payload)]);
+  } else {
+    await showAndFocusOcrWindow(ocrWindow);
   }
 }
 

@@ -146,7 +146,7 @@ describe('screenshotOverlayService', () => {
     expect(mocks.emitTo).toHaveBeenCalledTimes(0);
     mocks.emitReadyEvent();
     await firstOpen;
-    expect(mocks.emitTo).toHaveBeenCalledTimes(2);
+    expect(mocks.emitTo).toHaveBeenCalledTimes(1);
 
     mocks.emitTo.mockClear();
     mocks.clearExistingWindow();
@@ -156,6 +156,6 @@ describe('screenshotOverlayService', () => {
     expect(mocks.emitTo).toHaveBeenCalledTimes(0);
     mocks.emitReadyEvent();
     await secondOpen;
-    expect(mocks.emitTo).toHaveBeenCalledTimes(2);
+    expect(mocks.emitTo).toHaveBeenCalledTimes(1);
   });
 });

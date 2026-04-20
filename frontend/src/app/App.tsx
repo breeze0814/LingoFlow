@@ -16,7 +16,10 @@ import { matchesShortcut } from '../features/settings/shortcutMatcher';
 import { primeOcrResultWindowService } from '../features/ocr/ocrResultWindowService';
 import { syncNativeShortcuts } from '../features/settings/nativeShortcutSyncService';
 import { syncRuntimeSettings } from '../features/settings/runtimeSettingsSyncService';
-import { primeScreenshotOverlayService } from '../features/screenshot/screenshotOverlayService';
+import {
+  primeScreenshotOverlayService,
+  initScreenshotOverlayService,
+} from '../features/screenshot/screenshotOverlayService';
 import {
   loadSettingsFromNativeStorage,
   saveSettingsToNativeStorage,
@@ -86,44 +89,36 @@ export function App() {
     let inputCleanup: null | (() => void) = null;
     let disposed = false;
 
-    async function bindTrayActionListener() {
+    async function bindEventListeners() {
       try {
-        const unlisten = await listen(TRAY_ACTION_EVENT, (event) => {
-          if (!isTrayActionPayload(event.payload)) {
-            return;
-          }
-          void trayActionHandlerRef.current(event.payload.action);
-        });
+        const [trayUnlisten, inputUnlisten] = await Promise.all([
+          listen(TRAY_ACTION_EVENT, (event) => {
+            if (!isTrayActionPayload(event.payload)) {
+              return;
+            }
+            void trayActionHandlerRef.current(event.payload.action);
+          }),
+          listen(OPEN_INPUT_TRANSLATE_EVENT, (event) => {
+            if (!isOpenInputTranslatePayload(event.payload)) {
+              return;
+            }
+            void inputTranslateHandlerRef.current(event.payload);
+          }),
+        ]);
+
         if (disposed) {
-          unlisten();
+          trayUnlisten();
+          inputUnlisten();
           return;
         }
-        cleanup = unlisten;
+        cleanup = trayUnlisten;
+        inputCleanup = inputUnlisten;
       } catch (error) {
-        console.warn('tray action listener binding failed', error);
+        console.warn('event listeners binding failed', error);
       }
     }
 
-    async function bindInputTranslateListener() {
-      try {
-        const unlisten = await listen(OPEN_INPUT_TRANSLATE_EVENT, (event) => {
-          if (!isOpenInputTranslatePayload(event.payload)) {
-            return;
-          }
-          void inputTranslateHandlerRef.current(event.payload);
-        });
-        if (disposed) {
-          unlisten();
-          return;
-        }
-        inputCleanup = unlisten;
-      } catch (error) {
-        console.warn('input translate listener binding failed', error);
-      }
-    }
-
-    void bindTrayActionListener();
-    void bindInputTranslateListener();
+    void bindEventListeners();
     return () => {
       disposed = true;
       if (cleanup) {
@@ -142,48 +137,29 @@ export function App() {
 
     let disposed = false;
 
-    async function hydrateNativeSettings() {
+    async function hydrateNativeData() {
       try {
-        const loadedSettings = await loadSettingsFromNativeStorage();
-        if (!disposed && loadedSettings) {
-          setSettings(loadedSettings);
-        }
+        const [loadedSettings, permissionStatus] = await Promise.all([
+          loadSettingsFromNativeStorage(),
+          loadPermissionStatusFromNative(),
+        ]);
+
         if (!disposed) {
+          if (loadedSettings) {
+            setSettings(loadedSettings);
+          }
           setNativeSettingsHydrationState('ready');
+          setPermissionStatus(permissionStatus);
         }
       } catch (error) {
-        console.error('native settings load failed', error);
+        console.error('native data hydration failed', error);
         if (!disposed) {
           setNativeSettingsHydrationState('failed');
         }
       }
     }
 
-    void hydrateNativeSettings();
-    return () => {
-      disposed = true;
-    };
-  }, [tauriRuntime]);
-
-  useEffect(() => {
-    if (!tauriRuntime) {
-      return;
-    }
-
-    let disposed = false;
-
-    async function hydratePermissionStatus() {
-      try {
-        const nextStatus = await loadPermissionStatusFromNative();
-        if (!disposed) {
-          setPermissionStatus(nextStatus);
-        }
-      } catch (error) {
-        console.error('permission status load failed', error);
-      }
-    }
-
-    void hydratePermissionStatus();
+    void hydrateNativeData();
     return () => {
       disposed = true;
     };
@@ -226,12 +202,14 @@ export function App() {
       return;
     }
 
-    void primeScreenshotOverlayService().catch((error) => {
-      console.error('screenshot overlay service init failed', error);
-    });
-    void primeOcrResultWindowService().catch((error) => {
-      console.error('ocr result window service init failed', error);
-    });
+    void Promise.all([
+      initScreenshotOverlayService().catch((error) => {
+        console.error('screenshot overlay service init failed', error);
+      }),
+      primeOcrResultWindowService().catch((error) => {
+        console.error('ocr result window service init failed', error);
+      }),
+    ]);
   }, []);
 
   useEffect(() => {

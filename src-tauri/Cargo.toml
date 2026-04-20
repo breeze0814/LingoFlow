@@ -33,6 +33,7 @@ aes = "0.8"
 cbc = "0.1"
 base64 = "0.22"
 keyring = "3"
+futures = "0.3.32"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = [

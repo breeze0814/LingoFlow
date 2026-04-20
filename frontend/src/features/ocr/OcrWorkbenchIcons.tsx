@@ -1,6 +1,7 @@
 type TooltipIconButtonProps = {
   ariaLabel: string;
   children: React.ReactNode;
+  disabled?: boolean;
   isActive?: boolean;
   isPrimary?: boolean;
   onClick: () => void;
@@ -122,6 +123,7 @@ export function TooltipIconButton(props: TooltipIconButtonProps) {
       className={classNames}
       aria-label={props.ariaLabel}
       data-tooltip={props.tooltip}
+      disabled={props.disabled}
       onClick={props.onClick}
     >
       {props.children}

@@ -9,7 +9,7 @@ const {
   mockShowCachedOcrResultWindow,
   mockPrimeOcrResultWindowService,
   mockShowScreenshotOverlay,
-  mockPrimeScreenshotOverlayService,
+  mockInitScreenshotOverlayService,
   mockReadSelectionText,
   mockTriggerOcrRecognize,
   mockMainWindowShow,
@@ -28,7 +28,7 @@ const {
   mockShowCachedOcrResultWindow: vi.fn().mockResolvedValue(undefined),
   mockPrimeOcrResultWindowService: vi.fn().mockResolvedValue(undefined),
   mockShowScreenshotOverlay: vi.fn().mockResolvedValue(undefined),
-  mockPrimeScreenshotOverlayService: vi.fn().mockResolvedValue(undefined),
+  mockInitScreenshotOverlayService: vi.fn().mockResolvedValue(undefined),
   mockReadSelectionText: vi.fn(),
   mockTriggerOcrRecognize: vi.fn(),
   mockMainWindowShow: vi.fn().mockResolvedValue(undefined),
@@ -60,7 +60,7 @@ vi.mock('../../features/ocr/ocrResultWindowService', () => ({
 
 vi.mock('../../features/screenshot/screenshotOverlayService', () => ({
   showScreenshotOverlay: mockShowScreenshotOverlay,
-  primeScreenshotOverlayService: mockPrimeScreenshotOverlayService,
+  initScreenshotOverlayService: mockInitScreenshotOverlayService,
 }));
 
 vi.mock('../../infra/tauri/commands', () => ({
@@ -116,7 +116,7 @@ describe('App', () => {
     mockShowCachedOcrResultWindow.mockClear();
     mockPrimeOcrResultWindowService.mockClear();
     mockShowScreenshotOverlay.mockClear();
-    mockPrimeScreenshotOverlayService.mockClear();
+    mockInitScreenshotOverlayService.mockClear();
     mockReadSelectionText.mockReset();
     mockReadSelectionText.mockResolvedValue({ selectedText: 'selected text' });
     mockTriggerOcrRecognize.mockReset();

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
@@ -167,7 +167,6 @@ export function ScreenshotOverlayApp() {
     setIsSubmitting(true);
     await ensureCaptureExcluded();
     await waitForNextPaint();
-    await waitForNextPaint();
     await getCurrentWindow().hide();
   }
 
@@ -175,7 +174,6 @@ export function ScreenshotOverlayApp() {
     if (!payload) {
       return;
     }
-    const settings = await loadSettingsForTranslation();
 
     const captureRect = buildPhysicalCaptureRect(nextSelection, payload.monitor, {
       width: window.innerWidth,
@@ -185,7 +183,7 @@ export function ScreenshotOverlayApp() {
       return;
     }
 
-    await hideOverlayForCapture();
+    const [settings] = await Promise.all([loadSettingsForTranslation(), hideOverlayForCapture()]);
 
     const baseState: TaskState = initialTaskState;
 
@@ -238,6 +236,13 @@ export function ScreenshotOverlayApp() {
     }
 
     // ocr_recognize mode
+    const direction = {
+      sourceLanguageCode: payload.sourceLangHint ?? 'auto',
+      sourceLanguageLabel: payload.sourceLanguageLabel,
+      targetLanguageCode: payload.targetLanguageCode,
+      targetLanguageLabel: payload.targetLanguageLabel,
+    };
+
     const next = await triggerOcrRecognizeRegion(
       baseState,
       captureRect,
@@ -249,12 +254,7 @@ export function ScreenshotOverlayApp() {
     if (next.action === 'succeeded' && next.payload.result) {
       const resultPayload = createOcrRecognizePayload(
         next.payload.result,
-        {
-          sourceLanguageCode: payload.sourceLangHint ?? 'auto',
-          sourceLanguageLabel: payload.sourceLanguageLabel,
-          targetLanguageCode: payload.targetLanguageCode,
-          targetLanguageLabel: payload.targetLanguageLabel,
-        },
+        direction,
         settings.autoQueryOnOcr,
         settings.defaultTranslateProvider,
       );
@@ -270,12 +270,7 @@ export function ScreenshotOverlayApp() {
       const errorPayload = createErrorPayload(
         payload.mode,
         message,
-        {
-          sourceLanguageCode: payload.sourceLangHint ?? 'auto',
-          sourceLanguageLabel: payload.sourceLanguageLabel,
-          targetLanguageCode: payload.targetLanguageCode,
-          targetLanguageLabel: payload.targetLanguageLabel,
-        },
+        direction,
         settings.defaultTranslateProvider,
       );
       clearCachedScreenshotOverlayPayload();
@@ -289,11 +284,11 @@ export function ScreenshotOverlayApp() {
     }
   }
 
+  const selectionStyle = useMemo(() => buildSelectionStyle(selection), [selection]);
+
   if (!payload) {
     return null;
   }
-
-  const selectionStyle = buildSelectionStyle(selection);
 
   return (
     <main

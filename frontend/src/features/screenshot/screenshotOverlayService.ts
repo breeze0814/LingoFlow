@@ -20,12 +20,12 @@ import { isTauriRuntime } from '../../app/appRuntime';
 
 type ScreenshotOverlayRequest = Omit<ScreenshotOverlayPayload, 'monitor'>;
 
-const OVERLAY_READY_TIMEOUT_MS = 1500;
-const OVERLAY_PAYLOAD_RETRY_DELAY_MS = 32;
+const OVERLAY_READY_TIMEOUT_MS = 500;
 
 let overlayReady = false;
 let overlayListenerPromise: Promise<void> | null = null;
 const overlayReadyWaiters: Array<() => void> = [];
+let overlayInitialized = false;
 
 async function waitUntilWindowCreated(target: WebviewWindow): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -70,7 +70,12 @@ async function createScreenshotOverlayWindow() {
 async function ensureScreenshotOverlayWindow() {
   const existing = await WebviewWindow.getByLabel(SCREENSHOT_OVERLAY_WINDOW_LABEL);
   if (existing) {
-    return existing;
+    try {
+      await existing.isVisible();
+      return existing;
+    } catch {
+      // Window is damaged, recreate
+    }
   }
   return createScreenshotOverlayWindow();
 }
@@ -92,10 +97,12 @@ async function positionScreenshotOverlayWindow(target: WebviewWindow, monitor: M
   const logicalWidth = monitor.size.width / monitor.scaleFactor;
   const logicalHeight = monitor.size.height / monitor.scaleFactor;
 
-  await target.setSize(new LogicalSize(logicalWidth, logicalHeight));
-  await target.setPosition(
-    new PhysicalPosition(Math.round(monitor.position.x), Math.round(monitor.position.y)),
-  );
+  await Promise.all([
+    target.setSize(new LogicalSize(logicalWidth, logicalHeight)),
+    target.setPosition(
+      new PhysicalPosition(Math.round(monitor.position.x), Math.round(monitor.position.y)),
+    ),
+  ]);
 }
 
 async function emitOverlayPayload(payload: ScreenshotOverlayPayload) {
@@ -145,6 +152,22 @@ export async function primeScreenshotOverlayService() {
   await ensureScreenshotOverlayWindow();
 }
 
+export async function initScreenshotOverlayService() {
+  if (overlayInitialized || !isTauriRuntime()) {
+    return;
+  }
+
+  try {
+    await bindOverlayReadyListener();
+    await ensureScreenshotOverlayWindow();
+    await waitForOverlayReady();
+    overlayInitialized = true;
+  } catch (error) {
+    console.error('Failed to initialize screenshot overlay service:', error);
+    overlayInitialized = false;
+  }
+}
+
 export async function showScreenshotOverlay(request: ScreenshotOverlayRequest) {
   if (!isTauriRuntime()) {
     return;
@@ -167,11 +190,15 @@ export async function showScreenshotOverlay(request: ScreenshotOverlayRequest) {
   };
   cacheScreenshotOverlayPayload(payload);
 
-  await positionScreenshotOverlayWindow(overlayWindow, monitor);
-  await overlayWindow.show();
-  await overlayWindow.setFocus();
-  await waitForOverlayReady();
-  await emitOverlayPayload(payload);
-  await new Promise((resolve) => window.setTimeout(resolve, OVERLAY_PAYLOAD_RETRY_DELAY_MS));
+  await Promise.all([
+    positionScreenshotOverlayWindow(overlayWindow, monitor),
+    overlayWindow.show(),
+    overlayWindow.setFocus(),
+  ]);
+
+  if (!overlayInitialized) {
+    await waitForOverlayReady();
+  }
+
   await emitOverlayPayload(payload);
 }

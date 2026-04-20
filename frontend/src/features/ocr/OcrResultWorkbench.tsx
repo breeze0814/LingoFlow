@@ -292,6 +292,7 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
             <TooltipIconButton
               ariaLabel="翻译"
               tooltip={props.status === 'pending' ? '翻译中...' : '翻译'}
+              disabled={props.status === 'pending'}
               isPrimary
               size="small"
               onClick={() => props.onSubmit()}
@@ -322,6 +323,11 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
         {props.copyMessage ? (
           <div className="ocrInlineMessage" role="status" aria-live="polite" aria-atomic="true">
             {props.copyMessage}
+          </div>
+        ) : null}
+        {props.status === 'pending' ? (
+          <div className="ocrInlineMessage" role="status" aria-live="polite" aria-atomic="true">
+            正在翻译...
           </div>
         ) : null}
         {props.errorMessage ? (
