@@ -17,7 +17,6 @@ import { primeOcrResultWindowService } from '../features/ocr/ocrResultWindowServ
 import { syncNativeShortcuts } from '../features/settings/nativeShortcutSyncService';
 import { syncRuntimeSettings } from '../features/settings/runtimeSettingsSyncService';
 import {
-  primeScreenshotOverlayService,
   initScreenshotOverlayService,
 } from '../features/screenshot/screenshotOverlayService';
 import {

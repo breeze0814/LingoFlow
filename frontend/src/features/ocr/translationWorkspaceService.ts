@@ -4,6 +4,7 @@ import { TaskResult } from '../task/taskTypes';
 import { buildEnabledTranslateProviderConfigs } from '../settings/translateProviderRequest';
 import { loadSettingsForTranslation } from '../settings/nativeSettingsStorage';
 import { resolveConfiguredSourceLanguage } from '../settings/settingsRuntime';
+import { SettingsState } from '../settings/settingsTypes';
 import { OcrResultWindowPayload } from './ocrResultWindowBridge';
 
 export type TranslationWorkspaceStatus = 'idle' | 'pending' | 'success' | 'failure';
@@ -38,6 +39,15 @@ export function createTranslationWorkspaceState(
     };
   }
 
+  if (payload.initialStatus === 'pending') {
+    return {
+      errorMessage: '',
+      result: null,
+      status: 'pending',
+      text: payload.initialText,
+    };
+  }
+
   return {
     errorMessage: payload.initialErrorMessage ?? '',
     result: payload.result ?? null,
@@ -50,6 +60,7 @@ export async function submitTranslationWorkspaceText(
   payload: OcrResultWindowPayload,
   text: string,
   direction?: WorkspaceDirection,
+  preloadedSettings?: Promise<SettingsState> | null,
 ): Promise<SubmitResult> {
   if (!text.trim()) {
     return {
@@ -59,7 +70,7 @@ export async function submitTranslationWorkspaceText(
     };
   }
 
-  const settings = await loadSettingsForTranslation();
+  const settings = preloadedSettings ? await preloadedSettings : await loadSettingsForTranslation();
   const sourceLanguageCode = direction?.sourceLanguageCode ?? payload.sourceLanguageCode;
 
   const response = await triggerInputTranslate(initialTaskState, {

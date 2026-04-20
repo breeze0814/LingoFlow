@@ -20,6 +20,7 @@ type OcrResultPanelProps = {
   onTargetLanguageChange: (code: string) => void;
   onTextChange: (text: string) => void;
   onTogglePin: () => void;
+  pendingMessage?: string;
   preferredProviderId: string | null;
   rows: DisplayRow[];
   sourceLanguageCode: string;
@@ -50,6 +51,7 @@ export function OcrResultPanel({
   onTargetLanguageChange,
   onTextChange,
   onTogglePin,
+  pendingMessage,
   preferredProviderId,
   rows,
   sourceLanguageCode,
@@ -127,6 +129,7 @@ export function OcrResultPanel({
         onTargetLanguageChange={onTargetLanguageChange}
         onTextChange={onTextChange}
         onTogglePin={onTogglePin}
+        pendingMessage={pendingMessage}
         preferredProviderId={preferredProviderId}
         rows={rows}
         sourceLanguageCode={sourceLanguageCode}

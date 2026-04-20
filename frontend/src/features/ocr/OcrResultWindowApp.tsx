@@ -25,6 +25,7 @@ import {
 } from './translationWorkspaceService';
 import { isTauriRuntime } from '../../app/appRuntime';
 import { ErrorBoundary } from '../../infra/ErrorBoundary';
+import { loadSettingsForTranslation } from '../settings/nativeSettingsStorage';
 
 type WorkspaceDirection = {
   sourceLanguageCode: string;
@@ -129,6 +130,9 @@ export function OcrResultWindowApp() {
   const [listenError, setListenError] = useState('');
   const autoTranslateTokenRef = useRef('');
   const automationTaskIdRef = useRef('');
+  const settingsPromiseRef = useRef<ReturnType<typeof loadSettingsForTranslation> | null>(
+    initialPayload?.autoTranslate ? loadSettingsForTranslation() : null,
+  );
   const enabledProviderIds = buildEnabledTranslateProviderIds(runtimeSettings.providers);
   const textSelectionToken = createTextSelectionToken(payload);
 
@@ -156,6 +160,9 @@ export function OcrResultWindowApp() {
               return;
             }
             cacheOcrResultPayload(event.payload);
+            if (event.payload.autoTranslate) {
+              settingsPromiseRef.current = loadSettingsForTranslation();
+            }
             setPayload(event.payload);
           },
         );
@@ -215,6 +222,8 @@ export function OcrResultWindowApp() {
       }
       const text = nextText ?? workspaceState.text;
       const settings = loadSettingsFromStorage();
+      const preloadedSettings = settingsPromiseRef.current;
+      settingsPromiseRef.current = null;
       setWorkspaceState((current) => ({
         ...current,
         errorMessage: '',
@@ -225,7 +234,7 @@ export function OcrResultWindowApp() {
       const nextState = await submitTranslationWorkspaceText(payload, text, {
         sourceLanguageCode: direction.sourceLanguageCode,
         targetLanguageCode: direction.targetLanguageCode,
-      });
+      }, preloadedSettings);
       const resolvedText =
         payload.mode === 'input_translate' &&
         settings.clearInputOnTranslate &&
@@ -391,6 +400,7 @@ export function OcrResultWindowApp() {
             onTogglePin={() => {
               void handleTogglePin();
             }}
+            pendingMessage={payload.pendingMessage}
             preferredProviderId={preferredProviderId}
             rows={buildDisplayRows(workspaceState.result)}
             sourceLanguageCode={direction.sourceLanguageCode}

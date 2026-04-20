@@ -25,6 +25,7 @@ const OCR_WINDOW_HEIGHT = 560;
 const OCR_WINDOW_MIN_WIDTH = 360;
 const OCR_WINDOW_MIN_HEIGHT = 320;
 const SCREEN_MARGIN = 16;
+let cachedOcrResultWindow: WebviewWindow | null = null;
 
 type PositionPoint = {
   x: number;
@@ -76,14 +77,19 @@ async function createOcrResultWindow() {
     titleBarStyle: 'overlay',
   });
   await waitUntilWindowCreated(createdWindow);
+  cachedOcrResultWindow = createdWindow;
   return createdWindow;
 }
 
 async function ensureOcrResultWindow() {
+  if (cachedOcrResultWindow) {
+    return cachedOcrResultWindow;
+  }
   const existing = await WebviewWindow.getByLabel(OCR_RESULT_WINDOW_LABEL);
   if (existing) {
     try {
       await existing.isVisible();
+      cachedOcrResultWindow = existing;
       return existing;
     } catch {
       // Window is damaged, recreate
@@ -167,6 +173,14 @@ export async function showOcrResultWindow(payload: OcrResultWindowPayload) {
   const ocrWindow = await ensureOcrResultWindow();
 
   await Promise.all([showAndFocusOcrWindow(ocrWindow), emitResultPayload(payload)]);
+}
+
+export async function updateOcrResultWindow(payload: OcrResultWindowPayload) {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  cacheOcrResultPayload(payload);
+  await emitResultPayload(payload);
 }
 
 export async function showCachedOcrResultWindow() {

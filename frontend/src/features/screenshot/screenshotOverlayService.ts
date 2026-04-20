@@ -3,10 +3,6 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import {
   LogicalSize,
   PhysicalPosition,
-  currentMonitor,
-  cursorPosition,
-  monitorFromPoint,
-  type Monitor,
 } from '@tauri-apps/api/window';
 import {
   SCREENSHOT_OVERLAY_READY_EVENT,
@@ -17,8 +13,15 @@ import {
   cacheScreenshotOverlayPayload,
 } from './screenshotOverlayBridge';
 import { isTauriRuntime } from '../../app/appRuntime';
+import { commandsClient } from '../../infra/tauri/commands';
 
 type ScreenshotOverlayRequest = Omit<ScreenshotOverlayPayload, 'monitor'>;
+
+type MonitorInfo = {
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  scaleFactor: number;
+};
 
 const OVERLAY_READY_TIMEOUT_MS = 500;
 
@@ -26,6 +29,7 @@ let overlayReady = false;
 let overlayListenerPromise: Promise<void> | null = null;
 const overlayReadyWaiters: Array<() => void> = [];
 let overlayInitialized = false;
+let cachedOverlayWindow: WebviewWindow | null = null;
 
 async function waitUntilWindowCreated(target: WebviewWindow): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -64,14 +68,19 @@ async function createScreenshotOverlayWindow() {
     resizable: false,
   });
   await waitUntilWindowCreated(createdWindow);
+  cachedOverlayWindow = createdWindow;
   return createdWindow;
 }
 
 async function ensureScreenshotOverlayWindow() {
+  if (cachedOverlayWindow) {
+    return cachedOverlayWindow;
+  }
   const existing = await WebviewWindow.getByLabel(SCREENSHOT_OVERLAY_WINDOW_LABEL);
   if (existing) {
     try {
       await existing.isVisible();
+      cachedOverlayWindow = existing;
       return existing;
     } catch {
       // Window is damaged, recreate
@@ -80,20 +89,11 @@ async function ensureScreenshotOverlayWindow() {
   return createScreenshotOverlayWindow();
 }
 
-async function resolveActiveMonitor(): Promise<Monitor> {
-  const cursor = await cursorPosition();
-  const matched = await monitorFromPoint(cursor.x, cursor.y);
-  if (matched) {
-    return matched;
-  }
-  const current = await currentMonitor();
-  if (current) {
-    return current;
-  }
-  throw new Error('无法获取当前屏幕信息');
+async function resolveActiveMonitor(): Promise<MonitorInfo> {
+  return commandsClient.resolveCursorMonitor();
 }
 
-async function positionScreenshotOverlayWindow(target: WebviewWindow, monitor: Monitor) {
+async function positionScreenshotOverlayWindow(target: WebviewWindow, monitor: MonitorInfo) {
   const logicalWidth = monitor.size.width / monitor.scaleFactor;
   const logicalHeight = monitor.size.height / monitor.scaleFactor;
 
@@ -190,15 +190,20 @@ export async function showScreenshotOverlay(request: ScreenshotOverlayRequest) {
   };
   cacheScreenshotOverlayPayload(payload);
 
-  await Promise.all([
-    positionScreenshotOverlayWindow(overlayWindow, monitor),
-    overlayWindow.show(),
-    overlayWindow.setFocus(),
-  ]);
-
   if (!overlayInitialized) {
+    await Promise.all([
+      positionScreenshotOverlayWindow(overlayWindow, monitor),
+      overlayWindow.show(),
+      overlayWindow.setFocus(),
+    ]);
     await waitForOverlayReady();
+    await emitOverlayPayload(payload);
+  } else {
+    await Promise.all([
+      positionScreenshotOverlayWindow(overlayWindow, monitor),
+      overlayWindow.show(),
+      overlayWindow.setFocus(),
+      emitOverlayPayload(payload),
+    ]);
   }
-
-  await emitOverlayPayload(payload);
 }

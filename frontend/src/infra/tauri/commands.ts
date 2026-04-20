@@ -243,4 +243,11 @@ export const commandsClient = {
       payload: settings,
     });
   },
+  resolveCursorMonitor(): Promise<{
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+    scaleFactor: number;
+  }> {
+    return invoke('resolve_cursor_monitor');
+  },
 };

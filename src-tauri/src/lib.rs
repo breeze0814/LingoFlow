@@ -85,7 +85,8 @@ pub fn run() {
         commands::ocr::ocr_recognize_region,
         commands::ocr::ocr_translate_region,
         commands::tesseract_ocr::resolve_tesseract_ocr,
-        commands::window_display::set_capture_excluded
+        commands::window_display::set_capture_excluded,
+        commands::window_display::resolve_cursor_monitor
     ]);
 
     #[cfg(all(not(test), not(target_os = "windows")))]
@@ -101,7 +102,8 @@ pub fn run() {
         commands::translation::input_translate,
         commands::ocr::ocr_recognize,
         commands::ocr::ocr_translate,
-        commands::window_display::set_capture_excluded
+        commands::window_display::set_capture_excluded,
+        commands::window_display::resolve_cursor_monitor
     ]);
 
     builder

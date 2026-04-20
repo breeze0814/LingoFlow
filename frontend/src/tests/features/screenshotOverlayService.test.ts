@@ -83,6 +83,15 @@ vi.mock('@tauri-apps/api/event', () => ({
   listen: mocks.listen,
 }));
 
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn().mockImplementation((cmd: string) => {
+    if (cmd === 'resolve_cursor_monitor') {
+      return Promise.resolve(mocks.monitor);
+    }
+    return Promise.resolve(undefined);
+  }),
+}));
+
 vi.mock('@tauri-apps/api/window', () => ({
   LogicalSize: class {
     constructor(
@@ -96,9 +105,6 @@ vi.mock('@tauri-apps/api/window', () => ({
       public y: number,
     ) {}
   },
-  monitorFromPoint: vi.fn().mockResolvedValue(mocks.monitor),
-  currentMonitor: vi.fn().mockResolvedValue(mocks.monitor),
-  cursorPosition: vi.fn().mockResolvedValue({ x: 200, y: 100 }),
 }));
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({

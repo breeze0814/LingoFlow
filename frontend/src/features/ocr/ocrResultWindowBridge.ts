@@ -13,8 +13,10 @@ export type TranslationWorkspaceMode = 'input_translate' | 'ocr_recognize' | 'oc
 export type OcrResultWindowPayload = {
   autoTranslate: boolean;
   initialErrorMessage?: string;
+  initialStatus?: 'pending';
   initialText: string;
   mode: TranslationWorkspaceMode;
+  pendingMessage?: string;
   preferredProviderId?: string;
   result?: TaskResult;
   sourceLanguageCode: string;

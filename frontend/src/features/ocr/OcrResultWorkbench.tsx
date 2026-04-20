@@ -35,6 +35,7 @@ type OcrResultWorkbenchProps = {
   onTargetLanguageChange: (code: string) => void;
   onTextChange: (text: string) => void;
   onTogglePin: () => void;
+  pendingMessage?: string;
   preferredProviderId: string | null;
   rows: DisplayRow[];
   sourceLanguageCode: string;
@@ -327,7 +328,7 @@ export function OcrResultWorkbench(props: OcrResultWorkbenchProps) {
         ) : null}
         {props.status === 'pending' ? (
           <div className="ocrInlineMessage" role="status" aria-live="polite" aria-atomic="true">
-            正在翻译...
+            {props.pendingMessage ?? '正在翻译...'}
           </div>
         ) : null}
         {props.errorMessage ? (

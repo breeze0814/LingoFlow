@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import {
@@ -16,8 +16,9 @@ import {
   createOcrRecognizePayload,
   createOcrTranslatePayload,
   createErrorPayload,
+  createPendingPayload,
 } from '../ocr/translationWorkspacePayload';
-import { showOcrResultWindow } from '../ocr/ocrResultWindowService';
+import { showOcrResultWindow, updateOcrResultWindow } from '../ocr/ocrResultWindowService';
 import { ensureCaptureExcluded } from './screenshotOverlayExclude';
 import { TaskState } from '../task/taskTypes';
 import {
@@ -61,6 +62,16 @@ export function ScreenshotOverlayApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const draggingRef = useRef(false);
   const selectionRef = useRef<DragState | null>(null);
+  const settingsPromiseRef = useRef<null | ReturnType<typeof loadSettingsForTranslation>>(null);
+
+  useEffect(() => {
+    if (!payload) {
+      settingsPromiseRef.current = null;
+      return;
+    }
+    settingsPromiseRef.current = loadSettingsForTranslation();
+    void ensureCaptureExcluded();
+  }, [payload]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -155,10 +166,6 @@ export function ScreenshotOverlayApp() {
     await getCurrentWindow().hide();
   }
 
-  async function waitForNextPaint() {
-    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-  }
-
   async function hideOverlayForCapture() {
     draggingRef.current = false;
     setErrorMessage('');
@@ -166,7 +173,6 @@ export function ScreenshotOverlayApp() {
     selectionRef.current = null;
     setIsSubmitting(true);
     await ensureCaptureExcluded();
-    await waitForNextPaint();
     await getCurrentWindow().hide();
   }
 
@@ -183,59 +189,10 @@ export function ScreenshotOverlayApp() {
       return;
     }
 
-    const [settings] = await Promise.all([loadSettingsForTranslation(), hideOverlayForCapture()]);
+    const settingsPromise = settingsPromiseRef.current ?? loadSettingsForTranslation();
+    settingsPromiseRef.current = null;
+    const [settings] = await Promise.all([settingsPromise, hideOverlayForCapture()]);
 
-    const baseState: TaskState = initialTaskState;
-
-    if (payload.mode === 'ocr_translate') {
-      const direction = {
-        sourceLanguageCode: payload.sourceLangHint ?? 'auto',
-        sourceLanguageLabel: payload.sourceLanguageLabel,
-        targetLanguageCode: payload.targetLanguageCode,
-        targetLanguageLabel: payload.targetLanguageLabel,
-      };
-      const next = await triggerOcrRecognizeRegion(
-        baseState,
-        captureRect,
-        payload.sourceLangHint,
-        resolveOcrProviderRequestId(settings.defaultOcrProvider),
-        buildEnabledOcrProviderConfigs(settings.providers),
-      );
-
-      if (next.action === 'succeeded' && next.payload.result) {
-        const resultPayload = createOcrTranslatePayload(
-          next.payload.result,
-          direction,
-          true,
-          settings.defaultTranslateProvider,
-        );
-        clearCachedScreenshotOverlayPayload();
-        setPayload(null);
-        setIsSubmitting(false);
-        await showOcrResultWindow(resultPayload);
-        return;
-      }
-      if (next.action !== 'cancelled') {
-        const message = next.payload.error?.message ?? '截图翻译失败';
-        const errorPayload = createErrorPayload(
-          payload.mode,
-          message,
-          direction,
-          settings.defaultTranslateProvider,
-        );
-        clearCachedScreenshotOverlayPayload();
-        setPayload(null);
-        setIsSubmitting(false);
-        await showOcrResultWindow(errorPayload);
-        return;
-      }
-      clearCachedScreenshotOverlayPayload();
-      setPayload(null);
-      setIsSubmitting(false);
-      return;
-    }
-
-    // ocr_recognize mode
     const direction = {
       sourceLanguageCode: payload.sourceLangHint ?? 'auto',
       sourceLanguageLabel: payload.sourceLanguageLabel,
@@ -243,44 +200,96 @@ export function ScreenshotOverlayApp() {
       targetLanguageLabel: payload.targetLanguageLabel,
     };
 
-    const next = await triggerOcrRecognizeRegion(
-      baseState,
-      captureRect,
-      payload.sourceLangHint,
-      resolveOcrProviderRequestId(settings.defaultOcrProvider),
-      buildEnabledOcrProviderConfigs(settings.providers),
-    );
+    const baseState: TaskState = initialTaskState;
 
-    if (next.action === 'succeeded' && next.payload.result) {
-      const resultPayload = createOcrRecognizePayload(
-        next.payload.result,
+    if (payload.mode === 'ocr_translate') {
+      const pendingOcrPayload = createPendingPayload(
+        'ocr_translate',
         direction,
-        settings.autoQueryOnOcr,
+        '正在识别...',
         settings.defaultTranslateProvider,
       );
+      const [next] = await Promise.all([
+        triggerOcrRecognizeRegion(
+          baseState,
+          captureRect,
+          payload.sourceLangHint,
+          resolveOcrProviderRequestId(settings.defaultOcrProvider),
+          buildEnabledOcrProviderConfigs(settings.providers),
+        ),
+        showOcrResultWindow(pendingOcrPayload),
+      ]);
+
       clearCachedScreenshotOverlayPayload();
       setPayload(null);
       setIsSubmitting(false);
-      await showOcrResultWindow(resultPayload);
+
+      if (next.action === 'succeeded' && next.payload.result) {
+        await updateOcrResultWindow(
+          createOcrTranslatePayload(
+            next.payload.result,
+            direction,
+            true,
+            settings.defaultTranslateProvider,
+          ),
+        );
+        return;
+      }
+      if (next.action !== 'cancelled') {
+        await updateOcrResultWindow(
+          createErrorPayload(
+            'ocr_translate',
+            next.payload.error?.message ?? '截图识别失败',
+            direction,
+            settings.defaultTranslateProvider,
+          ),
+        );
+      }
       return;
     }
 
-    if (next.action !== 'cancelled') {
-      const message = next.payload.error?.message ?? '截图识别失败';
-      const errorPayload = createErrorPayload(
-        payload.mode,
-        message,
-        direction,
-        settings.defaultTranslateProvider,
+    // ocr_recognize mode
+    const pendingOcrPayload = createPendingPayload(
+      'ocr_recognize',
+      direction,
+      '正在识别...',
+      settings.defaultTranslateProvider,
+    );
+    const [next] = await Promise.all([
+      triggerOcrRecognizeRegion(
+        baseState,
+        captureRect,
+        payload.sourceLangHint,
+        resolveOcrProviderRequestId(settings.defaultOcrProvider),
+        buildEnabledOcrProviderConfigs(settings.providers),
+      ),
+      showOcrResultWindow(pendingOcrPayload),
+    ]);
+
+    clearCachedScreenshotOverlayPayload();
+    setPayload(null);
+    setIsSubmitting(false);
+
+    if (next.action === 'succeeded' && next.payload.result) {
+      await updateOcrResultWindow(
+        createOcrRecognizePayload(
+          next.payload.result,
+          direction,
+          settings.autoQueryOnOcr,
+          settings.defaultTranslateProvider,
+        ),
       );
-      clearCachedScreenshotOverlayPayload();
-      setPayload(null);
-      setIsSubmitting(false);
-      await showOcrResultWindow(errorPayload);
-    } else {
-      clearCachedScreenshotOverlayPayload();
-      setPayload(null);
-      setIsSubmitting(false);
+      return;
+    }
+    if (next.action !== 'cancelled') {
+      await updateOcrResultWindow(
+        createErrorPayload(
+          'ocr_recognize',
+          next.payload.error?.message ?? '截图识别失败',
+          direction,
+          settings.defaultTranslateProvider,
+        ),
+      );
     }
   }
 

@@ -80,3 +80,16 @@ export function createErrorPayload(
     initialErrorMessage: errorMessage,
   };
 }
+
+export function createPendingPayload(
+  mode: OcrResultWindowPayload['mode'],
+  labels: WorkspaceLabels,
+  pendingMessage: string,
+  preferredProviderId?: string,
+): OcrResultWindowPayload {
+  return {
+    ...createPayload(mode, '', labels, false, preferredProviderId),
+    initialStatus: 'pending',
+    pendingMessage,
+  };
+}

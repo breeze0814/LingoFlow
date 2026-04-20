@@ -16,6 +16,7 @@ const {
   mockTriggerOcrRecognizeRegion,
   mockTriggerOcrTranslateRegion,
   mockShowOcrResultWindow,
+  mockUpdateOcrResultWindow,
 } = vi.hoisted(() => ({
   mockHide: vi.fn().mockResolvedValue(undefined),
   mockShow: vi.fn().mockResolvedValue(undefined),
@@ -25,6 +26,7 @@ const {
   mockTriggerOcrRecognizeRegion: vi.fn(),
   mockTriggerOcrTranslateRegion: vi.fn(),
   mockShowOcrResultWindow: vi.fn().mockResolvedValue(undefined),
+  mockUpdateOcrResultWindow: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@tauri-apps/api/window', () => ({
@@ -51,6 +53,7 @@ vi.mock('../../features/task/taskService', () => ({
 
 vi.mock('../../features/ocr/ocrResultWindowService', () => ({
   showOcrResultWindow: mockShowOcrResultWindow,
+  updateOcrResultWindow: mockUpdateOcrResultWindow,
 }));
 
 vi.mock('../../features/settings/nativeSettingsStorage', () => ({
@@ -69,6 +72,7 @@ describe('ScreenshotOverlayApp', () => {
     mockTriggerOcrRecognizeRegion.mockReset();
     mockTriggerOcrTranslateRegion.mockReset();
     mockShowOcrResultWindow.mockClear();
+    mockUpdateOcrResultWindow.mockClear();
     mockLoadSettingsForTranslation.mockResolvedValue(DEFAULT_SETTINGS);
     mockTriggerOcrRecognizeRegion.mockResolvedValue({
       action: 'succeeded',
@@ -80,6 +84,21 @@ describe('ScreenshotOverlayApp', () => {
           providerId: 'apple_vision',
           sourceText: 'hello',
           recognizedText: 'hello',
+        },
+      },
+    });
+    mockTriggerOcrTranslateRegion.mockResolvedValue({
+      action: 'succeeded',
+      payload: {
+        taskType: 'ocr_translate',
+        taskId: 'task_ocr_translate_1',
+        result: {
+          taskId: 'task_ocr_translate_1',
+          providerId: 'bing_web',
+          sourceText: 'hello',
+          recognizedText: 'hello',
+          translatedText: '你好',
+          translationResults: [{ providerId: 'bing_web', translatedText: '你好' }],
         },
       },
     });
@@ -158,9 +177,17 @@ describe('ScreenshotOverlayApp', () => {
     await waitFor(() => {
       expect(mockTriggerOcrRecognizeRegion).toHaveBeenCalledTimes(1);
       expect(mockShowOcrResultWindow).toHaveBeenCalledTimes(1);
+      expect(mockUpdateOcrResultWindow).toHaveBeenCalledTimes(1);
     });
     expect(mockTriggerOcrTranslateRegion).not.toHaveBeenCalled();
     expect(mockShowOcrResultWindow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initialStatus: 'pending',
+        mode: 'ocr_translate',
+        pendingMessage: '正在识别...',
+      }),
+    );
+    expect(mockUpdateOcrResultWindow).toHaveBeenCalledWith(
       expect.objectContaining({
         autoTranslate: true,
         mode: 'ocr_translate',
